@@ -20,6 +20,7 @@
 #include "llvm/Support/ToolOutputFile.h"
 
 #include "Dyn/DynDialect.h"
+#include "Dyn/DynamicDialect.h"
 
 int main(int argc, char **argv) {
   mlir::registerAllPasses();
