@@ -13,10 +13,8 @@
 namespace mlir {
 namespace dyn {
 
-  DynamicObject::DynamicObject(DynamicContext *ctx) :
-    ctx{ctx},
-    dynamicID{ctx->getDynamicIDAllocator()->allocateID()}
-  {}
+DynamicObject::DynamicObject(DynamicContext *ctx)
+    : ctx{ctx}, dynamicID{ctx->getDynamicIDAllocator()->allocateID()} {}
 
-}
-}
+} // namespace dyn
+} // namespace mlir
