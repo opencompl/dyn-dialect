@@ -20,15 +20,36 @@
 #include "llvm/Support/ToolOutputFile.h"
 
 #include "Dyn/DynDialect.h"
+#include "Dyn/DynamicContext.h"
 #include "Dyn/DynamicDialect.h"
+#include "Dyn/DynamicOperation.h"
+
+using namespace mlir;
+using namespace dyn;
 
 int main(int argc, char **argv) {
   mlir::registerAllPasses();
   // TODO: Register dyn passes here.
 
-  mlir::DialectRegistry registry;
-  registry.insert<mlir::dyn::DynDialect>();
-  registry.insert<mlir::StandardOpsDialect>();
+  DynamicContext dynCtx;
+
+  auto fooDialectRes = dynCtx.createAndRegisterDialect("foo");
+
+  if (failed(fooDialectRes))
+    return failed(fooDialectRes);
+
+  auto *fooDialect = *fooDialectRes;
+
+  auto barOpRes = fooDialect->createAndRegisterOp("bar");
+
+  if (failed(barOpRes))
+    return failed(barOpRes);
+
+  auto *barOp = *barOpRes;
+
+  DialectRegistry registry;
+  registry.insert<DynDialect>();
+  registry.insert<StandardOpsDialect>();
   // Add the following to include *all* MLIR Core dialects, or selectively
   // include what you need like above. You only need to register dialects that
   // will be *parsed* by the tool, not the one generated

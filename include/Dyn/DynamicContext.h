@@ -12,13 +12,16 @@
 #include "DynamicID.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
-#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/StringMap.h"
 
 namespace mlir {
 namespace dyn {
 
 /// Forward declaration
 class DynamicDialect;
+
+/// Forward declaration
+class DynamicOperation;
 
 /// Manages the creation and lifetime of dynamic MLIR objects such as dialects,
 /// operations, types, and traits
@@ -35,8 +38,8 @@ public:
 private:
   DynamicIDAllocator dynamicIDAllocator;
 
-  /// The list of dynamically defined dialects.
-  mlir::DenseMap<mlir::StringRef, std::unique_ptr<DynamicDialect>> dialects;
+  /// The set of dynamically defined dialects.
+  llvm::StringMap<std::unique_ptr<DynamicDialect>> dialects;
 };
 
 } // namespace dyn

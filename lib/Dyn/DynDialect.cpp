@@ -8,17 +8,11 @@
 
 #include "Dyn/DynDialect.h"
 #include "Dyn/DynOps.h"
+#include "mlir/IR/MLIRContext.h"
 
 using namespace mlir;
 using namespace mlir::dyn;
 
-//===----------------------------------------------------------------------===//
-// Dyn dialect.
-//===----------------------------------------------------------------------===//
-
-void DynDialect::initialize() {
-  addOperations<
-#define GET_OP_LIST
-#include "Dyn/DynOps.cpp.inc"
-      >();
+DynDialect::DynDialect(mlir::MLIRContext *ctx)
+  : Dialect(getDialectNamespace(), ctx, DynDialect::getTypeID()) {
 }

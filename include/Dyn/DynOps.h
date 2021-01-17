@@ -14,7 +14,4 @@
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
-#define GET_OP_CLASSES
-#include "Dyn/DynOps.h.inc"
-
 #endif // DYN_DYNOPS_H

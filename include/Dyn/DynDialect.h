@@ -11,6 +11,17 @@
 
 #include "mlir/IR/Dialect.h"
 
-#include "Dyn/DynOpsDialect.h.inc"
+namespace mlir {
+namespace dyn {
+
+class DynDialect : public mlir::Dialect {
+public:
+  DynDialect(mlir::MLIRContext *ctx);
+
+  static mlir::StringRef getDialectNamespace() { return "dyn"; }
+};
+
+} // namespace dyn
+} // namespace mlir
 
 #endif // DYN_DYNDIALECT_H

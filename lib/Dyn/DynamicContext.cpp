@@ -8,6 +8,7 @@
 
 #include "Dyn/DynamicContext.h"
 #include "Dyn/DynamicDialect.h"
+#include "Dyn/DynamicOperation.h"
 
 using namespace mlir;
 using namespace dyn;
