@@ -10,19 +10,33 @@
 #define DYN_DYNAMICCONTEXT_H
 
 #include "DynamicID.h"
+#include "mlir/Support/LLVM.h"
+#include "mlir/Support/LogicalResult.h"
+#include "llvm/ADT/DenseMap.h"
 
 namespace mlir {
 namespace dyn {
+
+/// Forward declaration
+class DynamicDialect;
 
 /// Manages the creation and lifetime of dynamic MLIR objects such as dialects,
 /// operations, types, and traits
 class DynamicContext {
 public:
-  DynamicIDAllocator* getDynamicIDAllocator() {
-    return &dynamicIDAllocator;
-  }
+  DynamicIDAllocator *getDynamicIDAllocator() { return &dynamicIDAllocator; }
+
+  /// Create and register a dynamic dialect.
+  /// Return an error if the dialect could not be inserted, or if a dialect with
+  /// the same name was already registered.
+  mlir::FailureOr<DynamicDialect *>
+  createAndRegisterDialect(llvm::StringRef name);
+
 private:
   DynamicIDAllocator dynamicIDAllocator;
+
+  /// The list of dynamically defined dialects.
+  mlir::DenseMap<mlir::StringRef, std::unique_ptr<DynamicDialect>> dialects;
 };
 
 } // namespace dyn

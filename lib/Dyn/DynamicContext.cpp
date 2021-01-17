@@ -1,4 +1,4 @@
-//===- DynamicDialect.cpp - Dynamic dialects --------------------*- C++ -*-===//
+//===- DynamicContext.cpp - Dynamic context ---------------------*- C++ -*-===//
 //
 // This file is licensed under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,18 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Dyn/DynamicContext.h"
 #include "Dyn/DynamicDialect.h"
-#include "Dyn/DynamicOperation.h"
 
 using namespace mlir;
 using namespace dyn;
 
-DynamicDialect::DynamicDialect(llvm::StringRef name) : name{name}, ops{} {}
-
-FailureOr<DynamicOperation *>
-DynamicDialect::createAndRegisterOp(llvm::StringRef name) {
-  auto op = std::make_unique<DynamicOperation>(DynamicOperation(name, this));
-  auto p = ops.try_emplace(name, std::move(op));
+mlir::FailureOr<DynamicDialect *>
+DynamicContext::createAndRegisterDialect(llvm::StringRef name) {
+  auto dialect = std::make_unique<DynamicDialect>(name);
+  auto p = dialects.try_emplace(name, std::move(dialect));
 
   if (!p.second)
     return failure();

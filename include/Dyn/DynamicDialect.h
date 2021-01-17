@@ -23,6 +23,10 @@ class DynamicOperation;
 
 class DynamicDialect {
 public:
+  /// Create a new dialect given a name.
+  /// The dialect will contain no operations or types.
+  DynamicDialect(llvm::StringRef name);
+
   mlir::StringRef getName() const { return name; }
 
   /// Create and register a dynamic operation for the dialect.
