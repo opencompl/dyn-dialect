@@ -8,13 +8,12 @@
 
 #include "Dyn/DynamicObject.h"
 #include "Dyn/DynamicContext.h"
-#include "Dyn/DynamicID.h"
 
 namespace mlir {
 namespace dyn {
 
 DynamicObject::DynamicObject(DynamicContext *ctx)
-    : ctx{ctx}, dynamicID{ctx->getDynamicIDAllocator()->allocateID()} {}
+    : ctx{ctx}, typeID{ctx->getTypeIDAllocator()->allocateID()} {}
 
 } // namespace dyn
 } // namespace mlir

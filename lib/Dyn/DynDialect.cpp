@@ -15,4 +15,5 @@ using namespace mlir::dyn;
 
 DynDialect::DynDialect(mlir::MLIRContext *ctx)
   : Dialect(getDialectNamespace(), ctx, DynDialect::getTypeID()) {
+  addOperations<DynOp>();
 }

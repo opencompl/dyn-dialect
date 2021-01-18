@@ -9,7 +9,7 @@
 #ifndef DYN_DYNAMICOBJECT_H
 #define DYN_DYNAMICOBJECT_H
 
-#include "DynamicID.h"
+#include "TypeIDAllocator.h"
 
 namespace mlir {
 namespace dyn {
@@ -23,11 +23,11 @@ public:
   explicit DynamicObject(DynamicContext *ctx);
 
   inline DynamicContext *getDynamicContext() const { return ctx; }
-  inline DynamicID getTypeID() { return dynamicID; }
+  inline TypeID getTypeID() { return typeID; }
 
 private:
   DynamicContext *ctx;
-  DynamicID dynamicID;
+  TypeID typeID;
 };
 
 } // namespace dyn

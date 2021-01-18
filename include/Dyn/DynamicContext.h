@@ -9,7 +9,7 @@
 #ifndef DYN_DYNAMICCONTEXT_H
 #define DYN_DYNAMICCONTEXT_H
 
-#include "DynamicID.h"
+#include "TypeIDAllocator.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/StringMap.h"
@@ -27,7 +27,7 @@ class DynamicOperation;
 /// operations, types, and traits
 class DynamicContext {
 public:
-  DynamicIDAllocator *getDynamicIDAllocator() { return &dynamicIDAllocator; }
+  TypeIDAllocator *getTypeIDAllocator() { return &typeIDAllocator; }
 
   /// Create and register a dynamic dialect.
   /// Return an error if the dialect could not be inserted, or if a dialect with
@@ -36,7 +36,7 @@ public:
   createAndRegisterDialect(llvm::StringRef name);
 
 private:
-  DynamicIDAllocator dynamicIDAllocator;
+  TypeIDAllocator typeIDAllocator;
 
   /// The set of dynamically defined dialects.
   llvm::StringMap<std::unique_ptr<DynamicDialect>> dialects;

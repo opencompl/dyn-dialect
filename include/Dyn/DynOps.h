@@ -12,6 +12,12 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
-#include "mlir/Interfaces/SideEffectInterfaces.h"
+
+class DynOp : public mlir::Op<DynOp> {
+public:
+  using Op::Op;
+
+  static llvm::StringRef getOperationName() { return "dyn.dynop"; }
+};
 
 #endif // DYN_DYNOPS_H
