@@ -15,8 +15,6 @@
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Translation.h"
 
-#include "Dyn/DynDialect.h"
-
 int main(int argc, char **argv) {
   mlir::registerAllTranslations();
 
