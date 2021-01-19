@@ -1,6 +1,4 @@
 add_mlir_dialect_library(MLIRDyn
-        DynDialect.cpp
-        DynOps.cpp
         DynamicObject.cpp
         DynamicOperation.cpp
         DynamicDialect.cpp

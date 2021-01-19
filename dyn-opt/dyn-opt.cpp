@@ -19,7 +19,6 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/ToolOutputFile.h"
 
-#include "Dyn/DynDialect.h"
 #include "Dyn/DynamicContext.h"
 #include "Dyn/DynamicDialect.h"
 #include "Dyn/DynamicOperation.h"
