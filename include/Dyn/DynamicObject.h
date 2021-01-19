@@ -27,7 +27,7 @@ public:
 
 private:
   DynamicContext *ctx;
-  TypeID typeID;
+  const TypeID typeID;
 };
 
 } // namespace dyn
