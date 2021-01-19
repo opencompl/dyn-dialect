@@ -9,17 +9,27 @@
 #include "Dyn/DynamicContext.h"
 #include "Dyn/DynamicDialect.h"
 #include "Dyn/DynamicOperation.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace mlir;
 using namespace dyn;
 
+DynamicContext::DynamicContext(MLIRContext *ctx) : ctx{ctx} {}
+
 mlir::FailureOr<DynamicDialect *>
 DynamicContext::createAndRegisterDialect(llvm::StringRef name) {
-  auto dialect = std::make_unique<DynamicDialect>(name);
-  auto p = dialects.try_emplace(name, std::move(dialect));
+  // Allocate a new ID for the dialect.
+  auto id = getTypeIDAllocator().allocateID();
+  auto ctor = [name, this, id]() {
+    return std::make_unique<DynamicDialect>(name, this, id);
+  };
 
-  if (!p.second)
+  // TODO, if the dialect is already defined, deallocate the TypeID.
+  Dialect* dialect = getMLIRCtx()->getOrLoadDialect(name, id, ctor);
+
+  if (!dialect)
     return failure();
 
-  return p.first->second.get();
+  return reinterpret_cast<DynamicDialect*>(dialect);
 }

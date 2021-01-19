@@ -31,29 +31,19 @@ int main(int argc, char **argv) {
   mlir::registerAllPasses();
   // TODO: Register dyn passes here.
 
-  DynamicContext dynCtx;
+  MLIRContext ctx;
+  DynamicContext dynCtx(&ctx);
 
-  auto fooDialectRes = dynCtx.createAndRegisterDialect("foo");
+  // Register a dynamic dialect
+  auto fooDialectRes = dynCtx.createAndRegisterDialect("dyn");
 
-  if (failed(fooDialectRes))
+  // Check that the dialect is defined
+  if (failed(fooDialectRes)) {
     return failed(fooDialectRes);
+  }
 
-  auto *fooDialect = *fooDialectRes;
-
-  auto barOpRes = fooDialect->createAndRegisterOp("bar");
-
-  if (failed(barOpRes))
-    return failed(barOpRes);
-
-  auto *barOp = *barOpRes;
-
-  DialectRegistry registry;
-  registry.insert<DynDialect>();
+  DialectRegistry &registry = ctx.getDialectRegistry();
   registry.insert<StandardOpsDialect>();
-  // Add the following to include *all* MLIR Core dialects, or selectively
-  // include what you need like above. You only need to register dialects that
-  // will be *parsed* by the tool, not the one generated
-  // registerAllDialects(registry);
 
   return failed(
       mlir::MlirOptMain(argc, argv, "Dyn optimizer driver\n", registry));
