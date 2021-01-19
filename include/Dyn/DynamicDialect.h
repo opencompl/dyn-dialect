@@ -9,6 +9,8 @@
 #ifndef DYN_DYNAMICDIALECT_H
 #define DYN_DYNAMICDIALECT_H
 
+#include "Dyn/DynamicObject.h"
+#include "mlir/IR/Dialect.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/DenseMap.h"
@@ -21,11 +23,18 @@ namespace dyn {
 /// Forward declaration
 class DynamicOperation;
 
-class DynamicDialect {
+/// Forward declaration
+class DynamicContext;
+
+class DynamicDialect : public DynamicObject, public mlir::Dialect {
 public:
   /// Create a new dialect given a name.
   /// The dialect will contain no operations or types.
-  DynamicDialect(llvm::StringRef name);
+  DynamicDialect(llvm::StringRef name, DynamicContext *ctx);
+
+  /// Create a new dialect given a name and an already allocated TypeID.
+  /// The dialect will contain no operations or types.
+  DynamicDialect(llvm::StringRef name, DynamicContext *ctx, TypeID id);
 
   mlir::StringRef getName() const { return name; }
 
