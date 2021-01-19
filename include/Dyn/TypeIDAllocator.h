@@ -31,8 +31,7 @@ private:
 public:
   /// Allocate a new TypeID, that is ensured to be unique.
   TypeID allocateID() {
-    auto ptr = std::make_unique<Storage>();
-    ids.emplace_back(ptr.get());
+    ids.emplace_back(new Storage());
     return TypeID::getFromOpaquePointer(ids.back().get());
   }
 
