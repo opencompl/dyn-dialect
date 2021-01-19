@@ -20,14 +20,19 @@ class DynamicContext;
 /// Here, a TypeID is assigned to an instance, and not a statically known class.
 class DynamicObject {
 public:
+  /// Given a dynamic context, create a new dynamic object.
+  /// The typeID is allocated by the DynamicContext TypeID allocator.
   explicit DynamicObject(DynamicContext *ctx);
 
+  /// Create a new dynamic object given an already allocated typeID.
+  explicit DynamicObject(DynamicContext *ctx, TypeID id);
+
   inline DynamicContext *getDynamicContext() const { return ctx; }
-  inline TypeID getTypeID() { return typeID; }
+  inline TypeID getTypeID() { return id; }
 
 private:
   DynamicContext *ctx;
-  const TypeID typeID;
+  const TypeID id;
 };
 
 } // namespace dyn
