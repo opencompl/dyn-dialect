@@ -2,6 +2,20 @@
 
 ## Building
 
-First, modify the paths `DMLIR_DIR` and `DLLVM_EXTERNAL_LIT` in `setup.sh`.
-Then, run `./setup.sh`.
-Finally, run `./build.sh` to build the project.
+- Build LLVM subproject
+  - `git submodule update --init`
+  - `mkdir llvm-project/build`
+  - `cd llvm-project/build`
+  - `cmake -G Ninja ../llvm
+      -DLLVM_ENABLE_PROJECTS=mlir \
+      -DLLVM_BUILD_EXAMPLES=ON \
+      -DLLVM_TARGETS_TO_BUILD="X86;NVPTX;AMDGPU" \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DLLVM_ENABLE_ASSERTIONS=ON \
+      -DMLIR_BINDINGS_PYTHON_ENABLED=ON`
+
+Bindings requires numpy and pybind11
+
+- run setup.sh
+
+- run build.sh
