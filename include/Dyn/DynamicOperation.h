@@ -18,6 +18,7 @@ namespace dyn {
 /// Forward declaration
 class DynamicDialect;
 
+/// Each instance of DynamicOperation correspond to a different operation
 class DynamicOperation {
 public:
   /// Create a new dynamic operation given the operation name and the defining

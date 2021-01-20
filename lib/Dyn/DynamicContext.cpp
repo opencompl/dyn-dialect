@@ -26,10 +26,13 @@ DynamicContext::createAndRegisterDialect(llvm::StringRef name) {
   };
 
   // TODO, if the dialect is already defined, deallocate the TypeID.
-  Dialect* dialect = getMLIRCtx()->getOrLoadDialect(name, id, ctor);
+  Dialect *dialect = getMLIRCtx()->getOrLoadDialect(name, id, ctor);
 
   if (!dialect)
     return failure();
 
-  return reinterpret_cast<DynamicDialect*>(dialect);
+  // llvm::cast cannot be used here, since we have a custom TypeID that does
+  // not correspond to the TypeID statically assigned to the DynamicDialect
+  // class.
+  return reinterpret_cast<DynamicDialect *>(dialect);
 }
