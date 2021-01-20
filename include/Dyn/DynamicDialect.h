@@ -47,9 +47,6 @@ private:
   /// Name of the dialect.
   /// This name is used for parsing and printing
   const std::string name;
-
-  /// The dynamic operations defined by the dialect
-  mlir::DenseMap<mlir::StringRef, std::unique_ptr<DynamicOperation>> ops;
 };
 
 } // namespace dyn
