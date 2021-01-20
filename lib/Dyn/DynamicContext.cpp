@@ -21,12 +21,21 @@ mlir::FailureOr<DynamicDialect *>
 DynamicContext::createAndRegisterDialect(llvm::StringRef name) {
   // Allocate a new ID for the dialect.
   auto id = getTypeIDAllocator().allocateID();
+
+  // Dialect allocator in the MLIR context.
   auto ctor = [name, this, id]() {
     return std::make_unique<DynamicDialect>(name, this, id);
   };
 
+  // Dialect allocator for the dialect registry.
+  auto registryCtor = [name, id, ctor](MLIRContext *ctx) {
+    return ctx->getOrLoadDialect(name, id, ctor);
+  };
+
   // TODO, if the dialect is already defined, deallocate the TypeID.
-  Dialect *dialect = getMLIRCtx()->getOrLoadDialect(name, id, ctor);
+  getMLIRCtx()->getDialectRegistry().insert(id, name, registryCtor);
+
+  Dialect *dialect = getMLIRCtx()->getOrLoadDialect(name);
 
   if (!dialect)
     return failure();
