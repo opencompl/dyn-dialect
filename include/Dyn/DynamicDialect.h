@@ -26,6 +26,7 @@ class DynamicOperation;
 /// Forward declaration
 class DynamicContext;
 
+/// Each instance of DynamicDialect correspond to a different dialect.
 class DynamicDialect : public DynamicObject, public mlir::Dialect {
 public:
   /// Create a new dialect given a name.
