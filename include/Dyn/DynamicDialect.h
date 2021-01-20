@@ -41,7 +41,7 @@ public:
 
 private:
   /// Name of the dialect.
-  /// This name is used for parsing and printing
+  /// This name is used for parsing and printing.
   const std::string name;
 };
 
