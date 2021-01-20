@@ -38,11 +38,6 @@ public:
 
   mlir::StringRef getName() const { return name; }
 
-  /// Create and register a dynamic operation for the dialect.
-  /// Return an error if the operation could not be inserted, or if an operation
-  /// with the same name already exists.
-  mlir::FailureOr<DynamicOperation *> createAndRegisterOp(llvm::StringRef name);
-
 private:
   /// Name of the dialect.
   /// This name is used for parsing and printing
