@@ -23,14 +23,3 @@ DynamicDialect::DynamicDialect(llvm::StringRef name, DynamicContext *ctx, TypeID
   : DynamicObject{ctx, id},
     Dialect(name, ctx->getMLIRCtx(), id), name{name} {
 }
-
-FailureOr<DynamicOperation *>
-DynamicDialect::createAndRegisterOp(llvm::StringRef name) {
-  auto op = std::make_unique<DynamicOperation>(DynamicOperation(name, this));
-  auto p = ops.try_emplace(name, std::move(op));
-
-  if (!p.second)
-    return failure();
-
-  return p.first->second.get();
-}
