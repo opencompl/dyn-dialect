@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "Dyn/DynamicDialect.h"
-#include "Dyn/DynamicOperation.h"
 #include "Dyn/DynamicContext.h"
+#include "Dyn/DynamicOperation.h"
 #include "mlir/IR/Dialect.h"
 
 using namespace mlir;
@@ -19,7 +19,7 @@ DynamicDialect::DynamicDialect(llvm::StringRef name, DynamicContext *ctx)
       Dialect(name, ctx->getMLIRCtx(), DynamicObject::getTypeID()), name{name} {
 }
 
-DynamicDialect::DynamicDialect(llvm::StringRef name, DynamicContext *ctx, TypeID id)
-  : DynamicObject{ctx, id},
-    Dialect(name, ctx->getMLIRCtx(), id), name{name} {
+DynamicDialect::DynamicDialect(llvm::StringRef name, DynamicContext *ctx,
+                               TypeID id)
+    : DynamicObject{ctx, id}, Dialect(name, ctx->getMLIRCtx(), id), name{name} {
 }
