@@ -13,7 +13,7 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Support/FileUtilities.h"
-#include "mlir/Support/MlirOptMain.h"
+#include "MlirOptMain.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/SourceMgr.h"
@@ -45,5 +45,5 @@ int main(int argc, char **argv) {
   registry.insert<StandardOpsDialect>();
 
   return failed(
-      mlir::MlirOptMain(argc, argv, "Dyn optimizer driver\n", registry));
+      mlir::MlirOptMain(argc, argv, "Dyn optimizer driver\n", ctx));
 }
