@@ -33,10 +33,10 @@ int main(int argc, char **argv) {
   MLIRContext ctx;
   DynamicContext dynCtx(&ctx);
 
-  // Register a dynamic dialect
+  // Register a dynamic dialect.
   auto fooDialectRes = dynCtx.createAndRegisterDialect("dyn");
 
-  // Check that the dialect is defined
+  // Check that the dialect is defined.
   if (failed(fooDialectRes)) {
     return failed(fooDialectRes);
   }
