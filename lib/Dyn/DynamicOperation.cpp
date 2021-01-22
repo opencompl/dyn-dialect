@@ -8,6 +8,7 @@
 
 #include "Dyn/DynamicOperation.h"
 #include "Dyn/DynamicDialect.h"
+#include "mlir/IR/OpImplementation.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -16,5 +17,10 @@
 using namespace mlir;
 using namespace dyn;
 
+void DynamicOperation::printOperation(Operation *op, OpAsmPrinter &printer) {
+  printer.printGenericOp(op);
+}
+
 DynamicOperation::DynamicOperation(StringRef name, DynamicDialect *dialect)
-    : name((dialect->getName() + "." + name).str()), dialect{dialect} {}
+    : DynamicObject(dialect->getDynamicContext()),
+    name((dialect->getName() + "." + name).str()), dialect{dialect} {}
