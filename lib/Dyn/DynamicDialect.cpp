@@ -17,8 +17,7 @@ using namespace dyn;
 
 DynamicDialect::DynamicDialect(llvm::StringRef name, DynamicContext *ctx)
     : DynamicObject{ctx},
-      Dialect(name, ctx->getMLIRCtx(), DynamicObject::getTypeID()), name{name} {
-}
+      Dialect(name, ctx->getMLIRCtx(), getRuntimeTypeID()), name{name} {}
 
 DynamicDialect::DynamicDialect(llvm::StringRef name, DynamicContext *ctx,
                                TypeID id)
@@ -27,7 +26,7 @@ DynamicDialect::DynamicDialect(llvm::StringRef name, DynamicContext *ctx,
 
 void DynamicDialect::addOperation(DynamicOperation *absOp) {
   AbstractOperation::insert(
-      absOp->getName(), *this, {}, absOp->getTypeID(),
+      absOp->getName(), *this, {}, absOp->getRuntimeTypeID(),
       DynamicOperation::parseOperation, DynamicOperation::printOperation,
       DynamicOperation::verifyInvariants, DynamicOperation::foldHook,
       DynamicOperation::getCanonicalizationPatterns,

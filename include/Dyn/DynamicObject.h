@@ -28,7 +28,7 @@ public:
   explicit DynamicObject(DynamicContext *ctx, TypeID id);
 
   inline DynamicContext *getDynamicContext() const { return ctx; }
-  inline TypeID getTypeID() { return id; }
+  inline TypeID getRuntimeTypeID() { return id; }
 
 private:
   DynamicContext *ctx;
