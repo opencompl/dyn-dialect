@@ -41,6 +41,12 @@ int main(int argc, char **argv) {
     return failed(fooDialectRes);
   }
 
+  auto* fooDialect = *fooDialectRes;
+
+  // Create and register new dynamic operations.
+  fooDialect->createAndAddOperation("foo");
+  fooDialect->createAndAddOperation("bar");
+
   DialectRegistry &registry = ctx.getDialectRegistry();
   registry.insert<StandardOpsDialect>();
 

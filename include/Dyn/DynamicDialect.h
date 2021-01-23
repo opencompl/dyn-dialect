@@ -11,6 +11,7 @@
 
 #include "Dyn/DynamicObject.h"
 #include "mlir/IR/Dialect.h"
+#include "mlir/IR/OperationSupport.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/DenseMap.h"
@@ -38,6 +39,13 @@ public:
   DynamicDialect(llvm::StringRef name, DynamicContext *ctx, TypeID id);
 
   mlir::StringRef getName() const { return name; }
+
+  /// Add an operation to the dialect
+  void addOperation(DynamicOperation* absOp);
+
+  /// Create and register a new operation to the dialect.
+  /// The name of the operation should not begin by the name of the dialect.
+  void createAndAddOperation(llvm::StringRef name);
 
 private:
   /// Name of the dialect.

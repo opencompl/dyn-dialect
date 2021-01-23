@@ -8,6 +8,7 @@
 
 #include "Dyn/DynamicDialect.h"
 #include "Dyn/DynamicContext.h"
+#include "Dyn/DynamicObject.h"
 #include "Dyn/DynamicOperation.h"
 #include "mlir/IR/Dialect.h"
 
@@ -22,4 +23,18 @@ DynamicDialect::DynamicDialect(llvm::StringRef name, DynamicContext *ctx)
 DynamicDialect::DynamicDialect(llvm::StringRef name, DynamicContext *ctx,
                                TypeID id)
     : DynamicObject{ctx, id}, Dialect(name, ctx->getMLIRCtx(), id), name{name} {
+}
+
+void DynamicDialect::addOperation(DynamicOperation *absOp) {
+  AbstractOperation::insert(
+      absOp->getName(), *this, {}, absOp->getTypeID(),
+      DynamicOperation::parseOperation, DynamicOperation::printOperation,
+      DynamicOperation::verifyInvariants, DynamicOperation::foldHook,
+      DynamicOperation::getCanonicalizationPatterns,
+      detail::InterfaceMap::template get<>(), DynamicOperation::hasTrait);
+}
+
+void DynamicDialect::createAndAddOperation(StringRef name) {
+  DynamicOperation op(name, this);
+  addOperation(&op);
 }
