@@ -83,13 +83,11 @@ static LogicalResult performActions(raw_ostream &os, bool verifyDiagnostics,
 
 /// Parses the memory buffer.  If successfully, run a series of passes against
 /// it and print the result.
-static LogicalResult processBuffer(raw_ostream &os,
-                                   std::unique_ptr<MemoryBuffer> ownedBuffer,
-                                   bool verifyDiagnostics, bool verifyPasses,
-                                   bool allowUnregisteredDialects,
-                                   bool preloadDialectsInContext,
-                                   const PassPipelineCLParser &passPipeline,
-                                   MLIRContext &context) {
+static LogicalResult
+processBuffer(raw_ostream &os, std::unique_ptr<MemoryBuffer> ownedBuffer,
+              bool verifyDiagnostics, bool verifyPasses,
+              bool allowUnregisteredDialects, bool preloadDialectsInContext,
+              const PassPipelineCLParser &passPipeline, MLIRContext &context) {
   // Tell sourceMgr about this buffer, which is what the parser will pick up.
   SourceMgr sourceMgr;
   sourceMgr.AddNewSourceBuffer(std::move(ownedBuffer), SMLoc());
@@ -138,8 +136,7 @@ LogicalResult mlir::MlirOptMain(raw_ostream &outputStream,
         [&](std::unique_ptr<MemoryBuffer> chunkBuffer, raw_ostream &os) {
           return processBuffer(os, std::move(chunkBuffer), verifyDiagnostics,
                                verifyPasses, allowUnregisteredDialects,
-                               preloadDialectsInContext, passPipeline,
-                               context);
+                               preloadDialectsInContext, passPipeline, context);
         },
         outputStream);
 

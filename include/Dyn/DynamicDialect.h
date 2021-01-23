@@ -41,7 +41,7 @@ public:
   mlir::StringRef getName() const { return name; }
 
   /// Add an operation to the dialect
-  void addOperation(DynamicOperation* absOp);
+  void addOperation(DynamicOperation *absOp);
 
   /// Create and register a new operation to the dialect.
   /// The name of the operation should not begin by the name of the dialect.

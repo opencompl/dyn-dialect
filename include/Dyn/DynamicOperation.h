@@ -21,8 +21,8 @@ namespace dyn {
 class DynamicDialect;
 
 /// Each instance of DynamicOperation correspond to a different operation.
-  class DynamicOperation : public mlir::Op<DynamicOperation>,
-                           public DynamicObject {
+class DynamicOperation : public mlir::Op<DynamicOperation>,
+                         public DynamicObject {
 public:
   /// Create a new dynamic operation given the operation name and the defining
   /// dialect.
@@ -31,9 +31,7 @@ public:
 
   /// Get the operation name.
   /// The name should have the format `dialect.name`.
-  StringRef getName() {
-    return name;
-  }
+  StringRef getName() { return name; }
 
   /// Parse a dynamic operation.
   static mlir::ParseResult parseOperation(OpAsmParser &parser,

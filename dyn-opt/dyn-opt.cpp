@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MlirOptMain.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/InitAllDialects.h"
@@ -13,7 +14,6 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Support/FileUtilities.h"
-#include "MlirOptMain.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/SourceMgr.h"
@@ -41,7 +41,7 @@ int main(int argc, char **argv) {
     return failed(fooDialectRes);
   }
 
-  auto* fooDialect = *fooDialectRes;
+  auto *fooDialect = *fooDialectRes;
 
   // Create and register new dynamic operations.
   fooDialect->createAndAddOperation("foo");
@@ -50,6 +50,5 @@ int main(int argc, char **argv) {
   DialectRegistry &registry = ctx.getDialectRegistry();
   registry.insert<StandardOpsDialect>();
 
-  return failed(
-      mlir::MlirOptMain(argc, argv, "Dyn optimizer driver\n", ctx));
+  return failed(mlir::MlirOptMain(argc, argv, "Dyn optimizer driver\n", ctx));
 }
