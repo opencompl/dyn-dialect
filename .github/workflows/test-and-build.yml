@@ -15,6 +15,15 @@ jobs:
     name: Build LLVM
     runs-on: ubuntu-latest
     steps:
+      # Get Python for MLIR Python bindings
+      - name: Set up Python 3.x
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.x'
+      - name: Install python deps
+        run:  |
+          python -m pip install --upgrade pip
+          pip install numpy pybind11 
       # Clone the dyn-dialect repo and its submodules. Do shallow clone to save clone
       # time.
       - name: Get Dyn-dialect
@@ -97,6 +106,13 @@ jobs:
       # Build the Dyn-dialect test target in debug mode to build and test.
       - name: Build and Test Dyn-dialect
         run: |
-          utils/setup.sh && utils/build.sh 
+          utils/setup.sh && utils/build.sh
+
+      # --------
+      # test MLIR.
+      # --------
+      - name: Test MLIR
+        run: |
+          utils/check-mlir.sh
 
   # --- end of buildjob.

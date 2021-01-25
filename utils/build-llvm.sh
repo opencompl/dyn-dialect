@@ -31,8 +31,7 @@ cmake ../llvm \
   -DCMAKE_CXX_COMPILER=clang++ \
   -DLLVM_ENABLE_LLD=ON \
   -DCMAKE_BUILD_TYPE=Release \
-  -DLLVM_ENABLE_ASSERTIONS=ON
+  -DLLVM_ENABLE_ASSERTIONS=ON \
+  -DLLVM_MLIR_BINDINGS_PYTHON_ENABLED=ON
 
 cmake --build . --target install -- -j$(nproc)
-
-# TODO: enable bindings.
