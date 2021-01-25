@@ -9,8 +9,10 @@
 #ifndef DYN_DYNAMICOPERATION_H
 #define DYN_DYNAMICOPERATION_H
 
+#include "Dyn/DynamicObject.h"
 #include "DynamicDialect.h"
 #include "mlir/Support/LLVM.h"
+#include <mlir/IR/OpDefinition.h>
 
 namespace mlir {
 namespace dyn {
@@ -19,16 +21,45 @@ namespace dyn {
 class DynamicDialect;
 
 /// Each instance of DynamicOperation correspond to a different operation.
-class DynamicOperation {
+class DynamicOperation : public mlir::Op<DynamicOperation>,
+                         public DynamicObject {
 public:
   /// Create a new dynamic operation given the operation name and the defining
   /// dialect.
   /// The operation name should be `operation` and not `dialect.operation`.
   DynamicOperation(mlir::StringRef name, DynamicDialect *dialect);
 
+  /// Get the operation name.
+  /// The name should have the format `dialect.name`.
+  StringRef getName() { return name; }
+
+  /// Parse a dynamic operation.
+  static mlir::ParseResult parseOperation(OpAsmParser &parser,
+                                          OperationState &result) {
+    return success();
+  }
+
+  /// Print a dynamic operation.
+  static void printOperation(Operation *op, OpAsmPrinter &printer);
+
+  /// Verify invariants of a dynamic operation.
+  static mlir::LogicalResult verifyInvariants(Operation *op) {
+    return success();
+  }
+
+  /// Fold hook of generic operations.
+  static mlir::LogicalResult
+  foldHook(mlir::Operation *op, llvm::ArrayRef<mlir::Attribute> operands,
+           llvm::SmallVectorImpl<mlir::OpFoldResult> &results) {
+    return failure();
+  }
+
+  /// Check if the operation has a specific trait given the trait TypeID.
+  static bool hasTrait(TypeID traitId) { return false; }
+
 private:
   /// Full name of the operation: `dialect.operation`.
-  std::string name;
+  const std::string name;
 
   /// Pointer to the dialect defining the operation.
   DynamicDialect *dialect;
