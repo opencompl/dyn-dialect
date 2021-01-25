@@ -23,4 +23,4 @@ void DynamicOperation::printOperation(Operation *op, OpAsmPrinter &printer) {
 
 DynamicOperation::DynamicOperation(StringRef name, DynamicDialect *dialect)
     : DynamicObject(dialect->getDynamicContext()),
-      name((dialect->getName() + "." + name).str()), dialect{dialect} {}
+      name((dialect->getName() + "." + name).str()), dialect(dialect) {}
