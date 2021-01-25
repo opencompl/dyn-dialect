@@ -1,3 +1,4 @@
+add_subdirectory(CAPI)
 add_mlir_dialect_library(MLIRDyn
         DynamicObject.cpp
         DynamicOperation.cpp

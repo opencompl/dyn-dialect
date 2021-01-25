@@ -1,3 +1,14 @@
+add_llvm_executable(mlir-dyn-capi-pass-test
+  ${CMAKE_CURRENT_SOURCE_DIR}/Dyn/pass.c
+)
+llvm_update_compile_flags(mlir-dyn-capi-pass-test)
+
+target_link_libraries(mlir-dyn-capi-pass-test
+  PRIVATE
+  MLIRDynCAPI
+  MLIRPublicAPI
+)
+
 configure_lit_site_cfg(
         ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in
         ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg.py
@@ -9,6 +20,7 @@ set(DYN_TEST_DEPENDS
         FileCheck count not
         dyn-opt
         dyn-translate
+        mlir-dyn-capi-pass-test
         )
 
 add_lit_testsuite(check-dyn "Running the dyn regression tests"
