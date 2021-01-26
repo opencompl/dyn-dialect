@@ -1,0 +1,11 @@
+add_mlir_library(MLIRDynCAPI
+  SHARED
+  
+  IR.cpp
+  ADDITIONAL_HEADER_DIRS
+  ${PROJECT_SOURCE_DIR}/include/Dyn/CAPI
+
+  LINK_LIBS PRIVATE
+  MLIRPublicAPI
+  MLIRDyn
+)
