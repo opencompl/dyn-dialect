@@ -21,6 +21,32 @@ void DynamicOperation::printOperation(Operation *op, OpAsmPrinter &printer) {
   printer.printGenericOp(op);
 }
 
-DynamicOperation::DynamicOperation(StringRef name, DynamicDialect *dialect)
+mlir::LogicalResult DynamicOperation::verifyInvariants(Operation *op) {
+  auto typeID = op->getAbstractOperation()->typeID;
+
+  /// This is necessary, since it is not possible to know if a dialect is
+  /// dynamic or not without the DynamicContext.
+  /// However, this reinterpret_cast is safe, since a DynamicOperation can
+  /// only be created with a DynamicDialect.
+  auto *dialect = reinterpret_cast<DynamicDialect *>(op->getDialect());
+  auto dynOp = dialect->lookupOp(typeID);
+  assert(!failed(dynOp));
+
+  /// Call each custom verifier provided to the operation.
+  for (auto verifier : (*dynOp)->verifiers) {
+    auto res = verifier(op);
+    if (failed(res)) {
+      return res;
+    }
+  }
+
+  return success();
+}
+
+DynamicOperation::DynamicOperation(
+    StringRef name, DynamicDialect *dialect,
+    std::vector<std::function<mlir::LogicalResult(mlir::Operation *op)>>
+        verifiers)
     : DynamicObject(dialect->getDynamicContext()),
-      name((dialect->getName() + "." + name).str()), dialect(dialect) {}
+      name((dialect->getName() + "." + name).str()), dialect(dialect),
+      verifiers(std::move(verifiers)) {}
