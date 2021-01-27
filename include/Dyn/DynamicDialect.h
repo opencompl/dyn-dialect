@@ -44,7 +44,9 @@ public:
 
   /// Create and register a new operation to the dialect.
   /// The name of the operation should not begin with the name of the dialect.
-  FailureOr<DynamicOperation *> createAndAddOperation(llvm::StringRef name);
+  FailureOr<DynamicOperation *> createAndAddOperation(
+      llvm::StringRef name,
+      std::vector<std::function<LogicalResult(Operation *)>> verifiers = {});
 
   /// Create and add a new type to the dialect.
   /// The name of the type should not begin with the name of the dialect.

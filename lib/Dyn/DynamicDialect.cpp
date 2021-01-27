@@ -48,13 +48,17 @@ DynamicDialect::createAndAddType(StringRef name) {
   return type;
 }
 
-FailureOr<DynamicOperation *>
-DynamicDialect::createAndAddOperation(StringRef name) {
-  auto registered = dynOps.try_emplace(name, new DynamicOperation(name, this));
+FailureOr<DynamicOperation *> DynamicDialect::createAndAddOperation(
+    StringRef name,
+    std::vector<std::function<LogicalResult(Operation *)>> verifiers) {
+  auto registered = dynOps.try_emplace(
+      name, new DynamicOperation(name, this, std::move(verifiers)));
   if (!registered.second)
     return failure();
 
   DynamicOperation *absOp = registered.first->second.get();
+  auto typeID = absOp->getRuntimeTypeID();
+  typeIDToDynOps.insert({typeID, absOp});
 
   AbstractOperation::insert(
       absOp->getName(), *this, {}, absOp->getRuntimeTypeID(),

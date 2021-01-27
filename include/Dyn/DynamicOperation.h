@@ -12,6 +12,7 @@
 #include "Dyn/DynamicObject.h"
 #include "DynamicDialect.h"
 #include "mlir/Support/LLVM.h"
+#include "mlir/Support/LogicalResult.h"
 #include <mlir/IR/OpDefinition.h>
 
 namespace mlir {
@@ -27,7 +28,10 @@ public:
   /// Create a new dynamic operation given the operation name and the defining
   /// dialect.
   /// The operation name should be `operation` and not `dialect.operation`.
-  DynamicOperation(mlir::StringRef name, DynamicDialect *dialect);
+  DynamicOperation(
+      mlir::StringRef name, DynamicDialect *dialect,
+      std::vector<std::function<mlir::LogicalResult(mlir::Operation *op)>>
+          verifiers = {});
 
   /// Get the operation name.
   /// The name should have the format `dialect.name`.
@@ -43,9 +47,7 @@ public:
   static void printOperation(Operation *op, OpAsmPrinter &printer);
 
   /// Verify invariants of a dynamic operation.
-  static mlir::LogicalResult verifyInvariants(Operation *op) {
-    return success();
-  }
+  static mlir::LogicalResult verifyInvariants(Operation *op);
 
   /// Fold hook of generic operations.
   static mlir::LogicalResult
@@ -63,6 +65,10 @@ private:
 
   /// Pointer to the dialect defining the operation.
   DynamicDialect *dialect;
+
+  /// Custom verifiers for the operation.
+  std::vector<std::function<mlir::LogicalResult(mlir::Operation *op)>>
+      verifiers;
 };
 
 } // namespace dyn
