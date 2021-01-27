@@ -22,9 +22,77 @@
 #include "Dyn/DynamicContext.h"
 #include "Dyn/DynamicDialect.h"
 #include "Dyn/DynamicOperation.h"
+#include "mlir/Support/LogicalResult.h"
 
 using namespace mlir;
 using namespace dyn;
+
+/// Register a dialect and returns it.
+/// Assert in case of error.
+DynamicDialect *registerDialect(DynamicContext &ctx, StringRef name) {
+  auto dynCtxRes = ctx.createAndRegisterDialect(name);
+  if (failed(dynCtxRes)) {
+    llvm::errs() << "Failed while registering dialect " << name << "\n";
+    abort();
+  }
+  return *dynCtxRes;
+}
+
+/// Register a type in a dialect.
+/// Assert in case of error.
+void registerType(DynamicDialect *dialect, StringRef name) {
+  auto registerFailed = failed(dialect->createAndAddType(name));
+  if (registerFailed) {
+    llvm::errs() << "Failed while registering type " << name << " in dialect "
+                 << dialect->getName() << "\n";
+    abort();
+  }
+}
+
+/// Register an operation in a dialect.
+/// Assert in case of error.
+void registerOperation(
+    DynamicDialect *dialect, StringRef name,
+    std::vector<std::function<LogicalResult(Operation *)>> verifiers = {}) {
+  auto registerFailed = failed(dialect->createAndAddOperation(name, verifiers));
+  if (registerFailed) {
+    llvm::errs() << "Failed while registering operation " << name
+                 << " in dialect " << dialect->getName() << "\n";
+    abort();
+  }
+}
+
+/// Register the dyn dialect, used in tests.
+void registerDyn(DynamicContext &ctx) {
+  auto *dialect = registerDialect(ctx, "dyn");
+  registerType(dialect, "dyntype");
+  registerOperation(dialect, "foo");
+  registerOperation(dialect, "bar");
+}
+
+template <int N> LogicalResult hasNRegions(Operation *op) {
+  return success(op->getNumRegions() == N);
+}
+
+template <int N> LogicalResult hasNResults(Operation *op) {
+  return success(op->getNumResults() == N);
+}
+
+template <int N> LogicalResult hasNOperands(Operation *op) {
+  return success(op->getNumOperands() == N);
+}
+
+/// Register the complex example.
+void registerComplex(DynamicContext &ctx) {
+  auto *dialect = registerDialect(ctx, "complex");
+  registerType(dialect, "complex");
+  registerOperation(dialect, "make_complex",
+                    {hasNRegions<0>, hasNResults<1>, hasNOperands<2>});
+  registerOperation(dialect, "mul",
+                    {hasNRegions<0>, hasNResults<1>, hasNOperands<2>});
+  registerOperation(dialect, "norm",
+                    {hasNRegions<0>, hasNResults<1>, hasNOperands<1>});
+}
 
 int main(int argc, char **argv) {
   mlir::registerAllPasses();
@@ -33,23 +101,8 @@ int main(int argc, char **argv) {
   MLIRContext ctx;
   DynamicContext dynCtx(&ctx);
 
-  // Register a dynamic dialect.
-  auto fooDialectRes = dynCtx.createAndRegisterDialect("dyn");
-
-  // Check that the dialect is defined.
-  if (failed(fooDialectRes)) {
-    return failed(fooDialectRes);
-  }
-
-  auto *fooDialect = *fooDialectRes;
-
-  // Create and register new dynamic operations.
-  fooDialect->createAndAddOperation("foo");
-  fooDialect->createAndAddOperation("bar");
-  auto dynType = fooDialect->createAndAddType("dyntype");
-
-  if (failed(dynType))
-    return failed(dynType);
+  registerDyn(dynCtx);
+  registerComplex(dynCtx);
 
   DialectRegistry &registry = ctx.getDialectRegistry();
   registry.insert<StandardOpsDialect>();
