@@ -28,15 +28,6 @@ DynamicDialect::DynamicDialect(llvm::StringRef name, DynamicContext *ctx,
     : DynamicObject{ctx, id},
       Dialect(name, ctx->getMLIRCtx(), id), name{name}, ctx{ctx} {}
 
-void DynamicDialect::addOperation(DynamicOperation *absOp) {
-  AbstractOperation::insert(
-      absOp->getName(), *this, {}, absOp->getRuntimeTypeID(),
-      DynamicOperation::parseOperation, DynamicOperation::printOperation,
-      DynamicOperation::verifyInvariants, DynamicOperation::foldHook,
-      DynamicOperation::getCanonicalizationPatterns,
-      detail::InterfaceMap::template get<>(), DynamicOperation::hasTrait);
-}
-
 FailureOr<DynamicTypeDefinition *>
 DynamicDialect::createAndAddType(StringRef name) {
   /// If a type with same name is already defined, fail.
@@ -57,9 +48,22 @@ DynamicDialect::createAndAddType(StringRef name) {
   return type;
 }
 
-void DynamicDialect::createAndAddOperation(StringRef name) {
-  DynamicOperation op(name, this);
-  addOperation(&op);
+FailureOr<DynamicOperation *>
+DynamicDialect::createAndAddOperation(StringRef name) {
+  auto registered = dynOps.try_emplace(name, new DynamicOperation(name, this));
+  if (!registered.second)
+    return failure();
+
+  DynamicOperation *absOp = registered.first->second.get();
+
+  AbstractOperation::insert(
+      absOp->getName(), *this, {}, absOp->getRuntimeTypeID(),
+      DynamicOperation::parseOperation, DynamicOperation::printOperation,
+      DynamicOperation::verifyInvariants, DynamicOperation::foldHook,
+      DynamicOperation::getCanonicalizationPatterns,
+      detail::InterfaceMap::template get<>(), DynamicOperation::hasTrait);
+
+  return absOp;
 }
 
 Type DynamicDialect::parseType(mlir::DialectAsmParser &parser) const {

@@ -42,12 +42,9 @@ public:
 
   mlir::StringRef getName() const { return name; }
 
-  /// Add an operation to the dialect.
-  void addOperation(DynamicOperation *absOp);
-
   /// Create and register a new operation to the dialect.
   /// The name of the operation should not begin with the name of the dialect.
-  void createAndAddOperation(llvm::StringRef name);
+  FailureOr<DynamicOperation *> createAndAddOperation(llvm::StringRef name);
 
   /// Create and add a new type to the dialect.
   /// The name of the type should not begin with the name of the dialect.
@@ -63,17 +60,27 @@ public:
     return it == dynTypes.end() ? nullptr : it->second.get();
   }
 
+  DynamicOperation *lookupOp(StringRef name) const {
+    auto it = dynOps.find(name);
+    return it == dynOps.end() ? nullptr : it->second.get();
+  }
+
 private:
   /// Name of the dialect.
   /// This name is used for parsing and printing.
   const std::string name;
 
   /// Dynamic types registered in this dialect.
+  /// Their name is stored with the format `type` and not `dialect.type`.
   llvm::StringMap<std::unique_ptr<DynamicTypeDefinition>> dynTypes{};
 
   /// This structure allows to get in O(1) a dynamic type given its typeID.
   /// This is useful for accessing the printer efficiently for instance.
   llvm::DenseMap<TypeID, DynamicTypeDefinition *> typeIDToDynTypes{};
+
+  /// Dynamic operations registered in this dialect.
+  /// Their name is stored with the format `op` and not `dialect.op`.
+  llvm::StringMap<std::unique_ptr<DynamicOperation>> dynOps{};
 
   /// Context in which the dialect is registered.
   DynamicContext *ctx;
