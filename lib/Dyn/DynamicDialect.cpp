@@ -79,7 +79,7 @@ Type DynamicDialect::parseType(mlir::DialectAsmParser &parser) const {
 }
 
 void DynamicDialect::printType(Type type, DialectAsmPrinter &printer) const {
-  auto it = typeIDToDynTypes.find(type.getTypeID());
-  assert(it != typeIDToDynTypes.end());
-  printer << it->second->name;
+  auto dynType = lookupType(type.getTypeID());
+  assert(!failed(dynType));
+  printer << (*dynType)->name;
 }

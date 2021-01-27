@@ -63,12 +63,26 @@ public:
     return it->second.get();
   }
 
+  FailureOr<DynamicTypeDefinition *> lookupType(TypeID id) const {
+    auto it = typeIDToDynTypes.find(id);
+    if (it == typeIDToDynTypes.end())
+      return failure();
+    return &*it->second;
+  }
+
   /// The pointer is guaranteed to be non-null.
   FailureOr<DynamicOperation *> lookupOp(StringRef name) const {
     auto it = dynOps.find(name);
     if (it == dynOps.end())
       return failure();
     return it->second.get();
+  }
+
+  FailureOr<DynamicOperation *> lookupOp(TypeID id) const {
+    auto it = typeIDToDynOps.find(id);
+    if (it == typeIDToDynOps.end())
+      return failure();
+    return &*it->second;
   }
 
 private:
@@ -87,6 +101,10 @@ private:
   /// Dynamic operations registered in this dialect.
   /// Their name is stored with the format `op` and not `dialect.op`.
   llvm::StringMap<std::unique_ptr<DynamicOperation>> dynOps{};
+
+  /// This structure allows to get in O(1) a dynamic type given its typeID.
+  /// This is useful for accessing the verifier efficiently for instance.
+  llvm::DenseMap<TypeID, DynamicOperation *> typeIDToDynOps{};
 
   /// Context in which the dialect is registered.
   DynamicContext *ctx;
