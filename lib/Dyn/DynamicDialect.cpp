@@ -71,11 +71,11 @@ Type DynamicDialect::parseType(mlir::DialectAsmParser &parser) const {
   if (parser.parseKeyword(&name))
     return {};
 
-  auto *type = lookupType(name);
-  if (!type)
+  auto type = lookupType(name);
+  if (failed(type))
     return {};
 
-  return DynamicType::get(ctx->getMLIRCtx(), type);
+  return DynamicType::get(ctx->getMLIRCtx(), *type);
 }
 
 void DynamicDialect::printType(Type type, DialectAsmPrinter &printer) const {

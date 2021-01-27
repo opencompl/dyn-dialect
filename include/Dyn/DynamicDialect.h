@@ -55,14 +55,20 @@ public:
   void printType(mlir::Type type,
                  mlir::DialectAsmPrinter &printer) const override;
 
-  DynamicTypeDefinition *lookupType(StringRef name) const {
+  /// The pointer is guaranteed to be non-null.
+  FailureOr<DynamicTypeDefinition *> lookupType(StringRef name) const {
     auto it = dynTypes.find(name);
-    return it == dynTypes.end() ? nullptr : it->second.get();
+    if (it == dynTypes.end())
+      return failure();
+    return it->second.get();
   }
 
-  DynamicOperation *lookupOp(StringRef name) const {
+  /// The pointer is guaranteed to be non-null.
+  FailureOr<DynamicOperation *> lookupOp(StringRef name) const {
     auto it = dynOps.find(name);
-    return it == dynOps.end() ? nullptr : it->second.get();
+    if (it == dynOps.end())
+      return failure();
+    return it->second.get();
   }
 
 private:
