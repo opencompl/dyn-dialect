@@ -10,6 +10,7 @@
 #define DYN_DYNAMICDIALECT_H
 
 #include "Dyn/DynamicObject.h"
+#include "Dyn/DynamicOperation.h"
 #include "Dyn/DynamicType.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OperationSupport.h"
@@ -22,9 +23,6 @@
 
 namespace mlir {
 namespace dyn {
-
-/// Forward declaration
-class DynamicOperation;
 
 /// Forward declaration
 class DynamicContext;
