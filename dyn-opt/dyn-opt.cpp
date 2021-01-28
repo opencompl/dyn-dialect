@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Dyn/DynamicType.h"
 #include "MlirOptMain.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/MLIRContext.h"
@@ -40,13 +41,14 @@ DynamicDialect *registerDialect(DynamicContext &ctx, StringRef name) {
 
 /// Register a type in a dialect.
 /// Assert in case of error.
-void registerType(DynamicDialect *dialect, StringRef name) {
-  auto registerFailed = failed(dialect->createAndAddType(name));
-  if (registerFailed) {
+DynamicTypeDefinition *registerType(DynamicDialect *dialect, StringRef name) {
+  auto typeRes = dialect->createAndAddType(name);
+  if (failed(typeRes)) {
     llvm::errs() << "Failed while registering type " << name << " in dialect "
                  << dialect->getName() << "\n";
     abort();
   }
+  return *typeRes;
 }
 
 /// Register an operation in a dialect.
@@ -71,27 +73,71 @@ void registerDyn(DynamicContext &ctx) {
 }
 
 template <int N> LogicalResult hasNRegions(Operation *op) {
-  return success(op->getNumRegions() == N);
+  if (op->getNumRegions() == N)
+    return success();
+  return op->emitOpError("should have exactly " + std::to_string(N) +
+                         " regions");
 }
 
 template <int N> LogicalResult hasNResults(Operation *op) {
-  return success(op->getNumResults() == N);
+  if (op->getNumResults() == N)
+    return success();
+  return op->emitOpError("should have exactly " + std::to_string(N) +
+                         " results");
 }
 
 template <int N> LogicalResult hasNOperands(Operation *op) {
-  return success(op->getNumOperands() == N);
+  if (op->getNumOperands() == N)
+    return success();
+  return op->emitOpError("should have exactly " + std::to_string(N) +
+                         " operands");
+}
+
+LogicalResult operandsHaveType(DynamicTypeDefinition *type, Operation *op) {
+  for (auto operand : op->getOperands())
+    if (!DynamicType::isa(operand.getType(), type))
+      return op->emitOpError("should have all operands of type " + type->name);
+  return success();
+}
+
+LogicalResult resultsHaveType(DynamicTypeDefinition *type, Operation *op) {
+  for (auto operand : op->getResults())
+    if (!DynamicType::isa(operand.getType(), type))
+      return op->emitOpError("should have all results of type " + type->name);
+  return success();
 }
 
 /// Register the complex example.
 void registerComplex(DynamicContext &ctx) {
   auto *dialect = registerDialect(ctx, "complex");
-  registerType(dialect, "complex");
+  auto *realType = registerType(dialect, "real");
+  auto *complexType = registerType(dialect, "complex");
+
+  auto operandsAreReal = [=](Operation *op) {
+    return operandsHaveType(realType, op);
+  };
+  auto operandsAreComplex = [=](Operation *op) {
+    return operandsHaveType(complexType, op);
+  };
+  auto resultsAreReal = [=](Operation *op) {
+    return resultsHaveType(realType, op);
+  };
+  auto resultsAreComplex = [=](Operation *op) {
+    return resultsHaveType(complexType, op);
+  };
+
   registerOperation(dialect, "make_complex",
-                    {hasNRegions<0>, hasNResults<1>, hasNOperands<2>});
+                    {hasNRegions<0>, hasNResults<1>, hasNOperands<2>,
+                     operandsAreReal, resultsAreComplex});
+  registerOperation(dialect, "components",
+                    {hasNRegions<0>, hasNResults<2>, hasNOperands<1>,
+                     operandsAreComplex, resultsAreReal});
   registerOperation(dialect, "mul",
-                    {hasNRegions<0>, hasNResults<1>, hasNOperands<2>});
+                    {hasNRegions<0>, hasNResults<1>, hasNOperands<2>,
+                     operandsAreComplex, resultsAreComplex});
   registerOperation(dialect, "norm",
-                    {hasNRegions<0>, hasNResults<1>, hasNOperands<1>});
+                    {hasNRegions<0>, hasNResults<1>, hasNOperands<1>,
+                     operandsAreComplex, resultsAreReal});
 }
 
 int main(int argc, char **argv) {

@@ -71,6 +71,11 @@ public:
 
   /// Get the type definition of this type.
   DynamicTypeDefinition *getTypeDef();
+
+  /// Check if a type is a specific dynamic type.
+  static bool isa(Type type, DynamicTypeDefinition *typeDef) {
+    return type.getTypeID() == typeDef->getRuntimeTypeID();
+  }
 };
 
 } // namespace dyn
