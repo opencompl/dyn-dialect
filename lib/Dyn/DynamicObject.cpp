@@ -5,6 +5,10 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// Associate TypeID given at runtime to class instances.
+//
+//===----------------------------------------------------------------------===//
 
 #include "Dyn/DynamicObject.h"
 #include "Dyn/DynamicContext.h"

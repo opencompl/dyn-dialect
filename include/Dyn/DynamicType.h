@@ -5,6 +5,10 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// Represent types that can be defined at runtime.
+//
+//===----------------------------------------------------------------------===//
 
 #ifndef DYN_DYNAMICTYPE_H
 #define DYN_DYNAMICTYPE_H

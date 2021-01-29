@@ -5,6 +5,10 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// Allow the creation of new unique TypeID at runtime.
+//
+//===----------------------------------------------------------------------===//
 
 #ifndef DYN_TYPEIDALLOCATOR_H
 #define DYN_TYPEIDALLOCATOR_H

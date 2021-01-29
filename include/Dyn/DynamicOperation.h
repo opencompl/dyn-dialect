@@ -5,6 +5,10 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// Represent operations that can be defined at runtime.
+//
+//===----------------------------------------------------------------------===//
 
 #ifndef DYN_DYNAMICOPERATION_H
 #define DYN_DYNAMICOPERATION_H
@@ -18,7 +22,7 @@
 namespace mlir {
 namespace dyn {
 
-/// Forward declaration
+/// Forward declaration.
 class DynamicDialect;
 
 /// Each instance of DynamicOperation correspond to a different operation.
