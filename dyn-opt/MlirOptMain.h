@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Main entry function for mlir-opt for when built as standalone binary.
+// This file is copied from llvm, and was only modified to use MLIRContext
+// instead of DialectRegistry.
 //
 //===----------------------------------------------------------------------===//
 
