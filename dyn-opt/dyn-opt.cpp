@@ -101,8 +101,8 @@ LogicalResult operandsHaveType(DynamicTypeDefinition *type, Operation *op) {
 }
 
 LogicalResult resultsHaveType(DynamicTypeDefinition *type, Operation *op) {
-  for (auto operand : op->getResults())
-    if (!DynamicType::isa(operand.getType(), type))
+  for (auto result : op->getResults())
+    if (!DynamicType::isa(result.getType(), type))
       return op->emitOpError("should have all results of type " + type->name);
   return success();
 }
