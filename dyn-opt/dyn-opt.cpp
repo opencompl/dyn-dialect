@@ -39,7 +39,7 @@ DynamicDialect *registerDialect(DynamicContext &ctx, StringRef name) {
   return *dynCtxRes;
 }
 
-/// Register a type in a dialect.
+/// Register a type in a dialect, and returns the type definition.
 /// Assert in case of error.
 DynamicTypeDefinition *registerType(DynamicDialect *dialect, StringRef name) {
   auto typeRes = dialect->createAndAddType(name);
@@ -72,6 +72,7 @@ void registerDyn(DynamicContext &ctx) {
   registerOperation(dialect, "bar");
 }
 
+/// Check that an op has exactly N regions.
 template <int N> LogicalResult hasNRegions(Operation *op) {
   if (op->getNumRegions() == N)
     return success();
@@ -79,6 +80,7 @@ template <int N> LogicalResult hasNRegions(Operation *op) {
                          " regions");
 }
 
+/// Check that an op has exactly N results.
 template <int N> LogicalResult hasNResults(Operation *op) {
   if (op->getNumResults() == N)
     return success();
@@ -86,6 +88,7 @@ template <int N> LogicalResult hasNResults(Operation *op) {
                          " results");
 }
 
+/// Check that an op has exactly N operands.
 template <int N> LogicalResult hasNOperands(Operation *op) {
   if (op->getNumOperands() == N)
     return success();
@@ -93,6 +96,7 @@ template <int N> LogicalResult hasNOperands(Operation *op) {
                          " operands");
 }
 
+/// Check that an op has operands of a specific dynamic type.
 LogicalResult operandsHaveType(DynamicTypeDefinition *type, Operation *op) {
   for (auto operand : op->getOperands())
     if (!DynamicType::isa(operand.getType(), type))
@@ -100,6 +104,7 @@ LogicalResult operandsHaveType(DynamicTypeDefinition *type, Operation *op) {
   return success();
 }
 
+/// Check that an op has results of a specific dynamic type.
 LogicalResult resultsHaveType(DynamicTypeDefinition *type, Operation *op) {
   for (auto result : op->getResults())
     if (!DynamicType::isa(result.getType(), type))
@@ -147,9 +152,12 @@ int main(int argc, char **argv) {
   MLIRContext ctx;
   DynamicContext dynCtx(&ctx);
 
+  // Register dynamic dialects with MLIRContext.
+  // TODO: move the registration to DialectRegistry once it's done.
   registerDyn(dynCtx);
   registerComplex(dynCtx);
 
+  // Register the standard dialect using DialectRegistry.
   DialectRegistry &registry = ctx.getDialectRegistry();
   registry.insert<StandardOpsDialect>();
 
