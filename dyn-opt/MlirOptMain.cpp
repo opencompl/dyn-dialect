@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This is a utility that runs an optimization pass and prints the result back
-// out. It is designed to support unit testing.
+// This file is copied from llvm, and was only modified to use MLIRContext
+// instead of DialectRegistry.
 //
 //===----------------------------------------------------------------------===//
 
