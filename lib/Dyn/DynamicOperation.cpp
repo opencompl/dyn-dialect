@@ -33,14 +33,9 @@ mlir::LogicalResult DynamicOperation::verifyInvariants(Operation *op) {
   assert(!failed(dynOp));
 
   /// Call each custom verifier provided to the operation.
-  for (auto verifier : (*dynOp)->verifiers) {
-    auto res = verifier(op);
-    if (failed(res)) {
-      return res;
-    }
-  }
-
-  return success();
+  return success(llvm::all_of((*dynOp)->verifiers, [op](auto verifier) {
+    return succeeded(verifier(op));
+  }));
 }
 
 DynamicOperation::DynamicOperation(
