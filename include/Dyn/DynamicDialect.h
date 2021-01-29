@@ -5,6 +5,10 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// Allows the creation of new dialects with runtime information.
+//
+//===----------------------------------------------------------------------===//
 
 #ifndef DYN_DYNAMICDIALECT_H
 #define DYN_DYNAMICDIALECT_H
@@ -56,6 +60,7 @@ public:
                  mlir::DialectAsmPrinter &printer) const override;
 
   /// The pointer is guaranteed to be non-null.
+  /// The name format should be 'type' and not 'dialect.type'.
   FailureOr<DynamicTypeDefinition *> lookupType(StringRef name) const {
     auto it = dynTypes.find(name);
     if (it == dynTypes.end())
@@ -63,6 +68,7 @@ public:
     return it->second.get();
   }
 
+  /// The pointer is guaranteed to be non-null.
   FailureOr<DynamicTypeDefinition *> lookupType(TypeID id) const {
     auto it = typeIDToDynTypes.find(id);
     if (it == typeIDToDynTypes.end())
@@ -71,6 +77,7 @@ public:
   }
 
   /// The pointer is guaranteed to be non-null.
+  /// The name format should be 'dialect.operation'.
   FailureOr<DynamicOperation *> lookupOp(StringRef name) const {
     auto it = dynOps.find(name);
     if (it == dynOps.end())
@@ -78,6 +85,7 @@ public:
     return it->second.get();
   }
 
+  /// The pointer is guaranteed to be non-null.
   FailureOr<DynamicOperation *> lookupOp(TypeID id) const {
     auto it = typeIDToDynOps.find(id);
     if (it == typeIDToDynOps.end())

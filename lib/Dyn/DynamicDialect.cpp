@@ -5,6 +5,10 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// Allows the creation of new dialects with runtime information.
+//
+//===----------------------------------------------------------------------===//
 
 #include "Dyn/DynamicDialect.h"
 #include "Dyn/DynamicContext.h"

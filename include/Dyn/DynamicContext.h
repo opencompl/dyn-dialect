@@ -5,6 +5,10 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// Manages the creation of dynamic MLIR objects.
+//
+//===----------------------------------------------------------------------===//
 
 #ifndef DYN_DYNAMICCONTEXT_H
 #define DYN_DYNAMICCONTEXT_H

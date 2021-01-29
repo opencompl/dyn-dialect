@@ -5,6 +5,10 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// Manages the creation of dynamic MLIR objects.
+//
+//===----------------------------------------------------------------------===//
 
 #include "Dyn/DynamicContext.h"
 #include "Dyn/DynamicDialect.h"

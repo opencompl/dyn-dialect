@@ -5,6 +5,10 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// Represent operations that can be defined at runtime.
+//
+//===----------------------------------------------------------------------===//
 
 #include "Dyn/DynamicOperation.h"
 #include "Dyn/DynamicDialect.h"
