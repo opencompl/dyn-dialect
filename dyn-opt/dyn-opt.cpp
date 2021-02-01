@@ -6,6 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Dyn/Dialect/IRDL/IR/IRDL.h"
+#include "Dyn/DynamicContext.h"
+#include "Dyn/DynamicDialect.h"
+#include "Dyn/DynamicOperation.h"
 #include "Dyn/DynamicType.h"
 #include "MlirOptMain.h"
 #include "mlir/IR/Dialect.h"
@@ -15,15 +19,11 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Support/FileUtilities.h"
+#include "mlir/Support/LogicalResult.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/ToolOutputFile.h"
-
-#include "Dyn/DynamicContext.h"
-#include "Dyn/DynamicDialect.h"
-#include "Dyn/DynamicOperation.h"
-#include "mlir/Support/LogicalResult.h"
 
 using namespace mlir;
 using namespace dyn;
@@ -160,6 +160,7 @@ int main(int argc, char **argv) {
   // Register the standard dialect using DialectRegistry.
   DialectRegistry &registry = ctx.getDialectRegistry();
   registry.insert<StandardOpsDialect>();
+  registry.insert<irdl::IRDLDialect>();
 
   return failed(mlir::MlirOptMain(argc, argv, "Dyn optimizer driver\n", ctx));
 }
