@@ -1,4 +1,4 @@
-// RUN: dyn-opt --show-dialects | FileCheck %s
+// RUN: dyn-opt --irdl-file=%S/cmath.irdl --show-dialects | FileCheck %s
 // CHECK: Available Dialects:
-// CHECK: dyn
+// CHECK: cmath
 // CHECK: std

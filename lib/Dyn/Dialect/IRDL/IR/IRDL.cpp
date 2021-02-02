@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Dyn/Dialect/IRDL/IR/IRDL.h"
+#include "mlir/IR/Builders.h"
 #include "mlir/IR/OpImplementation.h"
 
 using namespace mlir;

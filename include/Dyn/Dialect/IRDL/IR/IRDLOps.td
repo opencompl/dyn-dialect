@@ -38,15 +38,15 @@ class IRDL_Op<string mnemonic, list<OpTrait> traits = []>
 // IRDL Dialect definition
 //===----------------------------------------------------------------------===//
 
-def IRDL_DialectOp : IRDL_Op<"dialect", [IsolatedFromAbove, Symbol, SingleBlockImplicitTerminator<"EndDialectOp">]> {
+def IRDL_DialectOp : IRDL_Op<"dialect", [IsolatedFromAbove, SingleBlockImplicitTerminator<"EndDialectOp">]> {
     let summary = "Define a new dialect";
     let description = [{
       TODO
     }];
 
-    let arguments = (ins OptionalAttr<SymbolNameAttr>:$sym_name);
+    let arguments = (ins StrAttr:$name);
     let regions = (region SizedRegion<1>:$body);
-    let assemblyFormat = "attr-dict $sym_name $body";
+    let assemblyFormat = "attr-dict $body";
 }
 
 def IRDL_EndDialectOp : IRDL_Op<"end_dialect", [Terminator]> {
