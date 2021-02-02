@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Manages the registration of IRDL-defined MLIR objects.
+// Manages the registration of MLIR objects from IRDL operations.
 //
 //===----------------------------------------------------------------------===//
 
@@ -14,12 +14,12 @@
 #define DYN_IRDL_IR_IRDLREGISTRATION_H
 
 #include "Dyn/Dialect/IRDL/IR/IRDL.h"
-#include "mlir/IR/MLIRContext.h"
 #include "mlir/Support/LogicalResult.h"
 
 namespace mlir {
 
 namespace dyn {
+/// Forward declaration.
 class DynamicContext;
 }
 

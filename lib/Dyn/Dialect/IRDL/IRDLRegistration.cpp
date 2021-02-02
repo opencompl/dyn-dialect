@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Manages the registration of IRDL-defined MLIR objects.
+// Manages the registration of MLIR objects from IRDL operations.
 //
 //===----------------------------------------------------------------------===//
 
@@ -20,10 +20,12 @@ using namespace mlir;
 using namespace irdl;
 
 namespace {
+/// Register a type represented by a `irdl.type` operation.
 LogicalResult registerType(TypeOp typeOp, dyn::DynamicDialect *dialect) {
   return dialect->createAndAddType(typeOp.name());
 }
 
+/// Register an operation represented by a `irdl.operation` operation.
 LogicalResult registerOperation(OperationOp op, dyn::DynamicDialect *dialect) {
   return dialect->createAndAddOperation(op.name());
 }
@@ -32,32 +34,29 @@ LogicalResult registerOperation(OperationOp op, dyn::DynamicDialect *dialect) {
 LogicalResult mlir::irdl::registerDialect(DialectOp dialectOp,
                                           dyn::DynamicContext *ctx) {
 
-  // Register the dialect
+  // Register the dialect.
   auto dialectRes = ctx->createAndRegisterDialect(dialectOp.name());
   if (failed(dialectRes))
     return failure();
-
   auto *dialect = *dialectRes;
 
-  // Register the types
+  // Register all the types first.
   auto failedTypeRegistration = success();
   dialectOp.walk([&](TypeOp type) {
     if (failed(registerType(type, dialect)))
       failedTypeRegistration = failure();
   });
 
+  // If a type failed to register, return early with an error.
   if (failed(failedTypeRegistration))
     return failure();
 
-  // Register the operations
+  // Register the operations.
   auto failedOperationRegistration = success();
   dialectOp.walk([&](OperationOp op) {
     if (failed(registerOperation(op, dialect)))
       failedOperationRegistration = failure();
   });
 
-  if (failed(failedOperationRegistration))
-    return failure();
-
-  return success();
+  return failedOperationRegistration;
 }
