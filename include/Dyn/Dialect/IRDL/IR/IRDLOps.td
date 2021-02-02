@@ -35,7 +35,7 @@ class IRDL_Op<string mnemonic, list<OpTrait> traits = []>
 }
 
 //===----------------------------------------------------------------------===//
-// IRDL Dialect definition
+// IRDL dialect definition
 //===----------------------------------------------------------------------===//
 
 def IRDL_DialectOp : IRDL_Op<"dialect", [IsolatedFromAbove, SingleBlockImplicitTerminator<"EndDialectOp">]> {
@@ -46,7 +46,7 @@ def IRDL_DialectOp : IRDL_Op<"dialect", [IsolatedFromAbove, SingleBlockImplicitT
 
     let arguments = (ins StrAttr:$name);
     let regions = (region SizedRegion<1>:$body);
-    let assemblyFormat = "attr-dict $body";
+    let assemblyFormat = "attr-dict $name $body";
 }
 
 def IRDL_EndDialectOp : IRDL_Op<"end_dialect", [Terminator]> {
@@ -57,5 +57,34 @@ def IRDL_EndDialectOp : IRDL_Op<"end_dialect", [Terminator]> {
 
     let assemblyFormat = "attr-dict";
 }
+
+//===----------------------------------------------------------------------===//
+// IRDL type definition
+//===----------------------------------------------------------------------===//
+
+def IRDL_TypeOp : IRDL_Op<"type"> {
+    let summary = "Define a new type";
+    let description = [{
+      TODO
+    }];
+
+    let arguments = (ins StrAttr:$name);
+    let assemblyFormat = "attr-dict $name";
+}
+
+//===----------------------------------------------------------------------===//
+// IRDL Dialect definition
+//===----------------------------------------------------------------------===//
+
+def IRDL_OperationOp : IRDL_Op<"operation"> {
+    let summary = "Define a new operation";
+    let description = [{
+      TODO
+    }];
+
+    let arguments = (ins StrAttr:$name);
+    let assemblyFormat = "attr-dict $name";
+}
+
 
 #endif // DYN_DIALECT_IRDL_IR_IRDLOPS

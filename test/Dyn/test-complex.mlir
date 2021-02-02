@@ -1,16 +1,18 @@
-// RUN: dyn-opt %s | dyn-opt | FileCheck %s
+// RUN: dyn-opt %s --irdl-file=%S/cmath.irdl | dyn-opt --irdl-file=%S/cmath.irdl | FileCheck %s
 
 module {
-    // CHECK-LABEL: func @bar(%{{.*}}: !complex.real, %{{.*}}: !complex.real) {
-    func @bar(%re: !complex.real, %im: !complex.real) {
-        // CHECK: %{{.*}} = "complex.make_complex"(%{{.*}}, %{{.*}}) : (!complex.real, !complex.real) -> !complex.complex
-        %c = "complex.make_complex"(%re, %im) : (!complex.real, !complex.real) -> !complex.complex
-        // CHECK: %{{.*}} = "complex.mul"(%{{.*}}, %{{.*}}) : (!complex.complex, !complex.complex) -> !complex.complex
-        %c2 = "complex.mul"(%c, %c) : (!complex.complex, !complex.complex) -> !complex.complex
-        // CHECK: %{{.*}} = "complex.norm"(%{{.*}}) : (!complex.complex) -> !complex.real
-        %resnorm = "complex.norm"(%c2) : (!complex.complex) -> !complex.real
-        // CHECK: %{{.*}}:2 = "complex.components"(%{{.*}}) : (!complex.complex) -> (!complex.real, !complex.real)
-        %res2:2 = "complex.components"(%c2) : (!complex.complex) -> (!complex.real, !complex.real)
+    // CHECK-LABEL: func @bar(%{{.*}}: !cmath.real, %{{.*}}: !cmath.real) {
+    func @bar(%re: !cmath.real, %im: !cmath.real) {
+        // CHECK: %{{.*}} = "cmath.make_complex"(%{{.*}}, %{{.*}}) : (!cmath.real, !cmath.real) -> !cmath.complex
+        %c = "cmath.make_complex"(%re, %im) : (!cmath.real, !cmath.real) -> !cmath.complex
+        // CHECK: %{{.*}} = "cmath.mul"(%{{.*}}, %{{.*}}) : (!cmath.complex, !cmath.complex) -> !cmath.complex
+        %c2 = "cmath.mul"(%c, %c) : (!cmath.complex, !cmath.complex) -> !cmath.complex
+        // CHECK: %{{.*}} = "cmath.norm"(%{{.*}}) : (!cmath.complex) -> !cmath.real
+        %resnorm = "cmath.norm"(%c2) : (!cmath.complex) -> !cmath.real
+        // CHECK: %{{.*}} = "cmath.get_real"(%{{.*}}) : (!cmath.complex) -> (!cmath.real)
+        %res_real = "cmath.get_real"(%c2) : (!cmath.complex) -> (!cmath.real)
+        // CHECK: %{{.*}} = "cmath.get_imaginary"(%{{.*}}) : (!cmath.complex) -> (!cmath.real)
+        %res_im = "cmath.get_imaginary"(%c2) : (!cmath.complex) -> (!cmath.real)
         return
     }
 }

@@ -153,11 +153,6 @@ int main(int argc, char **argv) {
   MLIRContext ctx;
   DynamicContext dynCtx(&ctx);
 
-  // Register dynamic dialects with MLIRContext.
-  // TODO: move the registration to DialectRegistry once it's done.
-  registerDyn(dynCtx);
-  registerComplex(dynCtx);
-
   // Register the standard dialect using DialectRegistry.
   DialectRegistry &registry = ctx.getDialectRegistry();
   registry.insert<StandardOpsDialect>();
