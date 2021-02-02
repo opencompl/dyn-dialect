@@ -1,4 +1,11 @@
 module {
-    irdl.dialect {name = "cmath"} {
+    irdl.dialect "cmath" {
+        irdl.type "complex"
+        irdl.type "real"
+        irdl.operation "make_complex"
+        irdl.operation "mul"
+        irdl.operation "norm"
+        irdl.operation "get_real"
+        irdl.operation "get_imaginary"
     }
 }
