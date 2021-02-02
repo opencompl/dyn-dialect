@@ -1,4 +1,4 @@
-// RUN: dyn-opt %s --irdl-file=%S/cmath.irdl" | FileCheck %s
+// RUN: dyn-opt %s --irdl-file=%S/cmath.irdl | FileCheck %s
 
 module {
     // CHECK-LABEL: func @bar() {
