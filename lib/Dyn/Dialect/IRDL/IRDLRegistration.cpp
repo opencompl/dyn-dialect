@@ -10,25 +10,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef DYN_IRDL_IR_IRDLREGISTRATION_H
-#define DYN_IRDL_IR_IRDLREGISTRATION_H
-
+#include "Dyn/Dialect/IRDL/IRDLRegistration.h"
 #include "Dyn/Dialect/IRDL/IR/IRDL.h"
-#include "mlir/IR/MLIRContext.h"
-#include "mlir/Support/LogicalResult.h"
+#include "Dyn/DynamicContext.h"
+#include "Dyn/DynamicDialect.h"
 
-namespace mlir {
+using namespace mlir;
+using namespace irdl;
 
-namespace dyn {
-class DynamicContext;
+LogicalResult mlir::irdl::registerDialect(DialectOp dialectOp,
+                                          dyn::DynamicContext *ctx) {
+  auto dialectRes = ctx->createAndRegisterDialect(dialectOp.name());
+  if (failed(dialectRes))
+    return failure();
+
+  auto *dialect = *dialectRes;
+  return dialect->createAndAddOperation("dummyop");
 }
-
-namespace irdl {
-
-/// Register a dialect defined in IRDL in a MLIR context.
-LogicalResult registerDialect(DialectOp dialectOp, dyn::DynamicContext *ctx);
-
-} // namespace irdl
-} // namespace mlir
-
-#endif // DYN_IRDL_IR_IRDLREGISTRATION_H
