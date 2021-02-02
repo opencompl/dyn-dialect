@@ -26,14 +26,11 @@ DynamicContext::createAndRegisterDialect(llvm::StringRef name) {
   // Allocate a new ID for the dialect.
   auto id = getTypeIDAllocator().allocateID();
 
-  // Dialect allocator in the MLIR context.
-  auto ctor = [name, this, id]() {
-    return std::make_unique<DynamicDialect>(name, this, id);
-  };
-
-  // Dialect allocator for the dialect registry.
-  auto registryCtor = [name, id, ctor](MLIRContext *ctx) {
-    return ctx->getOrLoadDialect(name, id, ctor);
+  // Dialect allocator.
+  auto registryCtor = [name(name.str()), this, id](MLIRContext *ctx) {
+    return ctx->getOrLoadDialect(name, id, [&name, this, id]() {
+      return std::make_unique<DynamicDialect>(name, this, id);
+    });
   };
 
   // TODO, if the dialect is already defined, deallocate the TypeID.
