@@ -21,7 +21,7 @@ namespace mlir {
 namespace dyn {
 /// Forward declaration.
 class DynamicContext;
-}
+} // namespace dyn
 
 namespace irdl {
 
