@@ -23,7 +23,26 @@ include "mlir/IR/SymbolInterfaces.td"
 def IRDL_Dialect : Dialect {
   let summary = "IR Definition Language Dialect";
   let description = [{
-    TODO
+    IRDL presents a high-level abstraction for the definition of dialects. It
+    can represent dialects, types, and operations.
+
+    The IRDL programs can be used to register dialects at runtime, which enables
+    users to plug-in new dialects without having to recompile the project.
+
+    Operation `irdl.dialect` defines a dialect, `irdl.type` defines a type,
+    and `irdl.operation` defines an operation.
+
+    A dialect example is shown below:
+
+    ```mlir
+    irdl.dialect "cmath" {
+      irdl.type "complex"
+      irdl.operation "mul"
+    }
+    ```
+
+    This program defines a `cmath` dialect that defines a `complex` type, and
+    a `mul` operation.
   }];
 
   let name = "irdl";
@@ -41,7 +60,17 @@ class IRDL_Op<string mnemonic, list<OpTrait> traits = []>
 def IRDL_DialectOp : IRDL_Op<"dialect", [IsolatedFromAbove, SingleBlockImplicitTerminator<"EndDialectOp">]> {
     let summary = "Define a new dialect";
     let description = [{
-      TODO
+      `irdl.dialect` operations defines a dialect.
+
+      Example:
+
+      ```mlir
+      irdl.dialect "cmath" {
+        ...
+      }
+      ```
+
+      The above program defines a `cmath` dialect.
     }];
 
     let arguments = (ins StrAttr:$name);
@@ -50,12 +79,7 @@ def IRDL_DialectOp : IRDL_Op<"dialect", [IsolatedFromAbove, SingleBlockImplicitT
 }
 
 def IRDL_EndDialectOp : IRDL_Op<"end_dialect", [Terminator]> {
-    let summary = "Define a new dialect";
-    let description = [{
-      TODO
-    }];
-
-    let assemblyFormat = "attr-dict";
+    let summary = "Implicit terminator of `irdl.dialect` operation";
 }
 
 //===----------------------------------------------------------------------===//
@@ -65,7 +89,20 @@ def IRDL_EndDialectOp : IRDL_Op<"end_dialect", [Terminator]> {
 def IRDL_TypeOp : IRDL_Op<"type"> {
     let summary = "Define a new type";
     let description = [{
-      TODO
+      `irdl.type` defines new types belonging to the previously defined dialect
+      using `irdl.dialect`.
+
+      Types defined by `irdl.type` are singleton types.
+
+      Example:
+
+      ```mlir
+      irdl.dialect "cmath" {
+        irdl.type "complex"
+      }
+      ```
+      
+      The above program defines a type `complex` inside the dialect `cmath`.
     }];
 
     let arguments = (ins StrAttr:$name);
@@ -79,7 +116,21 @@ def IRDL_TypeOp : IRDL_Op<"type"> {
 def IRDL_OperationOp : IRDL_Op<"operation"> {
     let summary = "Define a new operation";
     let description = [{
-      TODO
+      `irdl.operation` defines new operations belonging to the previously
+      defined dialect using `irdl.dialect`.
+
+      Those operations have no verifiers.
+
+      Example:
+
+      ```mlir
+      irdl.dialect "cmath" {
+        irdl.operation "mul"
+      }
+      ```
+      
+      The above program defines an operation `mul` inside the dialect `cmath`.
+
     }];
 
     let arguments = (ins StrAttr:$name);
