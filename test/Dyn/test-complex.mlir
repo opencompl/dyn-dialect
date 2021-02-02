@@ -9,10 +9,10 @@ module {
         %c2 = "cmath.mul"(%c, %c) : (!cmath.complex, !cmath.complex) -> !cmath.complex
         // CHECK: %{{.*}} = "cmath.norm"(%{{.*}}) : (!cmath.complex) -> !cmath.real
         %resnorm = "cmath.norm"(%c2) : (!cmath.complex) -> !cmath.real
-        // CHECK: %{{.*}} = "cmath.get_real"(%{{.*}}) : (!cmath.complex) -> (!cmath.real)
-        %res_real = "cmath.get_real"(%c2) : (!cmath.complex) -> (!cmath.real)
-        // CHECK: %{{.*}} = "cmath.get_imaginary"(%{{.*}}) : (!cmath.complex) -> (!cmath.real)
-        %res_im = "cmath.get_imaginary"(%c2) : (!cmath.complex) -> (!cmath.real)
+        // CHECK: %{{.*}} = "cmath.get_real"(%{{.*}}) : (!cmath.complex) -> !cmath.real
+        %res_real = "cmath.get_real"(%c2) : (!cmath.complex) -> !cmath.real
+        // CHECK: %{{.*}} = "cmath.get_imaginary"(%{{.*}}) : (!cmath.complex) -> !cmath.real
+        %res_im = "cmath.get_imaginary"(%c2) : (!cmath.complex) -> !cmath.real
         return
     }
 }
