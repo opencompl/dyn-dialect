@@ -12,6 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "MlirOptMain.h"
+#include "Dyn/DynamicContext.h"
+#include "RegisterIRDL.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -146,7 +148,7 @@ LogicalResult mlir::MlirOptMain(raw_ostream &outputStream,
 }
 
 LogicalResult mlir::MlirOptMain(int argc, char **argv, llvm::StringRef toolName,
-                                MLIRContext &context,
+                                dyn::DynamicContext &dynContext,
                                 bool preloadDialectsInContext) {
   static cl::opt<std::string> inputFilename(
       cl::Positional, cl::desc("<input file>"), cl::init("-"));
@@ -185,6 +187,9 @@ LogicalResult mlir::MlirOptMain(int argc, char **argv, llvm::StringRef toolName,
       cl::desc("Append the command line options of the reproducer"),
       cl::init(false));
 
+  static cl::opt<std::string> irdlFile("irdl-file", cl::desc("IRDL file"),
+                                       cl::value_desc("filename"));
+
   InitLLVM y(argc, argv);
 
   // Register any command line options.
@@ -193,7 +198,8 @@ LogicalResult mlir::MlirOptMain(int argc, char **argv, llvm::StringRef toolName,
   registerPassManagerCLOptions();
   PassPipelineCLParser passPipeline("", "Compiler passes to run");
 
-  auto registry = context.getDialectRegistry();
+  auto context = dynContext.getMLIRCtx();
+  auto registry = context->getDialectRegistry();
 
   // Build the list of dialects as a header for the --help message.
   std::string helpHeader = (toolName + "\nAvailable Dialects: ").str();
@@ -207,11 +213,14 @@ LogicalResult mlir::MlirOptMain(int argc, char **argv, llvm::StringRef toolName,
   // Parse pass names in main to ensure static initialization completed.
   cl::ParseCommandLineOptions(argc, argv, helpHeader);
 
+  if (irdlFile != "" && failed(registerIRDL(irdlFile, &dynContext)))
+    return failure();
+
   if (showDialects) {
     llvm::outs() << "Available Dialects:\n";
     interleave(
-        registry, llvm::outs(),
-        [](auto &registryEntry) { llvm::outs() << registryEntry.first; }, "\n");
+        context->getAvailableDialects(), llvm::outs(),
+        [](auto &str) { llvm::outs() << str; }, "\n");
     return success();
   }
 
@@ -246,7 +255,7 @@ LogicalResult mlir::MlirOptMain(int argc, char **argv, llvm::StringRef toolName,
     return failure();
   }
 
-  if (failed(MlirOptMain(output->os(), std::move(file), passPipeline, context,
+  if (failed(MlirOptMain(output->os(), std::move(file), passPipeline, *context,
                          splitInputFile, verifyDiagnostics, verifyPasses,
                          allowUnregisteredDialects, preloadDialectsInContext)))
     return failure();
