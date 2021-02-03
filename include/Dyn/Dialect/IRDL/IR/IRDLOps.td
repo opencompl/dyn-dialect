@@ -57,29 +57,31 @@ class IRDL_Op<string mnemonic, list<OpTrait> traits = []>
 // IRDL dialect definition
 //===----------------------------------------------------------------------===//
 
-def IRDL_DialectOp : IRDL_Op<"dialect", [IsolatedFromAbove, SingleBlockImplicitTerminator<"EndDialectOp">]> {
-    let summary = "Define a new dialect";
-    let description = [{
-      `irdl.dialect` operations defines a dialect.
+def IRDL_DialectOp : IRDL_Op<"dialect", [
+    IsolatedFromAbove, SingleBlockImplicitTerminator<"EndDialectOp">
+  ]> {
+  let summary = "Define a new dialect";
+  let description = [{
+    `irdl.dialect` operations defines a dialect.
 
-      Example:
+    Example:
 
-      ```mlir
-      irdl.dialect "cmath" {
-        ...
-      }
-      ```
+    ```mlir
+    irdl.dialect "cmath" {
+      ...
+    }
+    ```
 
-      The above program defines a `cmath` dialect.
-    }];
+    The above program defines a `cmath` dialect.
+  }];
 
-    let arguments = (ins StrAttr:$name);
-    let regions = (region SizedRegion<1>:$body);
-    let assemblyFormat = "attr-dict $name $body";
+  let arguments = (ins StrAttr:$name);
+  let regions = (region SizedRegion<1>:$body);
+  let assemblyFormat = "attr-dict $name $body";
 }
 
 def IRDL_EndDialectOp : IRDL_Op<"end_dialect", [Terminator]> {
-    let summary = "Implicit terminator of `irdl.dialect` operation";
+  let summary = "Implicit terminator of `irdl.dialect` operation";
 }
 
 //===----------------------------------------------------------------------===//
@@ -87,26 +89,26 @@ def IRDL_EndDialectOp : IRDL_Op<"end_dialect", [Terminator]> {
 //===----------------------------------------------------------------------===//
 
 def IRDL_TypeOp : IRDL_Op<"type"> {
-    let summary = "Define a new type";
-    let description = [{
-      `irdl.type` defines new types belonging to the previously defined dialect
-      using `irdl.dialect`.
+  let summary = "Define a new type";
+  let description = [{
+    `irdl.type` defines new types belonging to the previously defined dialect
+    using `irdl.dialect`.
 
-      Types defined by `irdl.type` are singleton types.
+    Types defined by `irdl.type` are singleton types.
 
-      Example:
+    Example:
 
-      ```mlir
-      irdl.dialect "cmath" {
-        irdl.type "complex"
-      }
-      ```
-      
-      The above program defines a type `complex` inside the dialect `cmath`.
-    }];
+    ```mlir
+    irdl.dialect "cmath" {
+      irdl.type "complex"
+    }
+    ```
+    
+    The above program defines a type `complex` inside the dialect `cmath`.
+  }];
 
-    let arguments = (ins StrAttr:$name);
-    let assemblyFormat = "attr-dict $name";
+  let arguments = (ins StrAttr:$name);
+  let assemblyFormat = "attr-dict $name";
 }
 
 //===----------------------------------------------------------------------===//
@@ -114,27 +116,27 @@ def IRDL_TypeOp : IRDL_Op<"type"> {
 //===----------------------------------------------------------------------===//
 
 def IRDL_OperationOp : IRDL_Op<"operation"> {
-    let summary = "Define a new operation";
-    let description = [{
-      `irdl.operation` defines new operations belonging to the previously
-      defined dialect using `irdl.dialect`.
+  let summary = "Define a new operation";
+  let description = [{
+    `irdl.operation` defines new operations belonging to the previously
+    defined dialect using `irdl.dialect`.
 
-      Those operations have no verifiers.
+    Those operations have no verifiers.
 
-      Example:
+    Example:
 
-      ```mlir
-      irdl.dialect "cmath" {
-        irdl.operation "mul"
-      }
-      ```
-      
-      The above program defines an operation `mul` inside the dialect `cmath`.
+    ```mlir
+    irdl.dialect "cmath" {
+      irdl.operation "mul"
+    }
+    ```
+    
+    The above program defines an operation `mul` inside the dialect `cmath`.
 
-    }];
+  }];
 
-    let arguments = (ins StrAttr:$name);
-    let assemblyFormat = "attr-dict $name";
+  let arguments = (ins StrAttr:$name);
+  let assemblyFormat = "attr-dict $name";
 }
 
 
