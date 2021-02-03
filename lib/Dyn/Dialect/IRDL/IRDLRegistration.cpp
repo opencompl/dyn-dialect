@@ -14,6 +14,7 @@
 #include "Dyn/Dialect/IRDL/IR/IRDL.h"
 #include "Dyn/DynamicContext.h"
 #include "Dyn/DynamicDialect.h"
+#include "mlir/IR/Visitors.h"
 #include "mlir/Support/LogicalResult.h"
 
 using namespace mlir;
@@ -41,22 +42,22 @@ LogicalResult mlir::irdl::registerDialect(DialectOp dialectOp,
   auto *dialect = *dialectRes;
 
   // Register all the types first.
-  auto failedTypeRegistration = success();
-  dialectOp.walk([&](TypeOp type) {
+  auto failedTypeRegistration = dialectOp.walk([&](TypeOp type) {
     if (failed(registerType(type, dialect)))
-      failedTypeRegistration = failure();
+      return WalkResult::interrupt();
+    return WalkResult::advance();
   });
 
   // If a type failed to register, return early with an error.
-  if (failed(failedTypeRegistration))
+  if (failedTypeRegistration.wasInterrupted())
     return failure();
 
   // Register the operations.
-  auto failedOperationRegistration = success();
-  dialectOp.walk([&](OperationOp op) {
+  auto failedOperationRegistration = dialectOp.walk([&](OperationOp op) {
     if (failed(registerOperation(op, dialect)))
-      failedOperationRegistration = failure();
+      return WalkResult::interrupt();
+    return WalkResult::advance();
   });
 
-  return failedOperationRegistration;
+  return failure(failedOperationRegistration.wasInterrupted());
 }
