@@ -22,7 +22,7 @@
 namespace mlir {
 namespace dyn {
 
-/// Forward declaration.
+// Forward declaration.
 class DynamicDialect;
 
 /// Each instance of DynamicOperation correspond to a different operation.

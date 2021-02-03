@@ -21,15 +21,15 @@
 
 namespace mlir {
 
-/// Forward declaration
+// Forward declaration.
 class MLIRContext;
 
 namespace dyn {
 
-/// Forward declaration
+// Forward declaration.
 class DynamicDialect;
 
-/// Forward declaration
+// Forward declaration.
 class DynamicOperation;
 
 /// Manages the creation and lifetime of dynamic MLIR objects such as dialects,

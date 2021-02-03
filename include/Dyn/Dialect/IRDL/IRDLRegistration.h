@@ -19,7 +19,7 @@
 namespace mlir {
 
 namespace dyn {
-/// Forward declaration.
+// Forward declaration.
 class DynamicContext;
 } // namespace dyn
 
