@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Dyn/Dialect/IRDL/IR/IRDL.h"
 #include "Dyn/DynamicContext.h"
 #include "Dyn/DynamicDialect.h"
 #include "MlirOptMain.h"
@@ -35,6 +36,7 @@ int main(int argc, char **argv) {
   // Register the standard dialect using DialectRegistry.
   DialectRegistry &registry = ctx.getDialectRegistry();
   registry.insert<StandardOpsDialect>();
+  registry.insert<irdl::IRDLDialect>();
 
   return failed(
       mlir::MlirOptMain(argc, argv, "Dyn optimizer driver\n", dynCtx));

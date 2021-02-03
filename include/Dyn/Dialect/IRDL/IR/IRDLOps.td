@@ -77,7 +77,9 @@ def IRDL_DialectOp : IRDL_Op<"dialect", [
 
   let arguments = (ins StrAttr:$name);
   let regions = (region SizedRegion<1>:$body);
-  let assemblyFormat = "attr-dict $name $body";
+  let printer = [{ ::print(p, *this); }];
+  let parser = [{ return ::parse$cppClass(parser, result); }];
+  let verifier = [{ return ::verify(*this); }];
 }
 
 def IRDL_EndDialectOp : IRDL_Op<"end_dialect", [Terminator]> {
