@@ -86,6 +86,29 @@ static void print(OpAsmPrinter &p, TypeOp typeOp) {
 }
 
 //===----------------------------------------------------------------------===//
+// irdl::OperationOp
+//===----------------------------------------------------------------------===//
+
+static ParseResult parseOperationOp(OpAsmParser &p, OperationState &state) {
+  Builder &builder = p.getBuilder();
+
+  // Parse the operation name.
+  StringRef name;
+  if (failed(p.parseKeyword(&name)))
+    return failure();
+  state.addAttribute("name", builder.getStringAttr(name));
+
+  return success();
+}
+
+static void print(OpAsmPrinter &p, OperationOp operationOp) {
+  p << OperationOp::getOperationName() << " ";
+
+  // Print the operation name.
+  p << operationOp.name();
+}
+
+//===----------------------------------------------------------------------===//
 // IRDL operations.
 //===----------------------------------------------------------------------===//
 

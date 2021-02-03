@@ -6,11 +6,11 @@ module {
         // CHECK: irdl.type complex
         irdl.type complex
         irdl.type real
-        // CHECK: irdl.operation "make_complex"
-        irdl.operation "make_complex"
-        irdl.operation "mul"
-        irdl.operation "norm"
-        irdl.operation "get_real"
-        irdl.operation "get_imaginary"
+        // CHECK: irdl.operation make_complex
+        irdl.operation make_complex
+        irdl.operation mul
+        irdl.operation norm
+        irdl.operation get_real
+        irdl.operation get_imaginary
     }
 }
