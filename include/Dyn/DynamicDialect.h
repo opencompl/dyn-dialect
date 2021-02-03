@@ -28,7 +28,7 @@
 namespace mlir {
 namespace dyn {
 
-/// Forward declaration
+// Forward declaration.
 class DynamicContext;
 
 /// Each instance of DynamicDialect correspond to a different dialect.
