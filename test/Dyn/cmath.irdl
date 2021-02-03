@@ -3,9 +3,9 @@
 module {
     // CHECK-LABEL: irdl.dialect cmath {
     irdl.dialect cmath {
-        // CHECK: irdl.type "complex"
-        irdl.type "complex"
-        irdl.type "real"
+        // CHECK: irdl.type complex
+        irdl.type complex
+        irdl.type real
         // CHECK: irdl.operation "make_complex"
         irdl.operation "make_complex"
         irdl.operation "mul"

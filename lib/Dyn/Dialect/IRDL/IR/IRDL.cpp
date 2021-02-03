@@ -63,6 +63,29 @@ static void print(OpAsmPrinter &p, DialectOp dialectOp) {
 }
 
 //===----------------------------------------------------------------------===//
+// irdl::TypeOp
+//===----------------------------------------------------------------------===//
+
+static ParseResult parseTypeOp(OpAsmParser &p, OperationState &state) {
+  Builder &builder = p.getBuilder();
+
+  // Parse the type name.
+  StringRef name;
+  if (failed(p.parseKeyword(&name)))
+    return failure();
+  state.addAttribute("name", builder.getStringAttr(name));
+
+  return success();
+}
+
+static void print(OpAsmPrinter &p, TypeOp typeOp) {
+  p << TypeOp::getOperationName() << " ";
+
+  // Print the type name.
+  p << typeOp.name();
+}
+
+//===----------------------------------------------------------------------===//
 // IRDL operations.
 //===----------------------------------------------------------------------===//
 

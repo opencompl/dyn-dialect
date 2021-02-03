@@ -110,7 +110,8 @@ def IRDL_TypeOp : IRDL_Op<"type"> {
   }];
 
   let arguments = (ins StrAttr:$name);
-  let assemblyFormat = "attr-dict $name";
+  let printer = [{ ::print(p, *this); }];
+  let parser = [{ return ::parse$cppClass(parser, result); }];
 }
 
 //===----------------------------------------------------------------------===//
