@@ -13,7 +13,6 @@
 #ifndef DYN_DYNAMICTYPE_H
 #define DYN_DYNAMICTYPE_H
 
-#include "Dyn/DynamicContext.h"
 #include "DynamicObject.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/TypeSupport.h"
@@ -22,6 +21,7 @@
 namespace mlir {
 namespace dyn {
 
+// Forward declaration.
 class DynamicDialect;
 
 /// This is the definition of a dynamic type. It stores the parser and printer.

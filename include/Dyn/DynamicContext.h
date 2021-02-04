@@ -28,6 +28,9 @@ class MLIRContext;
 namespace dyn {
 
 // Forward declaration.
+class DynamicTypeDefinition;
+
+// Forward declaration.
 class DynamicDialect;
 
 // Forward declaration.
