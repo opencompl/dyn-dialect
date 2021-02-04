@@ -43,6 +43,7 @@ DynamicDialect::createAndAddType(StringRef name) {
   DynamicTypeDefinition *type = registered.first->second.get();
   auto typeID = type->getRuntimeTypeID();
   typeIDToDynTypes.insert({typeID, type});
+  ctx->typeIDToDynTypes.insert({typeID, type});
 
   /// Add the type to the dialect and the type uniquer.
   addType(typeID,
@@ -63,6 +64,7 @@ FailureOr<DynamicOperation *> DynamicDialect::createAndAddOperation(
   DynamicOperation *absOp = registered.first->second.get();
   auto typeID = absOp->getRuntimeTypeID();
   typeIDToDynOps.insert({typeID, absOp});
+  ctx->typeIDToDynOps.insert({typeID, absOp});
 
   AbstractOperation::insert(
       absOp->getName(), *this, {}, absOp->getRuntimeTypeID(),

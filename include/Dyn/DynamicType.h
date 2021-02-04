@@ -22,6 +22,8 @@
 namespace mlir {
 namespace dyn {
 
+class DynamicDialect;
+
 /// This is the definition of a dynamic type. It stores the parser and printer.
 /// Each dynamic type instance refer to one instance of this class.
 class DynamicTypeDefinition : public DynamicObject {
