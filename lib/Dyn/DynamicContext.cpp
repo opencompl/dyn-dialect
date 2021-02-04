@@ -46,5 +46,9 @@ DynamicContext::createAndRegisterDialect(llvm::StringRef name) {
   // llvm::cast cannot be used here, since we have a custom TypeID that does
   // not correspond to the TypeID statically assigned to the DynamicDialect
   // class.
-  return reinterpret_cast<DynamicDialect *>(dialect);
+  auto *dynDialect = reinterpret_cast<DynamicDialect *>(dialect);
+
+  dialects.insert({name, dynDialect});
+
+  return dynDialect;
 }
