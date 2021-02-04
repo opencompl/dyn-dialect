@@ -70,6 +70,15 @@ public:
     return &*it->second;
   }
 
+  /// Get a dialect given its typeID.
+  /// The pointer is guaranteed to be non-null.
+  FailureOr<DynamicDialect *> lookupDialect(StringRef name) const {
+    auto it = dialects.find(name);
+    if (it == dialects.end())
+      return failure();
+    return &*it->second;
+  }
+
   /// We declare DynamicDialect friend so it can register types and operations
   /// in the context.
   friend DynamicDialect;
