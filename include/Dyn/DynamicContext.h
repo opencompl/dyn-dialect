@@ -79,7 +79,7 @@ private:
   TypeIDAllocator typeIDAllocator;
 
   /// The set of dynamically defined dialects.
-  llvm::StringMap<std::unique_ptr<DynamicDialect>> dialects;
+  llvm::StringMap<DynamicDialect *> dialects;
 
   /// This structure allows to get in O(1) a dynamic type given its typeID.
   llvm::DenseMap<TypeID, DynamicTypeDefinition *> typeIDToDynTypes{};
