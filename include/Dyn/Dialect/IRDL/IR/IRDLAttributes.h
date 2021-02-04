@@ -13,9 +13,14 @@
 #ifndef DYN_DIALECT_IRDL_IR_IRDLATTRIBUTES_H_
 #define DYN_DIALECT_IRDL_IR_IRDLATTRIBUTES_H_
 
+#include "Dyn/DynamicContext.h"
+#include "Dyn/DynamicDialect.h"
+#include "Dyn/DynamicObject.h"
+#include "Dyn/DynamicType.h"
 #include "mlir/IR/AttributeSupport.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/MLIRContext.h"
+#include "mlir/IR/Operation.h"
 #include "llvm/ADT/Hashing.h"
 
 namespace mlir {
@@ -28,6 +33,34 @@ struct TypeConstraint {
 
   bool operator==(const TypeConstraint &o) const {
     return typeName == o.typeName;
+  }
+
+  LogicalResult verifyType(Operation *op, Type type, bool isOperand,
+                           unsigned pos, dyn::DynamicContext &ctx) {
+    auto dialectEnd = typeName.find('.');
+    assert(dialectEnd != std::string::npos);
+    auto dialectName = StringRef(typeName).substr(0, dialectEnd);
+    auto typeSubname = StringRef(typeName).substr(dialectEnd + 1);
+
+    auto dialectRes = ctx.lookupDialect(dialectName);
+    if (failed(dialectRes))
+      return op->emitError("dialect " + dialectName + " is not registered.");
+    auto *dialect = *dialectRes;
+
+    auto dynTypeRes = dialect->lookupType(typeSubname);
+    if (failed(dynTypeRes))
+      return op->emitError("type " + typeSubname +
+                           " is not registered in the dialect " + dialectName +
+                           ".");
+    auto *dynType = *dynTypeRes;
+
+    if (!dyn::DynamicType::isa(type, dynType)) {
+      auto argType = isOperand ? "operand" : "result";
+      return op->emitError(std::to_string(pos) + "nth " + argType +
+                           " should be of type " + typeName);
+    }
+
+    return success();
   }
 };
 
