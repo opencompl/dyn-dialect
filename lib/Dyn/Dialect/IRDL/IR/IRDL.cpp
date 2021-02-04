@@ -103,14 +103,14 @@ ParseResult parseTypeConstraint(OpAsmParser &p,
   if (p.parseKeyword(&name))
     return failure();
 
-  *typeConstraint = name.str();
+  typeConstraint->typeName = name.str();
   return success();
 }
 
 /// Print a type constraint with the format "dialect.name".
 void printTypeConstraint(OpAsmPrinter &p,
                          const TypeConstraint &typeConstraint) {
-  p << typeConstraint;
+  p << typeConstraint.typeName;
 }
 
 /// Parse an ArgDef with format "name: typeConstraint".

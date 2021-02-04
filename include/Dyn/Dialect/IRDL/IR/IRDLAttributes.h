@@ -23,7 +23,18 @@ namespace irdl {
 
 /// A type constraint is for now only a type equality constraint represented by
 /// the type name.
-using TypeConstraint = std::string;
+struct TypeConstraint {
+  std::string typeName;
+
+  bool operator==(const TypeConstraint &o) const {
+    return typeName == o.typeName;
+  }
+};
+
+/// Make type constraints hashable.
+inline llvm::hash_code hash_value(const TypeConstraint &constr) {
+  return llvm::hash_value(constr.typeName);
+}
 
 /// Definition of an argument. An argument is either an operand or a result.
 /// It is represented by a name an a type constraint.
