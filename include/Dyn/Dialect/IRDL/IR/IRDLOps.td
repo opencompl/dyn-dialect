@@ -118,6 +118,11 @@ def IRDL_TypeOp : IRDL_Op<"type"> {
 // IRDL Dialect definition
 //===----------------------------------------------------------------------===//
 
+def OpDefAttr : Attr<CPred<"$_self.isa<OpTypeDefAttr>()">, "OperationOp type constraints definition"> {
+  let storageType = "OpTypeDefAttr";
+  let returnType = "OpTypeDef";
+}
+
 def IRDL_OperationOp : IRDL_Op<"operation"> {
   let summary = "Define a new operation";
   let description = [{
@@ -135,10 +140,9 @@ def IRDL_OperationOp : IRDL_Op<"operation"> {
     ```
     
     The above program defines an operation `mul` inside the dialect `cmath`.
-
   }];
 
-  let arguments = (ins StrAttr:$name);
+  let arguments = (ins StrAttr:$name, OpDefAttr:$op_def);
   let printer = [{ ::print(p, *this); }];
   let parser = [{ return ::parse$cppClass(parser, result); }];
 }
