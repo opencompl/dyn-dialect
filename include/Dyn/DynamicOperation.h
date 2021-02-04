@@ -14,7 +14,6 @@
 #define DYN_DYNAMICOPERATION_H
 
 #include "Dyn/DynamicObject.h"
-#include "DynamicDialect.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
 #include <mlir/IR/OpDefinition.h>
