@@ -1,5 +1,6 @@
 add_mlir_dialect_library(MLIRIRDL
         IR/IRDL.cpp
+        IR/TypeConstraint.cpp
         IRDLRegistration.cpp
 
         ADDITIONAL_HEADER_DIRS
