@@ -23,7 +23,9 @@ LogicalResult TypeConstraint::verifyType(Operation *op, Type type,
                                          bool isOperand, unsigned pos,
                                          dyn::DynamicContext &ctx) {
   auto dialectEnd = typeName.find('.');
-  assert(dialectEnd != std::string::npos);
+  if (dialectEnd == std::string::npos)
+    return op->emitError("type name should have the format dialect.name, " +
+                         typeName + " found.");
   auto dialectName = StringRef(typeName).substr(0, dialectEnd);
   auto typeSubname = StringRef(typeName).substr(dialectEnd + 1);
 
