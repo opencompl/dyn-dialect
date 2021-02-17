@@ -54,7 +54,7 @@ class IRDL_Op<string mnemonic, list<OpTrait> traits = []>
 }
 
 //===----------------------------------------------------------------------===//
-// IRDL dialect definition
+// IRDL Dialect definition
 //===----------------------------------------------------------------------===//
 
 def IRDL_DialectOp : IRDL_Op<"dialect", [
@@ -87,7 +87,7 @@ def IRDL_EndDialectOp : IRDL_Op<"end_dialect", [Terminator]> {
 }
 
 //===----------------------------------------------------------------------===//
-// IRDL type definition
+// IRDL Type definition
 //===----------------------------------------------------------------------===//
 
 def IRDL_TypeOp : IRDL_Op<"type", [HasParent<"DialectOp">]> {
@@ -120,7 +120,7 @@ def IRDL_TypeOp : IRDL_Op<"type", [HasParent<"DialectOp">]> {
 }
 
 //===----------------------------------------------------------------------===//
-// IRDL Dialect definition
+// IRDL Attribute definition
 //===----------------------------------------------------------------------===//
 
 def OpDefAttr : Attr<CPred<"$_self.isa<OpTypeDefAttr>()">, "OperationOp type constraints definition"> {
@@ -161,6 +161,5 @@ def IRDL_OperationOp : IRDL_Op<"operation", [HasParent<"DialectOp">]> {
     DialectOp getDialectOp() { return cast<DialectOp>(getOperation()->getParentOp()); };
   }];
 }
-
 
 #endif // DYN_DIALECT_IRDL_IR_IRDLOPS

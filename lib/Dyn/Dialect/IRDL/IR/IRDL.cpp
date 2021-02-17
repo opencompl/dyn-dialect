@@ -8,6 +8,7 @@
 
 #include "Dyn/Dialect/IRDL/IR/IRDL.h"
 #include "Dyn/Dialect/IRDL/IR/IRDLAttributes.h"
+#include "Dyn/Dialect/IRDL/TypeConstraint.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/Support/LogicalResult.h"
@@ -24,7 +25,7 @@ void IRDLDialect::initialize() {
 #define GET_OP_LIST
 #include "Dyn/Dialect/IRDL/IR/IRDLOps.cpp.inc"
       >();
-  addAttributes<OpTypeDefAttr>();
+  addAttributes<OpTypeDefAttr, EqTypeConstraintAttr>();
 }
 
 //===----------------------------------------------------------------------===//
@@ -93,43 +94,41 @@ static void print(OpAsmPrinter &p, TypeOp typeOp) {
 
 namespace {
 
-/// Parse a type constraint with the format "dialect.name".
-/// The verifier ensures that the format is respected. Only a keyword is parsed
-/// (since mlir will parse "." in keywords).
-ParseResult parseTypeConstraint(OpAsmParser &p,
-                                TypeConstraint *typeConstraint) {
+/// Parse a type constraint.
+/// The verifier ensures that the format is respected.
+ParseResult parseTypeConstraint(OpAsmParser &p, Attribute *typeConstraint) {
   StringRef name;
 
   if (p.parseKeyword(&name))
     return failure();
 
-  typeConstraint->typeName = name.str();
+  *typeConstraint =
+      EqTypeConstraintAttr::get(*p.getBuilder().getContext(), name);
   return success();
 }
 
-/// Print a type constraint with the format "dialect.name".
-void printTypeConstraint(OpAsmPrinter &p,
-                         const TypeConstraint &typeConstraint) {
-  p << typeConstraint.typeName;
+/// Print a type constraint.
+void printTypeConstraint(OpAsmPrinter &p, Attribute typeConstraint) {
+  if (auto eqConstr = typeConstraint.dyn_cast<EqTypeConstraintAttr>()) {
+    p << eqConstr.getValue();
+    return;
+  }
+  assert(false && "Unknown type constraint.");
 }
 
 /// Parse an ArgDef with format "name: typeConstraint".
 ParseResult parseArgDef(OpAsmParser &p, ArgDef *argDef) {
-  StringRef name;
-  TypeConstraint typeConstraint;
-
-  if (p.parseKeyword(&name) || p.parseColon() ||
+  if (p.parseKeyword(&argDef->first) || p.parseColon() ||
       parseTypeConstraint(p, &argDef->second))
     return failure();
 
-  argDef->first = name.str();
   return success();
 }
 
 /// Print an ArgDef with format "name: typeConstraint".
-void printTypedVar(OpAsmPrinter &p, const ArgDef &argDef) {
-  p << argDef.first << ": ";
-  printTypeConstraint(p, argDef.second);
+void printTypedVar(OpAsmPrinter &p, const ArgDef *argDef) {
+  p << argDef->first << ": ";
+  printTypeConstraint(p, argDef->second);
 }
 
 /// Parse an ArgDefs with format ([argDef,]*).
@@ -162,7 +161,7 @@ ParseResult parseArgDefs(OpAsmParser &p, OwningArgDefs *argDefs) {
 void printArgDefs(OpAsmPrinter &p, ArgDefs typedVars) {
   p << "(";
   for (const auto &typedVar : typedVars) {
-    printTypedVar(p, typedVar);
+    printTypedVar(p, &typedVar);
     p << ", ";
   }
   p << ")";
@@ -173,6 +172,7 @@ void printArgDefs(OpAsmPrinter &p, ArgDefs typedVars) {
 /// the ArgDefs format.
 ParseResult parseOpTypeDefAttr(OpAsmParser &p, OpTypeDefAttr *opTypeDefAttr) {
   OwningArgDefs operandDefs, resultDefs;
+  auto *ctx = p.getBuilder().getContext();
   // Parse the operands.
   if (parseArgDefs(p, &operandDefs))
     return failure();
@@ -184,9 +184,8 @@ ParseResult parseOpTypeDefAttr(OpAsmParser &p, OpTypeDefAttr *opTypeDefAttr) {
   if (parseArgDefs(p, &resultDefs))
     return failure();
 
-  *opTypeDefAttr =
-      OpTypeDefAttr::get(*p.getBuilder().getContext(), std::move(operandDefs),
-                         std::move(resultDefs));
+  *opTypeDefAttr = OpTypeDefAttr::get(*ctx, operandDefs, resultDefs);
+
   return success();
 }
 
@@ -236,3 +235,9 @@ static void print(OpAsmPrinter &p, OperationOp operationOp) {
 
 #define GET_OP_CLASSES
 #include "Dyn/Dialect/IRDL/IR/IRDLOps.cpp.inc"
+
+//===----------------------------------------------------------------------===//
+// IRDL interfaces.
+//===----------------------------------------------------------------------===//
+
+#include "Dyn/Dialect/IRDL/IR/IRDLInterface.cpp.inc"
