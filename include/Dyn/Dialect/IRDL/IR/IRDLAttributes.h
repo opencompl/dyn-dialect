@@ -13,26 +13,38 @@
 #ifndef DYN_DIALECT_IRDL_IR_IRDLATTRIBUTES_H_
 #define DYN_DIALECT_IRDL_IR_IRDLATTRIBUTES_H_
 
-#include "Dyn/Dialect/IRDL/IR/TypeConstraint.h"
+#include "Dyn/Dialect/IRDL/IR/IRDLInterface.h"
+#include "mlir/IR/AttributeSupport.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "llvm/ADT/Hashing.h"
 
 namespace mlir {
+
+namespace dyn {
+// Forward declaration.
+class DynamicContext;
+} // namespace dyn
+
 namespace irdl {
 
-/// Make type constraints hashable.
-inline llvm::hash_code hash_value(const TypeConstraint &constr) {
-  return llvm::hash_value(constr.typeName);
-}
+// Forward declaration.
+class OperationOp;
+
+namespace detail {
+// Forward declaration.
+struct StringAttributeStorage;
+} // namespace detail
 
 /// Definition of an argument. An argument is either an operand or a result.
 /// It is represented by a name an a type constraint.
-using ArgDef = std::pair<std::string, TypeConstraint>;
+using ArgDef = std::pair<StringRef, Attribute>;
 using ArgDefs = ArrayRef<ArgDef>;
 using OwningArgDefs = std::vector<ArgDef>;
 
 /// Definition of a dynamic operation type.
 /// It contains the definition of every operand and result.
-struct OpTypeDef {
+class OpTypeDef {
+public:
   ArgDefs operandDef, resultDef;
 
   /// Get the number of operands.
@@ -55,7 +67,8 @@ struct OpTypeDef {
 };
 
 /// Storage for OpTypeDefAttr.
-struct OpTypeDefAttrStorage : public AttributeStorage {
+class OpTypeDefAttrStorage : public AttributeStorage {
+public:
   using KeyTy = OpTypeDef;
 
   OpTypeDefAttrStorage(ArgDefs operandDefs, ArgDefs resultDefs)
@@ -73,11 +86,26 @@ struct OpTypeDefAttrStorage : public AttributeStorage {
 
   static OpTypeDefAttrStorage *
   construct(mlir::AttributeStorageAllocator &allocator, const KeyTy &key) {
-    auto operandDefs = allocator.copyInto(key.operandDef);
-    auto resDefs = allocator.copyInto(key.resultDef);
+    // Here, we need to put the KeyTy (which is OpTypeDef) inside the allocator.
+    // For that, we need to walk through the object.
 
-    return new (allocator.allocate<OpTypeDef>())
-        OpTypeDefAttrStorage({operandDefs, resDefs});
+    // We first need to make sure that all the StringRefs are in the allocator.
+    // The StringRefs are the name of the operands and results.
+    // We are creating new vectors to represent key.operandDef and
+    // key.resultDef because we are modifying the StringRef (because we allocate
+    // them somewhere else), and we cannot modify key.
+    OwningArgDefs operandDefs, resultDefs;
+    for (auto &p : key.operandDef)
+      operandDefs.emplace_back(allocator.copyInto(p.first), p.second);
+    for (auto &p : key.resultDef)
+      resultDefs.emplace_back(allocator.copyInto(p.first), p.second);
+
+    // Then we can put the ArgDefs themselves in the allocator.
+    auto allocatedOperandDefs = allocator.copyInto(ArgDefs(operandDefs));
+    auto allocatedResultDefs = allocator.copyInto(ArgDefs(resultDefs));
+
+    return new (allocator.allocate<OpTypeDefAttrStorage>())
+        OpTypeDefAttrStorage({allocatedOperandDefs, allocatedResultDefs});
   }
 
   OpTypeDef opTypeDef;
@@ -98,6 +126,26 @@ public:
   }
 
   OpTypeDef getValue() { return getImpl()->opTypeDef; }
+};
+
+//===----------------------------------------------------------------------===//
+// IRDL Equality type constraint attribute
+//===----------------------------------------------------------------------===//
+
+class EqTypeConstraintAttr : public mlir::Attribute::AttrBase<
+                                 EqTypeConstraintAttr, mlir::Attribute,
+                                 mlir::irdl::detail::StringAttributeStorage,
+                                 TypeConstraintAttrInterface::Trait> {
+public:
+  using Base::Base;
+
+  /// Get an instance of a StringAttr with the given string.
+  static EqTypeConstraintAttr get(MLIRContext &context, StringRef typeName);
+
+  FailureOr<std::unique_ptr<mlir::irdl::TypeConstraint>>
+  getTypeConstraint(OperationOp op, dyn::DynamicContext &ctx);
+
+  StringRef getValue();
 };
 
 } // namespace irdl
