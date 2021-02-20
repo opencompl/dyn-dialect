@@ -90,7 +90,7 @@ def IRDL_EndDialectOp : IRDL_Op<"end_dialect", [Terminator]> {
 // IRDL type definition
 //===----------------------------------------------------------------------===//
 
-def IRDL_TypeOp : IRDL_Op<"type"> {
+def IRDL_TypeOp : IRDL_Op<"type", [HasParent<"DialectOp">]> {
   let summary = "Define a new type";
   let description = [{
     `irdl.type` defines new types belonging to the previously defined dialect
@@ -112,6 +112,11 @@ def IRDL_TypeOp : IRDL_Op<"type"> {
   let arguments = (ins StrAttr:$name);
   let printer = [{ ::print(p, *this); }];
   let parser = [{ return ::parse$cppClass(parser, result); }];
+
+  let extraClassDeclaration = [{
+    /// Get the parent dialect operation.
+    DialectOp getDialectOp() { return cast<DialectOp>(getOperation()->getParentOp()); };
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -123,7 +128,12 @@ def OpDefAttr : Attr<CPred<"$_self.isa<OpTypeDefAttr>()">, "OperationOp type con
   let returnType = "OpTypeDef";
 }
 
-def IRDL_OperationOp : IRDL_Op<"operation"> {
+//===----------------------------------------------------------------------===//
+// IRDL Operation definition
+//===----------------------------------------------------------------------===//
+
+
+def IRDL_OperationOp : IRDL_Op<"operation", [HasParent<"DialectOp">]> {
   let summary = "Define a new operation";
   let description = [{
     `irdl.operation` defines new operations belonging to the previously
@@ -145,6 +155,11 @@ def IRDL_OperationOp : IRDL_Op<"operation"> {
   let arguments = (ins StrAttr:$name, OpDefAttr:$op_def);
   let printer = [{ ::print(p, *this); }];
   let parser = [{ return ::parse$cppClass(parser, result); }];
+
+  let extraClassDeclaration = [{
+    /// Get the parent dialect operation.
+    DialectOp getDialectOp() { return cast<DialectOp>(getOperation()->getParentOp()); };
+  }];
 }
 
 
