@@ -30,8 +30,8 @@ using namespace mlir;
 LogicalResult mlir::registerIRDL(StringRef irdlFile,
                                  dyn::DynamicContext *dynContext) {
 
-  MLIRContext context;
-  auto &registry = context.getDialectRegistry();
+  auto *context = dynContext->getMLIRCtx();
+  auto &registry = context->getDialectRegistry();
   registry.insert<irdl::IRDLDialect>();
 
   // Set up the input file.
@@ -47,16 +47,16 @@ LogicalResult mlir::registerIRDL(StringRef irdlFile,
   SourceMgr sourceMgr;
   sourceMgr.AddNewSourceBuffer(std::move(file), SMLoc());
 
-  SourceMgrDiagnosticHandler sourceMgrHandler(sourceMgr, &context);
+  SourceMgrDiagnosticHandler sourceMgrHandler(sourceMgr, context);
 
   // Disable multi-threading when parsing the input file. This removes the
   // unnecessary/costly context synchronization when parsing.
-  bool wasThreadingEnabled = context.isMultithreadingEnabled();
-  context.disableMultithreading();
+  bool wasThreadingEnabled = context->isMultithreadingEnabled();
+  context->disableMultithreading();
 
   // Parse the input file and reset the context threading state.
-  OwningModuleRef module(parseSourceFile(sourceMgr, &context));
-  context.enableMultithreading(wasThreadingEnabled);
+  OwningModuleRef module(parseSourceFile(sourceMgr, context));
+  context->enableMultithreading(wasThreadingEnabled);
   if (!module)
     return failure();
 
