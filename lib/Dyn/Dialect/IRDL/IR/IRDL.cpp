@@ -25,7 +25,7 @@ void IRDLDialect::initialize() {
 #define GET_OP_LIST
 #include "Dyn/Dialect/IRDL/IR/IRDLOps.cpp.inc"
       >();
-  addAttributes<OpTypeDefAttr, EqTypeConstraintAttr>();
+  addAttributes<OpTypeDefAttr, EqDynTypeConstraintAttr, EqTypeConstraintAttr>();
 }
 
 //===----------------------------------------------------------------------===//
@@ -97,19 +97,38 @@ namespace {
 /// Parse a type constraint.
 /// The verifier ensures that the format is respected.
 ParseResult parseTypeConstraint(OpAsmParser &p, Attribute *typeConstraint) {
-  StringRef name;
+  Type type;
 
-  if (p.parseKeyword(&name))
+  // If the type is already registered, parse it.
+  auto typeParseRes = p.parseOptionalType(type);
+  if (typeParseRes.hasValue()) {
+    if (typeParseRes.getValue())
+      return failure();
+
+    *typeConstraint =
+        EqTypeConstraintAttr::get(*p.getBuilder().getContext(), type);
+    return success();
+  }
+
+  // Otherwise, parse a dynamic type.
+  StringRef name;
+  if (p.parseOptionalKeyword(&name)) {
+    p.emitError(p.getCurrentLocation(), "type expected");
     return failure();
+  }
 
   *typeConstraint =
-      EqTypeConstraintAttr::get(*p.getBuilder().getContext(), name);
+      EqDynTypeConstraintAttr::get(*p.getBuilder().getContext(), name);
   return success();
 }
 
 /// Print a type constraint.
 void printTypeConstraint(OpAsmPrinter &p, Attribute typeConstraint) {
   if (auto eqConstr = typeConstraint.dyn_cast<EqTypeConstraintAttr>()) {
+    p << eqConstr.getValue();
+    return;
+  } else if (auto eqConstr =
+                 typeConstraint.dyn_cast<EqDynTypeConstraintAttr>()) {
     p << eqConstr.getValue();
     return;
   }
