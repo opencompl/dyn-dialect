@@ -37,28 +37,30 @@ EqTypeConstraint::get(StringRef typeName, OperationOp op, DynamicContext &ctx) {
   auto dialectRes = ctx.lookupDialect(dialectName);
   if (failed(dialectRes))
     return LogicalResult(
-        op->emitError("dialect ").append(dialectName, " is not registered."));
+        op->emitOpError("dialect ").append(dialectName, " is not registered."));
   auto *dialect = *dialectRes;
 
   /// Get the type from the dialect.
   auto dynTypeRes = dialect->lookupType(typeSubname);
   if (failed(dynTypeRes))
-    return LogicalResult(op->emitError("type ").append(
+    return LogicalResult(op->emitOpError("type ").append(
         typeSubname, " is not registered in the dialect ", dialectName, "."));
   auto *dynType = *dynTypeRes;
 
-  return EqTypeConstraint(dynType);
+  auto type = DynamicType::get(ctx.getMLIRCtx(), dynType);
+
+  return EqTypeConstraint(type);
 }
 
-LogicalResult EqTypeConstraint::verifyType(Operation *op, Type type,
+LogicalResult EqTypeConstraint::verifyType(Operation *op, Type argType,
                                            bool isOperand, unsigned pos,
                                            dyn::DynamicContext &ctx) {
-  if (dyn::DynamicType::isa(type, dynType))
+  if (type == this->type)
     return success();
 
-  auto argType = isOperand ? "operand" : "result";
+  auto argCategory = isOperand ? "operand" : "result";
 
-  return op->emitError("#").append(pos, " ", argType, " must be of type '",
-                                   dynType->dialect->getName(), ".",
-                                   dynType->name, "', but got ", type);
+  return op->emitOpError("#").append(pos, " ", argCategory,
+                                     " must be of type '", type, "', but got ",
+                                     argType);
 }

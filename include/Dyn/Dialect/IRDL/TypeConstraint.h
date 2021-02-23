@@ -43,7 +43,7 @@ public:
 
 class EqTypeConstraint : public TypeConstraint {
 public:
-  EqTypeConstraint(dyn::DynamicTypeDefinition *dynType) : dynType(dynType) {}
+  EqTypeConstraint(Type type) : type(type) {}
 
   /// Get the type constraint given the type name.
   /// The OperationOp should be the op having the type constraint.
@@ -55,11 +55,11 @@ public:
   /// isOperand is used for the error message, and indicate if the constraint
   /// is on an operand or a resuls, and pos is the position of the
   /// operand/result.
-  virtual LogicalResult verifyType(Operation *op, Type type, bool isOperand,
+  virtual LogicalResult verifyType(Operation *op, Type argType, bool isOperand,
                                    unsigned pos,
                                    dyn::DynamicContext &ctx) override;
 
-  dyn::DynamicTypeDefinition *const dynType;
+  Type type;
 };
 
 } // namespace irdl

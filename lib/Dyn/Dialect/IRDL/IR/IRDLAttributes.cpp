@@ -41,21 +41,42 @@ struct StringAttributeStorage : public AttributeStorage {
   StringRef value;
 };
 
+/// An attribute representing a reference to a type.
+/// This implementation already exists in MLIR, but is not public.
+struct TypeAttributeStorage : public AttributeStorage {
+  using KeyTy = Type;
+
+  TypeAttributeStorage(Type value) : value(value) {}
+
+  /// Key equality function.
+  bool operator==(const KeyTy &key) const { return key == value; }
+
+  /// Construct a new storage instance.
+  static TypeAttributeStorage *construct(AttributeStorageAllocator &allocator,
+                                         KeyTy key) {
+    return new (allocator.allocate<TypeAttributeStorage>())
+        TypeAttributeStorage(key);
+  }
+
+  Type value;
+};
+
 } // namespace detail
 } // namespace irdl
 } // namespace mlir
 
 //===----------------------------------------------------------------------===//
-// IRDL Equality type constraint attribute
+// IRDL Equality type constraint attribute with dynamic types
 //===----------------------------------------------------------------------===//
 
-EqTypeConstraintAttr EqTypeConstraintAttr::get(MLIRContext &context,
-                                               StringRef typeName) {
+EqDynTypeConstraintAttr EqDynTypeConstraintAttr::get(MLIRContext &context,
+                                                     StringRef typeName) {
   return Base::get(&context, typeName);
 }
 
 FailureOr<std::unique_ptr<TypeConstraint>>
-EqTypeConstraintAttr::getTypeConstraint(OperationOp op, DynamicContext &ctx) {
+EqDynTypeConstraintAttr::getTypeConstraint(OperationOp op,
+                                           DynamicContext &ctx) {
   auto constraint = EqTypeConstraint::get(getValue(), op, ctx);
   if (failed(constraint))
     return failure();
@@ -64,4 +85,21 @@ EqTypeConstraintAttr::getTypeConstraint(OperationOp op, DynamicContext &ctx) {
       std::make_unique<EqTypeConstraint>(*constraint));
 }
 
-StringRef EqTypeConstraintAttr::getValue() { return getImpl()->value; }
+StringRef EqDynTypeConstraintAttr::getValue() { return getImpl()->value; }
+
+//===----------------------------------------------------------------------===//
+// IRDL Equality type constraint attribute
+//===----------------------------------------------------------------------===//
+
+EqTypeConstraintAttr EqTypeConstraintAttr::get(MLIRContext &context,
+                                               Type type) {
+  return Base::get(&context, type);
+}
+
+FailureOr<std::unique_ptr<TypeConstraint>>
+EqTypeConstraintAttr::getTypeConstraint(OperationOp op, DynamicContext &ctx) {
+  return static_cast<std::unique_ptr<TypeConstraint>>(
+      std::make_unique<EqTypeConstraint>(getValue()));
+}
+
+Type EqTypeConstraintAttr::getValue() { return getImpl()->value; }

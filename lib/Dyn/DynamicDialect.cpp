@@ -77,13 +77,22 @@ FailureOr<DynamicOperation *> DynamicDialect::createAndAddOperation(
 }
 
 Type DynamicDialect::parseType(mlir::DialectAsmParser &parser) const {
+  llvm::SMLoc typeLoc = parser.getCurrentLocation();
   StringRef name;
-  if (parser.parseKeyword(&name))
-    return {};
+
+  if (parser.parseKeyword(&name)) {
+    parser.emitError(
+        typeLoc,
+        "dynamic dialect types should be of the format \"dialect.name\"");
+    return Type();
+  }
 
   auto type = lookupType(name);
-  if (failed(type))
-    return {};
+  if (failed(type)) {
+    parser.emitError(typeLoc, "dynamic type '")
+        << name << "' was not registered in the dialect " << getName();
+    return Type();
+  }
 
   return DynamicType::get(ctx->getMLIRCtx(), *type);
 }
