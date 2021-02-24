@@ -67,7 +67,7 @@ FailureOr<DynamicOperation *> DynamicDialect::createAndAddOperation(
   ctx->typeIDToDynOps.insert({typeID, absOp});
 
   AbstractOperation::insert(
-      absOp->getName(), *this, {}, absOp->getRuntimeTypeID(),
+      absOp->getName(), *this, absOp->getRuntimeTypeID(),
       DynamicOperation::parseOperation, DynamicOperation::printOperation,
       DynamicOperation::verifyInvariants, DynamicOperation::foldHook,
       DynamicOperation::getCanonicalizationPatterns,

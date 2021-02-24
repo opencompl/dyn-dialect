@@ -33,10 +33,10 @@ int main(int argc, char **argv) {
   MLIRContext ctx;
   DynamicContext dynCtx(&ctx);
 
-  // Register the standard dialect using DialectRegistry.
-  DialectRegistry &registry = ctx.getDialectRegistry();
-  registry.insert<StandardOpsDialect>();
-  registry.insert<irdl::IRDLDialect>();
+  // Register the standard dialect and the IRDL dialect in the MLIR context
+  DialectRegistry registry;
+  registry.insert<StandardOpsDialect, irdl::IRDLDialect>();
+  ctx.appendDialectRegistry(registry);
 
   return failed(
       mlir::MlirOptMain(argc, argv, "Dyn optimizer driver\n", dynCtx));
