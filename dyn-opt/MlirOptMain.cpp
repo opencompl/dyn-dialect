@@ -98,7 +98,7 @@ processBuffer(raw_ostream &os, std::unique_ptr<MemoryBuffer> ownedBuffer,
   auto registry = context.getDialectRegistry();
 
   if (preloadDialectsInContext)
-    registry.loadAll(&context);
+    context.loadAllAvailableDialects();
   context.allowUnregisteredDialects(allowUnregisteredDialects);
   context.printOpOnDiagnostic(!verifyDiagnostics);
 
@@ -115,8 +115,8 @@ processBuffer(raw_ostream &os, std::unique_ptr<MemoryBuffer> ownedBuffer,
   // Do any processing requested by command line flags.  We don't care whether
   // these actions succeed or fail, we only care what diagnostics they produce
   // and whether they match our expectations.
-  performActions(os, verifyDiagnostics, verifyPasses, sourceMgr, &context,
-                 passPipeline);
+  (void)performActions(os, verifyDiagnostics, verifyPasses, sourceMgr, &context,
+                       passPipeline);
 
   // Verify the diagnostic handler to make sure that each of the diagnostics
   // matched.
@@ -205,10 +205,9 @@ LogicalResult mlir::MlirOptMain(int argc, char **argv, llvm::StringRef toolName,
   std::string helpHeader = (toolName + "\nAvailable Dialects: ").str();
   {
     llvm::raw_string_ostream os(helpHeader);
-    interleaveComma(registry, os, [&](auto &registryEntry) {
-      StringRef name = registryEntry.first;
-      os << name;
-    });
+    MLIRContext context;
+    interleaveComma(registry.getDialectNames(), os,
+                    [&](auto name) { os << name; });
   }
   // Parse pass names in main to ensure static initialization completed.
   cl::ParseCommandLineOptions(argc, argv, helpHeader);

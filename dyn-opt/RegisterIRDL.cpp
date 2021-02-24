@@ -31,8 +31,10 @@ LogicalResult mlir::registerIRDL(StringRef irdlFile,
                                  dyn::DynamicContext *dynContext) {
 
   auto *context = dynContext->getMLIRCtx();
-  auto &registry = context->getDialectRegistry();
+
+  DialectRegistry registry;
   registry.insert<irdl::IRDLDialect>();
+  context->appendDialectRegistry(registry);
 
   // Set up the input file.
   std::string errorMessage;
@@ -60,8 +62,11 @@ LogicalResult mlir::registerIRDL(StringRef irdlFile,
   if (!module)
     return failure();
 
-  module.get()->walk(
-      [&](irdl::DialectOp op) { irdl::registerDialect(op, dynContext); });
+  auto res = module.get()->walk([&](irdl::DialectOp op) {
+    if (failed(irdl::registerDialect(op, dynContext)))
+      return WalkResult::interrupt();
+    return WalkResult::advance();
+  });
 
-  return success();
+  return failure(res.wasInterrupted());
 }
