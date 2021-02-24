@@ -5,7 +5,7 @@ module {
     irdl.dialect cmath {
         // CHECK: irdl.type complex
         irdl.type complex
-        // CHECK: irdl.operation make_complex(re: f32, im: f32, ) -> (res: cmath.complex, )
+        // CHECK: irdl.operation make_complex(re: f32, im: f32) -> (res: cmath.complex)
         irdl.operation make_complex(re : f32, im: f32) -> (res: cmath.complex)
         irdl.operation mul(lhs: cmath.complex, rhs: cmath.complex) -> (res: cmath.complex)
         irdl.operation norm(c: cmath.complex) -> (res: f32)
