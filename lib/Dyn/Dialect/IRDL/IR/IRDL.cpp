@@ -150,28 +150,29 @@ void printTypedVar(OpAsmPrinter &p, const ArgDef *argDef) {
   printTypeConstraint(p, argDef->second);
 }
 
-/// Parse an ArgDefs with format ([argDef,]*).
+/// Parse an ArgDefs with format (argDef1, argDef2, ..., argDefN).
 /// The trailing comma is optional.
 ParseResult parseArgDefs(OpAsmParser &p, OwningArgDefs *argDefs) {
   if (p.parseLParen())
     return failure();
 
-  while (true) {
-    if (!p.parseOptionalRParen())
-      break;
+  // Empty
+  if (!p.parseOptionalRParen())
+    return success();
+
+  ArgDef argDef;
+  if (parseArgDef(p, &argDef))
+    return failure();
+  argDefs->push_back(argDef);
+
+  while (p.parseOptionalRParen()) {
+    if (p.parseComma())
+      return failure();
 
     ArgDef argDef;
     if (parseArgDef(p, &argDef))
       return failure();
     argDefs->push_back(argDef);
-
-    if (!p.parseOptionalComma())
-      continue;
-
-    if (p.parseRParen())
-      return failure();
-
-    break;
   }
 
   return success();
@@ -179,10 +180,13 @@ ParseResult parseArgDefs(OpAsmParser &p, OwningArgDefs *argDefs) {
 
 void printArgDefs(OpAsmPrinter &p, ArgDefs typedVars) {
   p << "(";
-  for (const auto &typedVar : typedVars) {
+  for (size_t i = 0; i + 1 < typedVars.size(); i++) {
+    const auto &typedVar = typedVars[i];
     printTypedVar(p, &typedVar);
     p << ", ";
   }
+  if (typedVars.size() != 0)
+    printTypedVar(p, &typedVars[typedVars.size() - 1]);
   p << ")";
 }
 
