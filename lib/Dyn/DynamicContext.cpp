@@ -22,7 +22,9 @@
 using namespace mlir;
 using namespace dyn;
 
-DynamicContext::DynamicContext(MLIRContext *ctx) : ctx{ctx} {}
+DynamicContext::DynamicContext(MLIRContext *ctx)
+    : Dialect(getDialectNamespace(), ctx, TypeID::get<DynamicContext>()),
+      ctx{ctx} {}
 
 mlir::FailureOr<DynamicDialect *>
 DynamicContext::createAndRegisterDialect(llvm::StringRef name) {
