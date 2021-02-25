@@ -18,6 +18,7 @@
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Support/FileUtilities.h"
 #include "mlir/Support/LogicalResult.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/SourceMgr.h"
@@ -31,7 +32,7 @@ int main(int argc, char **argv) {
   // TODO: Register passes here.
 
   MLIRContext ctx;
-  DynamicContext dynCtx(&ctx);
+  auto dynCtx = ctx.getOrLoadDialect<DynamicContext>();
 
   // Register the standard dialect and the IRDL dialect in the MLIR context
   DialectRegistry registry;
@@ -39,5 +40,5 @@ int main(int argc, char **argv) {
   ctx.appendDialectRegistry(registry);
 
   return failed(
-      mlir::MlirOptMain(argc, argv, "Dyn optimizer driver\n", dynCtx));
+      mlir::MlirOptMain(argc, argv, "Dyn optimizer driver\n", *dynCtx));
 }

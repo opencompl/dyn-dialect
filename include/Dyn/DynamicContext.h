@@ -15,6 +15,7 @@
 
 #include "Dyn/DynamicType.h"
 #include "TypeIDAllocator.h"
+#include "mlir/IR/Dialect.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
@@ -38,9 +39,13 @@ class DynamicOperation;
 
 /// Manages the creation and lifetime of dynamic MLIR objects such as dialects,
 /// operations, types, and traits
-class DynamicContext {
+/// The dynamic context is a dialect so we can get the instance through
+/// `MLIRContext::getLoadedDialect`. This is a bit of a hack though.
+class DynamicContext : public mlir::Dialect {
 public:
-  DynamicContext(MLIRContext *ctx);
+  static StringRef getDialectNamespace() { return "DynamicContext"; }
+
+  explicit DynamicContext(mlir::MLIRContext *ctx);
 
   TypeIDAllocator &getTypeIDAllocator() { return typeIDAllocator; }
 
