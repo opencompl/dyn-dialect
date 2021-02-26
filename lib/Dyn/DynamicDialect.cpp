@@ -53,6 +53,11 @@ DynamicDialect::createAndAddType(StringRef name) {
   return type;
 }
 
+LogicalResult DynamicDialect::createAndAddTypeAlias(StringRef name, Type type) {
+  auto registered = typeAliases.try_emplace(name, type);
+  return success(registered.second);
+}
+
 FailureOr<DynamicOperation *> DynamicDialect::createAndAddOperation(
     StringRef name,
     std::vector<std::function<LogicalResult(Operation *)>> verifiers) {
@@ -88,13 +93,16 @@ Type DynamicDialect::parseType(mlir::DialectAsmParser &parser) const {
   }
 
   auto type = lookupType(name);
-  if (failed(type)) {
-    parser.emitError(typeLoc, "dynamic type '")
-        << name << "' was not registered in the dialect " << getName();
-    return Type();
-  }
+  if (succeeded(type))
+    return DynamicType::get(ctx->getMLIRCtx(), *type);
 
-  return DynamicType::get(ctx->getMLIRCtx(), *type);
+  auto alias = lookupTypeAlias(name);
+  if (succeeded(alias))
+    return *alias;
+
+  parser.emitError(typeLoc, "dynamic type '")
+      << name << "' was not registered in the dialect " << getName();
+  return Type();
 }
 
 void DynamicDialect::printType(Type type, DialectAsmPrinter &printer) const {
