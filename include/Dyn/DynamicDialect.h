@@ -80,7 +80,6 @@ public:
     return &*it->second;
   }
 
-  /// The pointer is guaranteed to be non-null.
   /// The name format should be 'alias' and not 'dialect.alias'.
   FailureOr<Type> lookupTypeAlias(StringRef name) const {
     auto it = typeAliases.find(name);
