@@ -29,6 +29,11 @@ namespace irdl {
 LogicalResult registerType(dyn::DynamicDialect *dialect, StringRef name) {
   return dialect->createAndAddType(name);
 }
+
+LogicalResult registerTypeAlias(dyn::DynamicDialect *dialect, StringRef name,
+                                Type type) {
+  return dialect->createAndAddTypeAlias(name, type);
+}
 } // namespace irdl
 } // namespace mlir
 

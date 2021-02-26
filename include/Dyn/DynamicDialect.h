@@ -88,6 +88,15 @@ public:
     return Type(it->second);
   }
 
+  /// The name format should be 'type' and not 'dialect.type'
+  FailureOr<Type> lookupTypeOrTypeAlias(StringRef name) const {
+    auto dynType = lookupType(name);
+    if (succeeded(dynType))
+      return DynamicType::get(getContext(), *dynType);
+
+    return lookupTypeAlias(name);
+  }
+
   /// The pointer is guaranteed to be non-null.
   /// The name format should be 'dialect.operation'.
   FailureOr<DynamicOperation *> lookupOp(StringRef name) const {

@@ -29,6 +29,10 @@ namespace irdl {
 /// Register a new dynamic type in a dynamic dialect.
 LogicalResult registerType(dyn::DynamicDialect *dialect, StringRef name);
 
+/// Register a new type alias in a dynamic dialect.
+LogicalResult registerTypeAlias(dyn::DynamicDialect *dialect, StringRef name,
+                                Type type);
+
 /// Register a new dynamic operation in a dynamic dialect.
 LogicalResult registerOperation(dyn::DynamicDialect *dialect, StringRef name,
                                 OpTypeDef opTypeDef);
