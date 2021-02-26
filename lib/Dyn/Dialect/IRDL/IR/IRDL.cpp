@@ -146,14 +146,13 @@ ParseResult parseType(OpAsmParser &p, Type *type) {
                     "no 'irdl.dialect' currently being parsed.");
 
   /// Get the type from the dialect.
-  auto dynType = dialect->lookupType(typeName);
+  auto dynType = dialect->lookupTypeOrTypeAlias(typeName);
   if (failed(dynType))
     return p.emitError(loc, "type ")
         .append(typeName, " is not registered in the dialect ",
                 dialect->getName(), ".");
 
-  *type = DynamicType::get(dynCtx->getMLIRCtx(), *dynType);
-
+  *type = *dynType;
   return success();
 }
 
@@ -263,6 +262,36 @@ void printOpTypeDef(OpAsmPrinter &p, OpTypeDef opDef) {
 }
 
 } // namespace
+
+//===----------------------------------------------------------------------===//
+// irdl::TypeAliasOp
+//===----------------------------------------------------------------------===//
+
+static ParseResult parseTypeAliasOp(OpAsmParser &p, OperationState &state) {
+  Builder &builder = p.getBuilder();
+
+  // Parse the operation name.
+  StringRef name;
+  Type type;
+  if (p.parseKeyword(&name) || p.parseEqual() || parseType(p, &type))
+    return failure();
+
+  state.addAttribute("name", builder.getStringAttr(name));
+  state.addAttribute("type", TypeAttr::get(type));
+
+  // Get the currently parsed dialect.
+  auto *dynCtx = state.getContext()->getOrLoadDialect<DynamicContext>();
+  auto *dialect = dynCtx->currentlyParsedDialect;
+  assert(dialect != nullptr);
+
+  // and register the type aliast in the dialect.
+  return registerTypeAlias(dialect, name, type);
+}
+
+static void print(OpAsmPrinter &p, TypeAliasOp typeAliasOp) {
+  p << TypeAliasOp::getOperationName() << " " << typeAliasOp.name() << " = "
+    << typeAliasOp.type();
+}
 
 //===----------------------------------------------------------------------===//
 // irdl::OperationOp
