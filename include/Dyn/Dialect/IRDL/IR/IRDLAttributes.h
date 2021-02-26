@@ -133,23 +133,6 @@ public:
 // IRDL Equality type constraint attribute
 //===----------------------------------------------------------------------===//
 
-/// Attribute for equality type constraint with a dynamic type. The dynamic type
-/// is represented by its name.
-class EqDynTypeConstraintAttr : public mlir::Attribute::AttrBase<
-                                    EqDynTypeConstraintAttr, mlir::Attribute,
-                                    mlir::irdl::detail::StringAttributeStorage,
-                                    TypeConstraintAttrInterface::Trait> {
-public:
-  using Base::Base;
-
-  static EqDynTypeConstraintAttr get(MLIRContext &context, StringRef typeName);
-
-  FailureOr<std::unique_ptr<mlir::irdl::TypeConstraint>>
-  getTypeConstraint(OperationOp op, dyn::DynamicContext &ctx);
-
-  StringRef getValue();
-};
-
 /// Attribute for equality type constraint.
 class EqTypeConstraintAttr
     : public mlir::Attribute::AttrBase<EqTypeConstraintAttr, mlir::Attribute,
@@ -160,8 +143,8 @@ public:
 
   static EqTypeConstraintAttr get(MLIRContext &context, Type type);
 
-  FailureOr<std::unique_ptr<mlir::irdl::TypeConstraint>>
-  getTypeConstraint(OperationOp op, dyn::DynamicContext &ctx);
+  std::unique_ptr<mlir::irdl::TypeConstraint>
+  getTypeConstraint(dyn::DynamicContext &ctx);
 
   Type getValue();
 };

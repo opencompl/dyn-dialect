@@ -45,11 +45,6 @@ class EqTypeConstraint : public TypeConstraint {
 public:
   EqTypeConstraint(Type type) : type(type) {}
 
-  /// Get the type constraint given the type name.
-  /// The OperationOp should be the op having the type constraint.
-  static FailureOr<EqTypeConstraint> get(StringRef typeName, OperationOp op,
-                                         dyn::DynamicContext &ctx);
-
   /// Check that a type is satisfying the type constraint.
   /// The operation should be the operation having the type constraint.
   /// isOperand is used for the error message, and indicate if the constraint

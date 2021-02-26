@@ -8,13 +8,17 @@
 
 #include "Dyn/Dialect/IRDL/IR/IRDL.h"
 #include "Dyn/Dialect/IRDL/IR/IRDLAttributes.h"
+#include "Dyn/Dialect/IRDL/IRDLRegistration.h"
 #include "Dyn/Dialect/IRDL/TypeConstraint.h"
+#include "Dyn/DynamicContext.h"
+#include "Dyn/DynamicDialect.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/Support/LogicalResult.h"
 
 using namespace mlir;
 using namespace mlir::irdl;
+using namespace mlir::dyn;
 
 //===----------------------------------------------------------------------===//
 // IRDL dialect.
@@ -25,7 +29,7 @@ void IRDLDialect::initialize() {
 #define GET_OP_LIST
 #include "Dyn/Dialect/IRDL/IR/IRDLOps.cpp.inc"
       >();
-  addAttributes<OpTypeDefAttr, EqDynTypeConstraintAttr, EqTypeConstraintAttr>();
+  addAttributes<OpTypeDefAttr, EqTypeConstraintAttr>();
 }
 
 //===----------------------------------------------------------------------===//
@@ -45,10 +49,25 @@ static ParseResult parseDialectOp(OpAsmParser &p, OperationState &state) {
     return failure();
   state.addAttribute("name", builder.getStringAttr(name));
 
+  // Register the dialect in the dynamic context.
+  auto *dynCtx = state.getContext()->getOrLoadDialect<DynamicContext>();
+  auto dialectRes = dynCtx->createAndRegisterDialect(name);
+  if (failed(dialectRes))
+    return failure();
+  auto *dialect = *dialectRes;
+
+  // Set the current dialect to the dialect that we are currently defining.
+  // Every IRDL operation that is parsed in the next region will be registered
+  // inside this dialect.
+  dynCtx->currentlyParsedDialect = dialect;
+
   // Parse the dialect body.
   Region *region = state.addRegion();
   if (failed(p.parseRegion(*region)))
     return failure();
+
+  // We are not parsing the dialect anymore.
+  dynCtx->currentlyParsedDialect = nullptr;
 
   DialectOp::ensureTerminator(*region, builder, state.location);
 
@@ -78,6 +97,14 @@ static ParseResult parseTypeOp(OpAsmParser &p, OperationState &state) {
     return failure();
   state.addAttribute("name", builder.getStringAttr(name));
 
+  // Get the currently parsed dialect, and register the type in it.
+  auto *dynCtx = state.getContext()->getOrLoadDialect<DynamicContext>();
+  auto *dialect = dynCtx->currentlyParsedDialect;
+  assert(dialect != nullptr && "Trying to parse an 'irdl.type' when there is "
+                               "no 'irdl.dialect' currently being parsed.");
+  if (failed(registerType(dialect, name)))
+    return failure();
+
   return success();
 }
 
@@ -94,41 +121,58 @@ static void print(OpAsmPrinter &p, TypeOp typeOp) {
 
 namespace {
 
+/// Parse a type. A type has either the usual MLIR format, or is a name.
+/// If the type has a name (let's say `type`), it will correspond to the type
+/// `!dialect.type`, where `dialect` is the name of the previously defined
+/// dialect using `irdl.dialect`.
+ParseResult parseType(OpAsmParser &p, Type *type) {
+  // If we can parse the type directly, do it.
+  auto typeParseRes = p.parseOptionalType(*type);
+  if (typeParseRes.hasValue())
+    return typeParseRes.getValue();
+
+  auto loc = p.getCurrentLocation();
+  // Otherwise, this mean that the type is in the format `type` instead of
+  // `dialect.type`.
+  StringRef typeName;
+  if (p.parseOptionalKeyword(&typeName)) {
+    p.emitError(p.getCurrentLocation(), "type expected");
+    return failure();
+  }
+
+  auto dynCtx = p.getBuilder().getContext()->getLoadedDialect<DynamicContext>();
+  auto *dialect = dynCtx->currentlyParsedDialect;
+  assert(dialect && "Trying to parse a possible dynamic type when there is "
+                    "no 'irdl.dialect' currently being parsed.");
+
+  /// Get the type from the dialect.
+  auto dynType = dialect->lookupType(typeName);
+  if (failed(dynType))
+    return p.emitError(loc, "type ")
+        .append(typeName, " is not registered in the dialect ",
+                dialect->getName(), ".");
+
+  *type = DynamicType::get(dynCtx->getMLIRCtx(), *dynType);
+
+  return success();
+}
+
 /// Parse a type constraint.
 /// The verifier ensures that the format is respected.
 ParseResult parseTypeConstraint(OpAsmParser &p, Attribute *typeConstraint) {
   Type type;
 
-  // If the type is already registered, parse it.
-  auto typeParseRes = p.parseOptionalType(type);
-  if (typeParseRes.hasValue()) {
-    if (typeParseRes.getValue())
-      return failure();
-
-    *typeConstraint =
-        EqTypeConstraintAttr::get(*p.getBuilder().getContext(), type);
-    return success();
-  }
-
-  // Otherwise, parse a dynamic type.
-  StringRef name;
-  if (p.parseOptionalKeyword(&name)) {
-    p.emitError(p.getCurrentLocation(), "type expected");
+  if (failed(parseType(p, &type)))
     return failure();
-  }
 
   *typeConstraint =
-      EqDynTypeConstraintAttr::get(*p.getBuilder().getContext(), name);
+      EqTypeConstraintAttr::get(*p.getBuilder().getContext(), type);
   return success();
 }
 
 /// Print a type constraint.
 void printTypeConstraint(OpAsmPrinter &p, Attribute typeConstraint) {
   if (auto eqConstr = typeConstraint.dyn_cast<EqTypeConstraintAttr>()) {
-    p << eqConstr.getValue();
-    return;
-  } else if (auto eqConstr =
-                 typeConstraint.dyn_cast<EqDynTypeConstraintAttr>()) {
     p << eqConstr.getValue();
     return;
   }
@@ -238,6 +282,17 @@ static ParseResult parseOperationOp(OpAsmParser &p, OperationState &state) {
   if (parseOpTypeDefAttr(p, &opTypeDef))
     return failure();
   state.addAttribute("op_def", opTypeDef);
+
+  // Get the currently parsed dialect
+  auto *dynCtx = state.getContext()->getOrLoadDialect<DynamicContext>();
+  auto *dialect = dynCtx->currentlyParsedDialect;
+  assert(dialect != nullptr &&
+         "Trying to parse an 'irdl.operation' when there is "
+         "no 'irdl.dialect' currently being parsed.");
+
+  // and register the operation in the dialect
+  if (failed(registerOperation(dialect, name, opTypeDef.getValue())))
+    return failure();
 
   return success();
 }

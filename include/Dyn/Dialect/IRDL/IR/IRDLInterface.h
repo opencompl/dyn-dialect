@@ -14,7 +14,6 @@
 #ifndef DYN_DIALECT_IRDL_IR_IRDLINTERFACE_H_
 #define DYN_DIALECT_IRDL_IR_IRDLINTERFACE_H_
 
-#include "Dyn/Dialect/IRDL/IR/IRDL.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include <memory>
 
