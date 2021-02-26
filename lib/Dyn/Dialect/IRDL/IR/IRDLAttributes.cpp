@@ -66,28 +66,6 @@ struct TypeAttributeStorage : public AttributeStorage {
 } // namespace mlir
 
 //===----------------------------------------------------------------------===//
-// IRDL Equality type constraint attribute with dynamic types
-//===----------------------------------------------------------------------===//
-
-EqDynTypeConstraintAttr EqDynTypeConstraintAttr::get(MLIRContext &context,
-                                                     StringRef typeName) {
-  return Base::get(&context, typeName);
-}
-
-FailureOr<std::unique_ptr<TypeConstraint>>
-EqDynTypeConstraintAttr::getTypeConstraint(OperationOp op,
-                                           DynamicContext &ctx) {
-  auto constraint = EqTypeConstraint::get(getValue(), op, ctx);
-  if (failed(constraint))
-    return failure();
-
-  return static_cast<std::unique_ptr<TypeConstraint>>(
-      std::make_unique<EqTypeConstraint>(*constraint));
-}
-
-StringRef EqDynTypeConstraintAttr::getValue() { return getImpl()->value; }
-
-//===----------------------------------------------------------------------===//
 // IRDL Equality type constraint attribute
 //===----------------------------------------------------------------------===//
 
@@ -96,10 +74,9 @@ EqTypeConstraintAttr EqTypeConstraintAttr::get(MLIRContext &context,
   return Base::get(&context, type);
 }
 
-FailureOr<std::unique_ptr<TypeConstraint>>
-EqTypeConstraintAttr::getTypeConstraint(OperationOp op, DynamicContext &ctx) {
-  return static_cast<std::unique_ptr<TypeConstraint>>(
-      std::make_unique<EqTypeConstraint>(getValue()));
+std::unique_ptr<TypeConstraint>
+EqTypeConstraintAttr::getTypeConstraint(DynamicContext &ctx) {
+  return std::make_unique<EqTypeConstraint>(getValue());
 }
 
 Type EqTypeConstraintAttr::getValue() { return getImpl()->value; }

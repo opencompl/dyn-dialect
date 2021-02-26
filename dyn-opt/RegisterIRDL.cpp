@@ -59,14 +59,5 @@ LogicalResult mlir::registerIRDL(StringRef irdlFile,
   // Parse the input file and reset the context threading state.
   OwningModuleRef module(parseSourceFile(sourceMgr, context));
   context->enableMultithreading(wasThreadingEnabled);
-  if (!module)
-    return failure();
-
-  auto res = module.get()->walk([&](irdl::DialectOp op) {
-    if (failed(irdl::registerDialect(op, dynContext)))
-      return WalkResult::interrupt();
-    return WalkResult::advance();
-  });
-
-  return failure(res.wasInterrupted());
+  return failure(!module);
 }

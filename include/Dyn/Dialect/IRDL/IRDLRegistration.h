@@ -18,15 +18,20 @@
 
 namespace mlir {
 
-namespace dyn {
 // Forward declaration.
+namespace dyn {
 class DynamicContext;
+class DynamicDialect;
 } // namespace dyn
 
 namespace irdl {
 
-/// Register a dialect defined in IRDL in a MLIR context.
-LogicalResult registerDialect(DialectOp dialectOp, dyn::DynamicContext *ctx);
+/// Register a new dynamic type in a dynamic dialect.
+LogicalResult registerType(dyn::DynamicDialect *dialect, StringRef name);
+
+/// Register a new dynamic operation in a dynamic dialect.
+LogicalResult registerOperation(dyn::DynamicDialect *dialect, StringRef name,
+                                OpTypeDef opTypeDef);
 
 } // namespace irdl
 } // namespace mlir

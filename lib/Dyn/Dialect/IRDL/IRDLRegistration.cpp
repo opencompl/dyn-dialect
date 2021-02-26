@@ -19,16 +19,20 @@
 #include "mlir/IR/Visitors.h"
 #include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/SMLoc.h"
 
 using namespace mlir;
 using namespace irdl;
 
-namespace {
-/// Register a type represented by a `irdl.type` operation.
-LogicalResult registerType(TypeOp typeOp, dyn::DynamicDialect *dialect) {
-  return dialect->createAndAddType(typeOp.name());
+namespace mlir {
+namespace irdl {
+LogicalResult registerType(dyn::DynamicDialect *dialect, StringRef name) {
+  return dialect->createAndAddType(name);
 }
+} // namespace irdl
+} // namespace mlir
 
+namespace {
 /// Objects representing the type constraints of dynamic operations.
 /// Each operand and each result have a name, and a type constraint.
 using NamedTypeConstraint =
@@ -76,32 +80,28 @@ LogicalResult verifyOpTypeConstraints(Operation *op,
 
   return success();
 }
+} // namespace
 
+namespace mlir {
+namespace irdl {
 /// Register an operation represented by a `irdl.operation` operation.
-LogicalResult registerOperation(OperationOp op, dyn::DynamicDialect *dialect) {
-  OpTypeDef opDef = op.op_def();
+LogicalResult registerOperation(dyn::DynamicDialect *dialect, StringRef name,
+                                OpTypeDef opTypeDef) {
   OpTypeConstraints constraints;
   auto *ctx = dialect->getDynamicContext();
 
-  for (auto &def : opDef.operandDef) {
+  for (auto &def : opTypeDef.operandDef) {
     auto name = def.first;
     auto constraint =
-        def.second.cast<TypeConstraintAttrInterface>().getTypeConstraint(op,
-                                                                         *ctx);
-    if (failed(constraint))
-      return failure();
-    constraints.first.emplace_back(name, std::move(*constraint));
+        def.second.cast<TypeConstraintAttrInterface>().getTypeConstraint(*ctx);
+    constraints.first.emplace_back(name, std::move(constraint));
   }
 
-  for (auto &def : opDef.resultDef) {
+  for (auto &def : opTypeDef.resultDef) {
     auto name = def.first;
     auto constraint =
-        def.second.cast<TypeConstraintAttrInterface>().getTypeConstraint(op,
-                                                                         *ctx);
-
-    if (failed(constraint))
-      return failure();
-    constraints.second.emplace_back(name, std::move(*constraint));
+        def.second.cast<TypeConstraintAttrInterface>().getTypeConstraint(*ctx);
+    constraints.second.emplace_back(name, std::move(constraint));
   }
 
   auto typeVerifier =
@@ -110,36 +110,7 @@ LogicalResult registerOperation(OperationOp op, dyn::DynamicDialect *dialect) {
         return verifyOpTypeConstraints(op, *constraints, *ctx);
       };
 
-  return dialect->createAndAddOperation(op.name(), {std::move(typeVerifier)});
+  return dialect->createAndAddOperation(name, {std::move(typeVerifier)});
 }
-} // namespace
-
-LogicalResult mlir::irdl::registerDialect(DialectOp dialectOp,
-                                          dyn::DynamicContext *ctx) {
-
-  // Register the dialect.
-  auto dialectRes = ctx->createAndRegisterDialect(dialectOp.name());
-  if (failed(dialectRes))
-    return failure();
-  auto *dialect = *dialectRes;
-
-  // Register all the types first.
-  auto failedTypeRegistration = dialectOp.walk([&](TypeOp type) {
-    if (failed(registerType(type, dialect)))
-      return WalkResult::interrupt();
-    return WalkResult::advance();
-  });
-
-  // If a type failed to register, return early with an error.
-  if (failedTypeRegistration.wasInterrupted())
-    return failure();
-
-  // Register the operations.
-  auto failedOperationRegistration = dialectOp.walk([&](OperationOp op) {
-    if (failed(registerOperation(op, dialect)))
-      return WalkResult::interrupt();
-    return WalkResult::advance();
-  });
-
-  return failure(failedOperationRegistration.wasInterrupted());
-}
+} // namespace irdl
+} // namespace mlir

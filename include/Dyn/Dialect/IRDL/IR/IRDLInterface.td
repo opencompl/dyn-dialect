@@ -24,8 +24,8 @@ def TypeConstraintAttrInterface : AttrInterface<"TypeConstraintAttrInterface"> {
   let methods = [
     InterfaceMethod<
       "Get the type constraint",
-      "mlir::FailureOr<std::unique_ptr<mlir::irdl::TypeConstraint>>", "getTypeConstraint",
-      (ins "mlir::irdl::OperationOp":$op, "mlir::dyn::DynamicContext &":$ctx)
+      "std::unique_ptr<mlir::irdl::TypeConstraint>", "getTypeConstraint",
+      (ins "mlir::dyn::DynamicContext &":$ctx)
     >
   ];
 }
