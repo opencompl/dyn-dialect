@@ -162,7 +162,7 @@ class AnyOfTypeConstraintAttr
 public:
   using Base::Base;
 
-  static AnyOfTypeConstraintAttr get(MLIRContext &context, Type type);
+  static AnyOfTypeConstraintAttr get(MLIRContext &context, ArrayRef<Type> type);
 
   std::unique_ptr<mlir::irdl::TypeConstraint>
   getTypeConstraint(dyn::DynamicContext &ctx);
