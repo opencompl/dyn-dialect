@@ -151,10 +151,10 @@ public:
 };
 
 //===----------------------------------------------------------------------===//
-// IRDL type set membership constraint attribute
+// IRDL AnyOf type constraint attribute
 //===----------------------------------------------------------------------===//
 
-/// Attribute for equality type constraint.
+/// Attribute for the AnyOf type constraint.
 class AnyOfTypeConstraintAttr
     : public mlir::Attribute::AttrBase<AnyOfTypeConstraintAttr, mlir::Attribute,
                                        mlir::irdl::detail::TypeArrayAttrStorage,

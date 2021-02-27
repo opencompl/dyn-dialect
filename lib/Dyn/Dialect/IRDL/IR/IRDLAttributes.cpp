@@ -81,6 +81,10 @@ EqTypeConstraintAttr::getTypeConstraint(DynamicContext &ctx) {
 
 Type EqTypeConstraintAttr::getValue() { return getImpl()->value; }
 
+//===----------------------------------------------------------------------===//
+// IRDL AnyOf type constraint attribute
+//===----------------------------------------------------------------------===//
+
 namespace mlir {
 namespace irdl {
 namespace detail {
