@@ -168,12 +168,56 @@ ParseResult parseType(OpAsmParser &p, Type *type) {
   return failure();
 }
 
+/// Parse an AnyOf constraint if there is one.
+/// It has the format 'irdl.AnyOf<type (, type)*>'
+Optional<ParseResult>
+parseOptionalAnyOfTypeConstraint(OpAsmParser &p, Attribute *typeConstraint) {
+  if (p.parseOptionalKeyword("irdl.AnyOf"))
+    return {};
+
+  if (p.parseLess())
+    return {failure()};
+
+  std::vector<Type> types;
+  Type type;
+
+  if (parseType(p, &type))
+    return {failure()};
+  types.push_back(type);
+
+  while (p.parseOptionalGreater()) {
+    if (p.parseComma())
+      return {failure()};
+
+    Type type;
+    if (parseType(p, &type))
+      return {failure()};
+    types.push_back(type);
+  }
+
+  *typeConstraint =
+      AnyOfTypeConstraintAttr::get(*p.getBuilder().getContext(), types);
+  return {success()};
+}
+
 /// Parse a type constraint.
 /// The verifier ensures that the format is respected.
 ParseResult parseTypeConstraint(OpAsmParser &p, Attribute *typeConstraint) {
   Type type;
 
-  if (failed(parseType(p, &type)))
+  // Parse an AnyOf constraint
+  auto anyOfRes = parseOptionalAnyOfTypeConstraint(p, typeConstraint);
+  if (anyOfRes.hasValue())
+    return anyOfRes.getValue();
+
+  // Type equality constraint.
+  // It has the format 'type'.
+  auto typeParsed = parseOptionalType(p, &type);
+  if (!typeParsed.hasValue()) {
+    p.emitError(p.getCurrentLocation(), "type constraint expected");
+  }
+
+  if (failed(typeParsed.getValue()))
     return failure();
 
   *typeConstraint =
@@ -181,13 +225,29 @@ ParseResult parseTypeConstraint(OpAsmParser &p, Attribute *typeConstraint) {
   return success();
 }
 
+/// Print an AnyOf type constraint.
+/// It has the format 'irdl.AnyOf<type, (, type)*>'.
+void printAnyOfTypeConstraint(OpAsmPrinter &p,
+                              AnyOfTypeConstraintAttr anyOfConstr) {
+  auto types = anyOfConstr.getValue();
+
+  p << "irdl.AnyOf<";
+  for (size_t i = 0; i + 1 < types.size(); i++) {
+    p << types[i] << ", ";
+  }
+  p << types.back() << ">";
+}
+
 /// Print a type constraint.
 void printTypeConstraint(OpAsmPrinter &p, Attribute typeConstraint) {
   if (auto eqConstr = typeConstraint.dyn_cast<EqTypeConstraintAttr>()) {
     p << eqConstr.getValue();
-    return;
+  } else if (auto anyOfConstr =
+                 typeConstraint.dyn_cast<AnyOfTypeConstraintAttr>()) {
+    printAnyOfTypeConstraint(p, anyOfConstr);
+  } else {
+    assert(false && "Unknown type constraint.");
   }
-  assert(false && "Unknown type constraint.");
 }
 
 /// Parse an ArgDef with format "name: typeConstraint".
