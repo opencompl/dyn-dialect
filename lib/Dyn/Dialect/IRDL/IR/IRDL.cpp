@@ -29,7 +29,7 @@ void IRDLDialect::initialize() {
 #define GET_OP_LIST
 #include "Dyn/Dialect/IRDL/IR/IRDLOps.cpp.inc"
       >();
-  addAttributes<OpTypeDefAttr, EqTypeConstraintAttr>();
+  addAttributes<OpTypeDefAttr, EqTypeConstraintAttr, AnyOfTypeConstraintAttr>();
 }
 
 //===----------------------------------------------------------------------===//

@@ -34,6 +34,7 @@ namespace detail {
 // Forward declaration.
 struct StringAttributeStorage;
 struct TypeAttributeStorage;
+struct TypeArrayAttrStorage;
 } // namespace detail
 
 /// Definition of an argument. An argument is either an operand or a result.
@@ -147,6 +148,26 @@ public:
   getTypeConstraint(dyn::DynamicContext &ctx);
 
   Type getValue();
+};
+
+//===----------------------------------------------------------------------===//
+// IRDL type set membership constraint attribute
+//===----------------------------------------------------------------------===//
+
+/// Attribute for equality type constraint.
+class AnyOfTypeConstraintAttr
+    : public mlir::Attribute::AttrBase<AnyOfTypeConstraintAttr, mlir::Attribute,
+                                       mlir::irdl::detail::TypeArrayAttrStorage,
+                                       TypeConstraintAttrInterface::Trait> {
+public:
+  using Base::Base;
+
+  static AnyOfTypeConstraintAttr get(MLIRContext &context, Type type);
+
+  std::unique_ptr<mlir::irdl::TypeConstraint>
+  getTypeConstraint(dyn::DynamicContext &ctx);
+
+  ArrayRef<Type> getValue();
 };
 
 } // namespace irdl
