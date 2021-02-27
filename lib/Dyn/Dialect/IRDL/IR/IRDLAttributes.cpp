@@ -109,7 +109,7 @@ struct TypeArrayAttrStorage : public AttributeStorage {
 } // namespace mlir
 
 AnyOfTypeConstraintAttr AnyOfTypeConstraintAttr::get(MLIRContext &context,
-                                                     Type type) {
+                                                     ArrayRef<Type> type) {
   return Base::get(&context, type);
 }
 

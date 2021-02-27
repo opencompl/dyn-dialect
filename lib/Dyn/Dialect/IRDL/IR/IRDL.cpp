@@ -121,11 +121,13 @@ static void print(OpAsmPrinter &p, TypeOp typeOp) {
 
 namespace {
 
-/// Parse a type. A type has either the usual MLIR format, or is a name.
-/// If the type has a name (let's say `type`), it will correspond to the type
-/// `!dialect.type`, where `dialect` is the name of the previously defined
-/// dialect using `irdl.dialect`.
-ParseResult parseType(OpAsmParser &p, Type *type) {
+/// Parse a optionally a type.
+/// A type has either the usual MLIR format, or is a name. If the type has a
+/// name (let's say `type`), it will correspond  to the type `!dialect.type`,
+/// where `dialect` is the name of the previously defined dialect using
+/// `irdl.dialect`.
+/// Returns a ParseResult if something was parsed, and no values otherwise.
+Optional<ParseResult> parseOptionalType(OpAsmParser &p, Type *type) {
   // If we can parse the type directly, do it.
   auto typeParseRes = p.parseOptionalType(*type);
   if (typeParseRes.hasValue())
@@ -135,10 +137,8 @@ ParseResult parseType(OpAsmParser &p, Type *type) {
   // Otherwise, this mean that the type is in the format `type` instead of
   // `dialect.type`.
   StringRef typeName;
-  if (p.parseOptionalKeyword(&typeName)) {
-    p.emitError(p.getCurrentLocation(), "type expected");
-    return failure();
-  }
+  if (p.parseOptionalKeyword(&typeName))
+    return {};
 
   auto dynCtx = p.getBuilder().getContext()->getLoadedDialect<DynamicContext>();
   auto *dialect = dynCtx->currentlyParsedDialect;
@@ -148,12 +148,24 @@ ParseResult parseType(OpAsmParser &p, Type *type) {
   /// Get the type from the dialect.
   auto dynType = dialect->lookupTypeOrTypeAlias(typeName);
   if (failed(dynType))
-    return p.emitError(loc, "type ")
-        .append(typeName, " is not registered in the dialect ",
-                dialect->getName(), ".");
+    return ParseResult(p.emitError(loc, "type ")
+                           .append(typeName,
+                                   " is not registered in the dialect ",
+                                   dialect->getName(), "."));
 
   *type = *dynType;
-  return success();
+  return ParseResult(success());
+}
+
+/// Parse a type, and returns an error if there is none.
+ParseResult parseType(OpAsmParser &p, Type *type) {
+  auto res = parseOptionalType(p, type);
+
+  if (res.hasValue())
+    return res.getValue();
+
+  p.emitError(p.getCurrentLocation(), "type expected");
+  return failure();
 }
 
 /// Parse a type constraint.
