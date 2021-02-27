@@ -1,0 +1,24 @@
+// RUN: dyn-opt %s | dyn-opt | FileCheck %s
+
+module {
+    // CHECK-LABEL: irdl.dialect testd {
+    irdl.dialect testd {
+        // CHECK: irdl.type testt
+        irdl.type testt
+
+        // CHECK: irdl.operation eq(c: !testd.testt) -> ()
+        irdl.operation eq(c: !testd.testt) -> ()
+        // CHECK: irdl.operation anyof(c: irdl.AnyOf<!testd.testt, i32>) -> ()
+        irdl.operation anyof(c: irdl.AnyOf<!testd.testt, i32>) -> ()
+    }
+
+    func @test(%a: !testd.testt, %b: i32) {
+        // CHECK: "testd.eq"(%{{.*}}) : (!testd.testt) -> ()
+        "testd.eq"(%a) : (!testd.testt) -> ()
+        // CHECK: "testd.anyof"(%{{.*}}) : (!testd.testt) -> ()
+        "testd.anyof"(%a) : (!testd.testt) -> ()
+        // CHECK: "testd.anyof"(%{{.*}}) : (i32) -> ()
+        "testd.anyof"(%b) : (i32) -> ()
+        return
+    }
+}
