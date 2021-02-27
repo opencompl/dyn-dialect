@@ -33,6 +33,11 @@ class OperationOp;
 /// A generic type constraint.
 class TypeConstraint {
 public:
+  /// Check that a type is satisfying the type constraint.
+  /// The operation should be the operation having the type constraint.
+  /// isOperand is used for the error message, and indicate if the constraint
+  /// is on an operand or a resuls, and pos is the position of the
+  /// operand/result.
   virtual LogicalResult verifyType(Operation *op, Type type, bool isOperand,
                                    unsigned pos, dyn::DynamicContext &ctx) = 0;
 };
@@ -45,16 +50,29 @@ class EqTypeConstraint : public TypeConstraint {
 public:
   EqTypeConstraint(Type type) : type(type) {}
 
-  /// Check that a type is satisfying the type constraint.
-  /// The operation should be the operation having the type constraint.
-  /// isOperand is used for the error message, and indicate if the constraint
-  /// is on an operand or a resuls, and pos is the position of the
-  /// operand/result.
   virtual LogicalResult verifyType(Operation *op, Type argType, bool isOperand,
                                    unsigned pos,
                                    dyn::DynamicContext &ctx) override;
 
   Type type;
+};
+
+//===----------------------------------------------------------------------===//
+// AnyOf type constraint
+//===----------------------------------------------------------------------===//
+
+/// AnyOf type constraint.
+/// A type satisfies this constraint if it is included in a set of types.
+class AnyOfTypeConstraint : public TypeConstraint {
+public:
+  AnyOfTypeConstraint(llvm::ArrayRef<Type> types)
+      : types(types.begin(), types.end()) {}
+
+  virtual LogicalResult verifyType(Operation *op, Type argType, bool isOperand,
+                                   unsigned pos,
+                                   dyn::DynamicContext &ctx) override;
+
+  llvm::SmallVector<Type, 4> types;
 };
 
 } // namespace irdl

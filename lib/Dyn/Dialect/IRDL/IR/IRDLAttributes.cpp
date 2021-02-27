@@ -80,3 +80,42 @@ EqTypeConstraintAttr::getTypeConstraint(DynamicContext &ctx) {
 }
 
 Type EqTypeConstraintAttr::getValue() { return getImpl()->value; }
+
+namespace mlir {
+namespace irdl {
+namespace detail {
+
+/// An attribute storage containing a reference to an array of type.
+struct TypeArrayAttrStorage : public AttributeStorage {
+  using KeyTy = ArrayRef<Type>;
+
+  TypeArrayAttrStorage(ArrayRef<Type> values) : values(values) {}
+
+  /// Key equality function.
+  bool operator==(const KeyTy &key) const { return key == values; }
+
+  /// Construct a new storage instance.
+  static TypeArrayAttrStorage *construct(AttributeStorageAllocator &allocator,
+                                         KeyTy key) {
+    return new (allocator.allocate<TypeArrayAttrStorage>())
+        TypeArrayAttrStorage(allocator.copyInto(key));
+  }
+
+  ArrayRef<Type> values;
+};
+
+} // namespace detail
+} // namespace irdl
+} // namespace mlir
+
+AnyOfTypeConstraintAttr AnyOfTypeConstraintAttr::get(MLIRContext &context,
+                                                     Type type) {
+  return Base::get(&context, type);
+}
+
+std::unique_ptr<TypeConstraint>
+AnyOfTypeConstraintAttr::getTypeConstraint(DynamicContext &ctx) {
+  return std::make_unique<AnyOfTypeConstraint>(getValue());
+}
+
+ArrayRef<Type> AnyOfTypeConstraintAttr::getValue() { return getImpl()->values; }

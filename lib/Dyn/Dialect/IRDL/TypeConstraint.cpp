@@ -32,3 +32,21 @@ LogicalResult EqTypeConstraint::verifyType(Operation *op, Type argType,
                                      " must be of type '", type, "', but got ",
                                      argType);
 }
+
+LogicalResult AnyOfTypeConstraint::verifyType(Operation *op, Type argType,
+                                              bool isOperand, unsigned pos,
+                                              dyn::DynamicContext &ctx) {
+  if (std::find(types.begin(), types.end(), argType) != types.end())
+    return success();
+
+  auto argCategory = isOperand ? "operand" : "result";
+
+  auto diagnostic = op->emitOpError("#").append(
+      pos, " ", argCategory, " is of type ", argType,
+      " but is expected to be one of the following types: [");
+
+  for (size_t i = 0; i + 1 < types.size(); i++) {
+    diagnostic.append(types[i], ", ");
+  }
+  return diagnostic.append(types.back(), "]");
+}
