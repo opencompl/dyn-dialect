@@ -16,6 +16,7 @@
 #include "Dyn/Dialect/IRDL/IR/IRDLInterface.h"
 #include "mlir/IR/AttributeSupport.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/TypeSupport.h"
 #include "llvm/ADT/Hashing.h"
 
 namespace mlir {
@@ -168,6 +169,24 @@ public:
   getTypeConstraint(dyn::DynamicContext &ctx);
 
   ArrayRef<Type> getValue();
+};
+
+//===----------------------------------------------------------------------===//
+// Always true type constraint attribute
+//===----------------------------------------------------------------------===//
+
+/// Attribute for equality type constraint.
+class AnyTypeConstraintAttr
+    : public mlir::Attribute::AttrBase<AnyTypeConstraintAttr, mlir::Attribute,
+                                       mlir::AttributeStorage,
+                                       TypeConstraintAttrInterface::Trait> {
+public:
+  using Base::Base;
+
+  static AnyTypeConstraintAttr get(MLIRContext &context);
+
+  std::unique_ptr<mlir::irdl::TypeConstraint>
+  getTypeConstraint(dyn::DynamicContext &ctx);
 };
 
 } // namespace irdl
