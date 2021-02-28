@@ -123,3 +123,16 @@ AnyOfTypeConstraintAttr::getTypeConstraint(DynamicContext &ctx) {
 }
 
 ArrayRef<Type> AnyOfTypeConstraintAttr::getValue() { return getImpl()->values; }
+
+//===----------------------------------------------------------------------===//
+// Always true type constraint attribute
+//===----------------------------------------------------------------------===//
+
+AnyTypeConstraintAttr AnyTypeConstraintAttr::get(MLIRContext &context) {
+  return Base::get(&context);
+}
+
+std::unique_ptr<TypeConstraint>
+AnyTypeConstraintAttr::getTypeConstraint(DynamicContext &ctx) {
+  return std::make_unique<AnyTypeConstraint>();
+}

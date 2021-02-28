@@ -10,15 +10,24 @@ module {
         irdl.operation eq(c: !testd.testt) -> ()
         // CHECK: irdl.operation anyof(c: irdl.AnyOf<!testd.testt, i32>) -> ()
         irdl.operation anyof(c: irdl.AnyOf<!testd.testt, i32>) -> ()
+        // CHECK: irdl.operation any(c: irdl.Any) -> ()
+        irdl.operation any(c: irdl.Any) -> ()
     }
 
     func @test(%a: !testd.testt, %b: i32) {
         // CHECK: "testd.eq"(%{{.*}}) : (!testd.testt) -> ()
         "testd.eq"(%a) : (!testd.testt) -> ()
+
         // CHECK: "testd.anyof"(%{{.*}}) : (!testd.testt) -> ()
         "testd.anyof"(%a) : (!testd.testt) -> ()
         // CHECK: "testd.anyof"(%{{.*}}) : (i32) -> ()
         "testd.anyof"(%b) : (i32) -> ()
+
+        // CHECK: "testd.any"(%{{.*}}) : (!testd.testt) -> ()
+        "testd.any"(%a) : (!testd.testt) -> ()
+        // CHECK: "testd.any"(%{{.*}}) : (i32) -> ()
+        "testd.any"(%b) : (i32) -> ()
+
         return
     }
 }

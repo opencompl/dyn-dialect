@@ -75,6 +75,23 @@ public:
   llvm::SmallVector<Type, 4> types;
 };
 
+//===----------------------------------------------------------------------===//
+// Always true type constraint
+//===----------------------------------------------------------------------===//
+
+/// Always true type constraint.
+/// All types satisfy this constraint.
+class AnyTypeConstraint : public TypeConstraint {
+public:
+  AnyTypeConstraint() {}
+
+  virtual LogicalResult verifyType(Operation *op, Type argType, bool isOperand,
+                                   unsigned pos,
+                                   dyn::DynamicContext &ctx) override {
+    return success();
+  };
+};
+
 } // namespace irdl
 } // namespace mlir
 
