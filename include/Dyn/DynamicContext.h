@@ -96,10 +96,10 @@ private:
   llvm::StringMap<DynamicDialect *> dialects;
 
   /// This structure allows to get in O(1) a dynamic type given its typeID.
-  llvm::DenseMap<TypeID, DynamicTypeDefinition *> typeIDToDynTypes{};
+  llvm::DenseMap<TypeID, DynamicTypeDefinition *> typeIDToDynTypes;
 
   /// This structure allows to get in O(1) a dynamic type given its typeID.
-  llvm::DenseMap<TypeID, DynamicOperation *> typeIDToDynOps{};
+  llvm::DenseMap<TypeID, DynamicOperation *> typeIDToDynOps;
 
   /// The MLIR context. It is used to register dialects, operations, types, ...
   MLIRContext *ctx;
