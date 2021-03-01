@@ -121,23 +121,23 @@ private:
 
   /// Dynamic types registered in this dialect.
   /// Their name is stored with the format `type` and not `dialect.type`.
-  llvm::StringMap<std::unique_ptr<DynamicTypeDefinition>> dynTypes{};
+  llvm::StringMap<std::unique_ptr<DynamicTypeDefinition>> dynTypes;
 
   /// This structure allows to get in O(1) a dynamic type given its typeID.
   /// This is useful for accessing the printer efficiently for instance.
-  llvm::DenseMap<TypeID, DynamicTypeDefinition *> typeIDToDynTypes{};
+  llvm::DenseMap<TypeID, DynamicTypeDefinition *> typeIDToDynTypes;
 
   /// Dynamic operations registered in this dialect.
   /// Their name is stored with the format `op` and not `dialect.op`.
-  llvm::StringMap<std::unique_ptr<DynamicOperation>> dynOps{};
+  llvm::StringMap<std::unique_ptr<DynamicOperation>> dynOps;
 
   /// This structure allows to get in O(1) a dynamic type given its typeID.
   /// This is useful for accessing the verifier efficiently for instance.
-  llvm::DenseMap<TypeID, DynamicOperation *> typeIDToDynOps{};
+  llvm::DenseMap<TypeID, DynamicOperation *> typeIDToDynOps;
 
   /// Type aliases registered in this dialect.
   /// Their name is stored with the format `alias` and not `dialect.alias`.
-  llvm::StringMap<Type> typeAliases{};
+  llvm::StringMap<Type> typeAliases;
 
   /// Context in which the dialect is registered.
   DynamicContext *ctx;
