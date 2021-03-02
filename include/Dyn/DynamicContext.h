@@ -13,6 +13,7 @@
 #ifndef DYN_DYNAMICCONTEXT_H
 #define DYN_DYNAMICCONTEXT_H
 
+#include "Dyn/DynamicTrait.h"
 #include "Dyn/DynamicType.h"
 #include "TypeIDAllocator.h"
 #include "mlir/IR/Dialect.h"
@@ -57,6 +58,29 @@ public:
   mlir::FailureOr<DynamicDialect *>
   createAndRegisterDialect(llvm::StringRef name);
 
+private:
+  /// Register a dynamic trait.
+  /// Return an error if the trait with the same name was already registered.
+  mlir::FailureOr<DynamicOpTrait *>
+  registerOpTrait(llvm::StringRef name,
+                  std::unique_ptr<DynamicOpTrait> opTrait);
+
+public:
+  /// Create and register a dynamic trait.
+  /// Return an error if the trait with the same name was already registered.
+  mlir::FailureOr<DynamicOpTrait *>
+  createAndRegisterOpTrait(llvm::StringRef name, OpTraitVerifierFn verifier) {
+    return registerOpTrait(name, std::make_unique<DynamicOpTrait>(
+                                     this, name, std::move(verifier)));
+  }
+
+  template <template <typename ConcreteT> class TraitTy>
+  mlir::FailureOr<DynamicOpTrait *>
+  createAndRegisterOpTrait(llvm::StringRef name) {
+    return registerOpTrait(name,
+                           std::move(DynamicOpTrait::get<TraitTy>(this, name)));
+  }
+
   /// Get a type given its typeID.
   /// The pointer is guaranteed to be non-null.
   FailureOr<DynamicTypeDefinition *> lookupType(TypeID id) const {
@@ -71,6 +95,24 @@ public:
   FailureOr<DynamicOperation *> lookupOp(TypeID id) const {
     auto it = typeIDToDynOps.find(id);
     if (it == typeIDToDynOps.end())
+      return failure();
+    return &*it->second;
+  }
+
+  /// Get an operation trait given its name.
+  /// The pointer is guaranteed to be non-null.
+  FailureOr<DynamicOpTrait *> lookupOpTrait(StringRef name) const {
+    auto it = opTraits.find(name);
+    if (it == opTraits.end())
+      return failure();
+    return &*it->second;
+  }
+
+  /// Get an operation trait given its typeID.
+  /// The pointer is guaranteed to be non-null.
+  FailureOr<DynamicOpTrait *> lookupOpTrait(TypeID id) const {
+    auto it = typeIDToOpTraits.find(id);
+    if (it == typeIDToOpTraits.end())
       return failure();
     return &*it->second;
   }
@@ -100,6 +142,12 @@ private:
 
   /// This structure allows to get in O(1) a dynamic type given its typeID.
   llvm::DenseMap<TypeID, DynamicOperation *> typeIDToDynOps;
+
+  /// The set of dynamically defined operation traits.
+  llvm::StringMap<std::unique_ptr<DynamicOpTrait>> opTraits;
+
+  /// This structure allows to get in O(1) a dynamic trait given its typeID.
+  llvm::DenseMap<TypeID, DynamicOpTrait *> typeIDToOpTraits;
 
   /// The MLIR context. It is used to register dialects, operations, types, ...
   MLIRContext *ctx;
