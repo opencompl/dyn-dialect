@@ -13,6 +13,7 @@
 #include "Dyn/DynamicContext.h"
 #include "Dyn/DynamicDialect.h"
 #include "Dyn/DynamicOperation.h"
+#include "Dyn/DynamicTrait.h"
 #include "Dyn/DynamicType.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/Support/LogicalResult.h"
@@ -57,4 +58,18 @@ DynamicContext::createAndRegisterDialect(llvm::StringRef name) {
   dialects.insert({name, dynDialect});
 
   return dynDialect;
+}
+
+mlir::FailureOr<DynamicOpTrait *>
+DynamicContext::registerOpTrait(llvm::StringRef name,
+                                std::unique_ptr<DynamicOpTrait> opTrait) {
+  auto opTraitPtr = opTrait.get();
+
+  auto inserted = opTraits.try_emplace(name, std::move(opTrait));
+  if (!inserted.second)
+    return failure();
+
+  typeIDToOpTraits.insert({opTraitPtr->getRuntimeTypeID(), opTraitPtr});
+
+  return inserted.first->second.get();
 }
