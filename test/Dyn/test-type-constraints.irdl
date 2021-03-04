@@ -10,8 +10,12 @@ module {
         irdl.operation eq(c: !testd.testt) -> ()
         // CHECK: irdl.operation anyof(c: irdl.AnyOf<!testd.testt, i32>) -> ()
         irdl.operation anyof(c: irdl.AnyOf<!testd.testt, i32>) -> ()
+
         // CHECK: irdl.operation any(c: irdl.Any) -> ()
         irdl.operation any(c: irdl.Any) -> ()
+
+        // CHECK: irdl.operation any_with_trait(c: irdl.Any, d: irdl.Any) -> () traits [SameTypeOperands]
+        irdl.operation any_with_trait(c: irdl.Any, d: irdl.Any) -> () traits [SameTypeOperands]
     }
 
     func @test(%a: !testd.testt, %b: i32) {
@@ -28,6 +32,7 @@ module {
         // CHECK: "testd.any"(%{{.*}}) : (i32) -> ()
         "testd.any"(%b) : (i32) -> ()
 
+        "testd.any_with_trait"(%b, %b) : (i32, i32) -> ()
         return
     }
 }

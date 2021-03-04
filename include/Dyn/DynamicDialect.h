@@ -15,6 +15,7 @@
 
 #include "Dyn/DynamicObject.h"
 #include "Dyn/DynamicOperation.h"
+#include "Dyn/DynamicTrait.h"
 #include "Dyn/DynamicType.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OperationSupport.h"
@@ -45,10 +46,12 @@ public:
   mlir::StringRef getName() const { return name; }
 
   /// Create and register a new operation to the dialect.
-  /// The name of the operation should not begin with the name of the dialect.
-  FailureOr<DynamicOperation *> createAndAddOperation(
-      llvm::StringRef name,
-      std::vector<std::function<LogicalResult(Operation *)>> verifiers = {});
+  /// The name of the operation should not begin with the name of the
+  /// dialect.
+  FailureOr<DynamicOperation *>
+  createAndAddOperation(llvm::StringRef name,
+                        std::vector<DynamicOperation::VerifierFn> verifiers,
+                        std::vector<DynamicOpTrait *> traits);
 
   /// Create and add a new type to the dialect.
   /// The name of the type should not begin with the name of the dialect.

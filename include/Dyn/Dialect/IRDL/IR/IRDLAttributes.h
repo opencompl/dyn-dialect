@@ -24,6 +24,7 @@ namespace mlir {
 namespace dyn {
 // Forward declaration.
 class DynamicContext;
+class DynamicOpTrait;
 } // namespace dyn
 
 namespace irdl {
@@ -43,12 +44,15 @@ struct TypeArrayAttrStorage;
 using ArgDef = std::pair<StringRef, Attribute>;
 using ArgDefs = ArrayRef<ArgDef>;
 using OwningArgDefs = std::vector<ArgDef>;
+using TraitDefs = ArrayRef<mlir::dyn::DynamicOpTrait *>;
+using OwningTraitDefs = std::vector<mlir::dyn::DynamicOpTrait *>;
 
 /// Definition of a dynamic operation type.
 /// It contains the definition of every operand and result.
 class OpTypeDef {
 public:
   ArgDefs operandDef, resultDef;
+  TraitDefs traitDefs;
 
   /// Get the number of operands.
   std::size_t getNumOperands() const { return operandDef.size(); }
@@ -64,8 +68,13 @@ public:
   /// Each result is defined by a name, and a type constraint.
   ArgDefs getResDefinitions() const { return resultDef; }
 
+  /// Return the traits definitions.
+  /// A trait is defined by its name.
+  TraitDefs getTraitsDefinitions() const { return traitDefs; };
+
   bool operator==(const OpTypeDef &o) const {
-    return o.operandDef == operandDef && o.resultDef == o.resultDef;
+    return o.operandDef == operandDef && o.resultDef == resultDef &&
+           o.traitDefs == traitDefs;
   }
 };
 
@@ -74,17 +83,19 @@ class OpTypeDefAttrStorage : public AttributeStorage {
 public:
   using KeyTy = OpTypeDef;
 
-  OpTypeDefAttrStorage(ArgDefs operandDefs, ArgDefs resultDefs)
-      : opTypeDef({operandDefs, resultDefs}) {}
+  OpTypeDefAttrStorage(ArgDefs operandDefs, ArgDefs resultDefs,
+                       TraitDefs traitDefs)
+      : opTypeDef({operandDefs, resultDefs, traitDefs}) {}
 
   bool operator==(const KeyTy &key) const { return key == opTypeDef; }
 
   static llvm::hash_code hashKey(const KeyTy &key) {
-    return llvm::hash_combine(key.operandDef, key.resultDef);
+    return llvm::hash_combine(key.operandDef, key.resultDef, key.traitDefs);
   }
 
-  static KeyTy getKey(ArgDefs operandDefs, ArgDefs resultDefs) {
-    return KeyTy({operandDefs, resultDefs});
+  static KeyTy getKey(ArgDefs operandDefs, ArgDefs resultDefs,
+                      TraitDefs traitDefs) {
+    return KeyTy({operandDefs, resultDefs, traitDefs});
   }
 
   static OpTypeDefAttrStorage *
@@ -106,9 +117,11 @@ public:
     // Then we can put the ArgDefs themselves in the allocator.
     auto allocatedOperandDefs = allocator.copyInto(ArgDefs(operandDefs));
     auto allocatedResultDefs = allocator.copyInto(ArgDefs(resultDefs));
+    auto allocatedTraitDefs = allocator.copyInto(key.traitDefs);
 
     return new (allocator.allocate<OpTypeDefAttrStorage>())
-        OpTypeDefAttrStorage({allocatedOperandDefs, allocatedResultDefs});
+        OpTypeDefAttrStorage(
+            {allocatedOperandDefs, allocatedResultDefs, allocatedTraitDefs});
   }
 
   OpTypeDef opTypeDef;
@@ -124,8 +137,8 @@ public:
   using Base::Base;
 
   static OpTypeDefAttr get(MLIRContext &ctx, ArgDefs operandDefs,
-                           ArgDefs resultDefs) {
-    return Base::get(&ctx, operandDefs, resultDefs);
+                           ArgDefs resultDefs, TraitDefs traitDefs) {
+    return Base::get(&ctx, operandDefs, resultDefs, traitDefs);
   }
 
   OpTypeDef getValue() { return getImpl()->opTypeDef; }

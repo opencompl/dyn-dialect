@@ -59,10 +59,11 @@ LogicalResult DynamicDialect::createAndAddTypeAlias(StringRef name, Type type) {
 }
 
 FailureOr<DynamicOperation *> DynamicDialect::createAndAddOperation(
-    StringRef name,
-    std::vector<std::function<LogicalResult(Operation *)>> verifiers) {
+    StringRef name, std::vector<DynamicOperation::VerifierFn> verifiers,
+    std::vector<DynamicOpTrait *> traits) {
   auto registered = dynOps.try_emplace(
-      name, new DynamicOperation(name, this, std::move(verifiers)));
+      name, new DynamicOperation(name, this, std::move(verifiers),
+                                 std::move(traits)));
   if (!registered.second)
     return failure();
 
@@ -71,12 +72,16 @@ FailureOr<DynamicOperation *> DynamicDialect::createAndAddOperation(
   typeIDToDynOps.insert({typeID, absOp});
   ctx->typeIDToDynOps.insert({typeID, absOp});
 
+  auto hasTraitFn = [absOp](TypeID traitId) {
+    return absOp->hasTrait(traitId);
+  };
+
   AbstractOperation::insert(
       absOp->getName(), *this, absOp->getRuntimeTypeID(),
       DynamicOperation::parseOperation, DynamicOperation::printOperation,
       DynamicOperation::verifyInvariants, DynamicOperation::foldHook,
       DynamicOperation::getCanonicalizationPatterns,
-      detail::InterfaceMap::template get<>(), DynamicOperation::hasTrait);
+      detail::InterfaceMap::template get<>(), hasTraitFn);
 
   return absOp;
 }

@@ -42,10 +42,20 @@ mlir::LogicalResult DynamicOperation::verifyInvariants(Operation *op) {
   }));
 }
 
-DynamicOperation::DynamicOperation(
-    StringRef name, DynamicDialect *dialect,
-    std::vector<std::function<mlir::LogicalResult(mlir::Operation *op)>>
-        verifiers)
+DynamicOperation::DynamicOperation(StringRef name, DynamicDialect *dialect,
+                                   std::vector<VerifierFn> customVerifiers,
+                                   std::vector<DynamicOpTrait *> traits)
     : DynamicObject(dialect->getDynamicContext()),
       name((dialect->getName() + "." + name).str()), dialect(dialect),
-      verifiers(std::move(verifiers)) {}
+      verifiers(std::move(customVerifiers)) {
+  // Add traits to verifiers and traitIDs.
+  for (auto trait : traits) {
+    traitsId.push_back(trait->getRuntimeTypeID());
+    verifiers.push_back(
+        [trait](Operation *op) { return trait->verifyTrait(op); });
+  }
+}
+
+bool DynamicOperation::hasTrait(TypeID traitId) {
+  return llvm::any_of(traitsId, [traitId](auto id) { return id == traitId; });
+}

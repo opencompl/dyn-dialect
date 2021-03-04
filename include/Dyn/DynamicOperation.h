@@ -14,6 +14,7 @@
 #define DYN_DYNAMICOPERATION_H
 
 #include "Dyn/DynamicObject.h"
+#include "Dyn/DynamicTrait.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
 #include <mlir/IR/OpDefinition.h>
@@ -28,13 +29,14 @@ class DynamicDialect;
 class DynamicOperation : public mlir::Op<DynamicOperation>,
                          public DynamicObject {
 public:
+  using VerifierFn = std::function<mlir::LogicalResult(mlir::Operation *op)>;
+
   /// Create a new dynamic operation given the operation name and the defining
   /// dialect.
   /// The operation name should be `operation` and not `dialect.operation`.
-  DynamicOperation(
-      mlir::StringRef name, DynamicDialect *dialect,
-      std::vector<std::function<mlir::LogicalResult(mlir::Operation *op)>>
-          verifiers = {});
+  DynamicOperation(mlir::StringRef name, DynamicDialect *dialect,
+                   std::vector<VerifierFn> verifiers,
+                   std::vector<DynamicOpTrait *> traits);
 
   /// Get the operation name.
   /// The name should have the format `dialect.name`.
@@ -60,7 +62,7 @@ public:
   }
 
   /// Check if the operation has a specific trait given the trait TypeID.
-  static bool hasTrait(TypeID traitId) { return false; }
+  bool hasTrait(TypeID traitId);
 
 private:
   /// Full name of the operation: `dialect.operation`.
@@ -72,6 +74,9 @@ private:
   /// Custom verifiers for the operation.
   std::vector<std::function<mlir::LogicalResult(mlir::Operation *op)>>
       verifiers;
+
+  /// Operation traits TypeID.
+  std::vector<TypeID> traitsId;
 };
 
 } // namespace dyn
