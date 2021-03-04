@@ -95,6 +95,7 @@ LogicalResult registerOperation(dyn::DynamicDialect *dialect, StringRef name,
   OpTypeConstraints constraints;
   auto *ctx = dialect->getDynamicContext();
 
+  // Add the operand constraints to the type constraints.
   for (auto &def : opTypeDef.operandDef) {
     auto name = def.first;
     auto constraint =
@@ -102,6 +103,7 @@ LogicalResult registerOperation(dyn::DynamicDialect *dialect, StringRef name,
     constraints.first.emplace_back(name, std::move(constraint));
   }
 
+  // Add the result constraints to the type constraints.
   for (auto &def : opTypeDef.resultDef) {
     auto name = def.first;
     auto constraint =
@@ -109,13 +111,15 @@ LogicalResult registerOperation(dyn::DynamicDialect *dialect, StringRef name,
     constraints.second.emplace_back(name, std::move(constraint));
   }
 
+  // Create the type verifier.
   auto typeVerifier =
       [constraints{std::make_shared<OpTypeConstraints>(std::move(constraints))},
        ctx](Operation *op) {
         return verifyOpTypeConstraints(op, *constraints, *ctx);
       };
 
-  return dialect->createAndAddOperation(name, {std::move(typeVerifier)});
+  return dialect->createAndAddOperation(name, {std::move(typeVerifier)},
+                                        opTypeDef.traitDefs);
 }
 } // namespace irdl
 } // namespace mlir

@@ -35,7 +35,7 @@ void mlirDynamicDialectDestroy(MlirDynamicDialect dialect) {
 MlirDynamicOperation mlirDynamicOperationCreate(MlirStringRef name,
                                                 MlirDynamicDialect dialect) {
   mlir::dyn::DynamicOperation *op =
-      new DynamicOperation(unwrap(name), unwrap(dialect));
+      new DynamicOperation(unwrap(name), unwrap(dialect), {}, {});
   return wrap(op);
 }
 

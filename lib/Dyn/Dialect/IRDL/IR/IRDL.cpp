@@ -325,9 +325,73 @@ void printArgDefs(OpAsmPrinter &p, ArgDefs typedVars) {
   p << ")";
 }
 
+ParseResult parseTraitDef(OpAsmParser &p, DynamicContext *dynCtx,
+                          DynamicOpTrait **trait) {
+  auto loc = p.getCurrentLocation();
+
+  StringRef traitName;
+  if (p.parseKeyword(&traitName))
+    return failure();
+
+  auto res = dynCtx->lookupOpTrait(traitName);
+  if (failed(res)) {
+    p.emitError(loc, "trait '").append(traitName, "' is not defined");
+    return failure();
+  }
+  *trait = *res;
+
+  return success();
+}
+
+/// Parse a TraitDefs with format '(traits [(name,)*])?'.
+ParseResult parseTraitDefs(OpAsmParser &p, OwningTraitDefs *traitDefs) {
+  // If the trait keyword is not present, then it means that no traits is
+  // defined.
+  if (p.parseOptionalKeyword("traits"))
+    return success();
+
+  if (p.parseLSquare())
+    return failure();
+
+  // Empty
+  if (!p.parseOptionalRSquare())
+    return success();
+
+  auto *dynCtx =
+      p.getBuilder().getContext()->getLoadedDialect<DynamicContext>();
+
+  DynamicOpTrait *trait;
+  if (parseTraitDef(p, dynCtx, &trait))
+    return failure();
+  traitDefs->push_back(trait);
+
+  while (p.parseOptionalRSquare()) {
+    if (p.parseComma())
+      return failure();
+
+    DynamicOpTrait *trait;
+    if (parseTraitDef(p, dynCtx, &trait))
+      return failure();
+    traitDefs->push_back(trait);
+  }
+
+  return success();
+}
+
+void printTraitDefs(OpAsmPrinter &p, TraitDefs traitDefs) {
+  if (traitDefs.empty())
+    return;
+  p << "traits [";
+  for (size_t i = 0; i + 1 < traitDefs.size(); i++) {
+    p << traitDefs[i]->name;
+    p << ", ";
+  }
+  p << traitDefs.back()->name << "]";
+}
+
 /// Parse an OpTypeDefAttr.
-/// The format is "operandDef -> resultDef" where operandDef and resultDef have
-/// the ArgDefs format.
+/// The format is "operandDef -> resultDef (traits (name)+)?" where operandDef
+/// and resultDef have the ArgDefs format.
 ParseResult parseOpTypeDefAttr(OpAsmParser &p, OpTypeDefAttr *opTypeDefAttr) {
   OwningArgDefs operandDefs, resultDefs;
   auto *ctx = p.getBuilder().getContext();
@@ -342,7 +406,12 @@ ParseResult parseOpTypeDefAttr(OpAsmParser &p, OpTypeDefAttr *opTypeDefAttr) {
   if (parseArgDefs(p, &resultDefs))
     return failure();
 
-  *opTypeDefAttr = OpTypeDefAttr::get(*ctx, operandDefs, resultDefs);
+  // Parse the associated traits.
+  OwningTraitDefs traitDefs;
+  if (parseTraitDefs(p, &traitDefs))
+    return failure();
+
+  *opTypeDefAttr = OpTypeDefAttr::get(*ctx, operandDefs, resultDefs, traitDefs);
 
   return success();
 }
@@ -351,6 +420,10 @@ void printOpTypeDef(OpAsmPrinter &p, OpTypeDef opDef) {
   printArgDefs(p, opDef.operandDef);
   p << " -> ";
   printArgDefs(p, opDef.resultDef);
+  if (!opDef.traitDefs.empty()) {
+    p << " ";
+    printTraitDefs(p, opDef.traitDefs);
+  }
 }
 
 } // namespace
