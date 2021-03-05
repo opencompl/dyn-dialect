@@ -39,6 +39,24 @@ struct TypeAttributeStorage;
 struct TypeArrayAttrStorage;
 } // namespace detail
 
+namespace detail {
+/// Attribute storage for string arrays.
+/// This should be moved somewhere else in MLIR.
+struct StringArrayAttrStorage : public AttributeStorage {
+  using KeyTy = ArrayRef<StringRef>;
+
+  StringArrayAttrStorage(ArrayRef<StringRef> values) : values(values) {}
+
+  /// Key equality function.
+  bool operator==(const KeyTy &key) const { return key == values; }
+
+  static StringArrayAttrStorage *construct(AttributeStorageAllocator &allocator,
+                                           KeyTy key);
+
+  ArrayRef<StringRef> values;
+};
+} // namespace detail
+
 /// Definition of an argument. An argument is either an operand or a result.
 /// It is represented by a name an a type constraint.
 using ArgDef = std::pair<StringRef, Attribute>;
