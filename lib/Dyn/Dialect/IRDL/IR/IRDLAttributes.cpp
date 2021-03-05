@@ -21,6 +21,17 @@ namespace mlir {
 namespace irdl {
 namespace detail {
 
+StringArrayAttrStorage *
+StringArrayAttrStorage::construct(AttributeStorageAllocator &allocator,
+                                  KeyTy key) {
+  std::vector<StringRef> strings;
+  for (auto str : key)
+    strings.push_back(allocator.copyInto(str));
+
+  return new (allocator.allocate<StringArrayAttrStorage>())
+      StringArrayAttrStorage(allocator.copyInto(ArrayRef<StringRef>(strings)));
+}
+
 /// An attribute representing a string value.
 /// This implementation already exists in MLIR, but is not public.
 struct StringAttributeStorage : public AttributeStorage {
