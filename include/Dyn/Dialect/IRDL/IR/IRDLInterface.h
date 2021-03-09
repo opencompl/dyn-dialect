@@ -15,6 +15,7 @@
 #define DYN_DIALECT_IRDL_IR_IRDLINTERFACE_H_
 
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/OpImplementation.h"
 #include <memory>
 
 // Forward declaration.
@@ -24,7 +25,8 @@ class TypeConstraint;
 }
 namespace dyn {
 class DynamicContext;
-}
+class DynamicOpInterfaceImpl;
+} // namespace dyn
 } // namespace mlir
 
 //===----------------------------------------------------------------------===//

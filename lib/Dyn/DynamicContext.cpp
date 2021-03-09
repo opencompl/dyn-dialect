@@ -71,5 +71,19 @@ DynamicContext::registerOpTrait(llvm::StringRef name,
 
   typeIDToOpTraits.insert({opTraitPtr->getRuntimeTypeID(), opTraitPtr});
 
-  return inserted.first->second.get();
+  return opTraitPtr;
+}
+
+mlir::FailureOr<DynamicOpInterface *> DynamicContext::registerOpInterface(
+    llvm::StringRef name, std::unique_ptr<DynamicOpInterface> opInterface) {
+  auto opInterfacePtr = opInterface.get();
+
+  auto inserted = opInterfaces.try_emplace(name, std::move(opInterface));
+  if (!inserted.second)
+    return failure();
+
+  typeIDToOpInterfaces.insert(
+      {opInterfacePtr->getRuntimeTypeID(), opInterfacePtr});
+
+  return opInterfacePtr;
 }

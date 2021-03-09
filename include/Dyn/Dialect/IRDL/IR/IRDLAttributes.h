@@ -64,6 +64,8 @@ using ArgDefs = ArrayRef<ArgDef>;
 using OwningArgDefs = std::vector<ArgDef>;
 using TraitDefs = ArrayRef<mlir::dyn::DynamicOpTrait *>;
 using OwningTraitDefs = std::vector<mlir::dyn::DynamicOpTrait *>;
+using InterfaceDefs = ArrayRef<InterfaceImplAttrInterface>;
+using OwningInterfaceDefs = std::vector<InterfaceImplAttrInterface>;
 
 /// Definition of a dynamic operation type.
 /// It contains the definition of every operand and result.
@@ -71,6 +73,7 @@ class OpTypeDef {
 public:
   ArgDefs operandDef, resultDef;
   TraitDefs traitDefs;
+  InterfaceDefs interfaceDefs;
 
   /// Get the number of operands.
   std::size_t getNumOperands() const { return operandDef.size(); }
@@ -90,9 +93,12 @@ public:
   /// A trait is defined by its name.
   TraitDefs getTraitsDefinitions() const { return traitDefs; };
 
+  /// Return the interface definitions.
+  InterfaceDefs getInterfaceDefinitions() const { return interfaceDefs; }
+
   bool operator==(const OpTypeDef &o) const {
     return o.operandDef == operandDef && o.resultDef == resultDef &&
-           o.traitDefs == traitDefs;
+           o.traitDefs == traitDefs && o.interfaceDefs == interfaceDefs;
   }
 };
 
@@ -102,18 +108,19 @@ public:
   using KeyTy = OpTypeDef;
 
   OpTypeDefAttrStorage(ArgDefs operandDefs, ArgDefs resultDefs,
-                       TraitDefs traitDefs)
-      : opTypeDef({operandDefs, resultDefs, traitDefs}) {}
+                       TraitDefs traitDefs, InterfaceDefs interfaceDefs)
+      : opTypeDef({operandDefs, resultDefs, traitDefs, interfaceDefs}) {}
 
   bool operator==(const KeyTy &key) const { return key == opTypeDef; }
 
   static llvm::hash_code hashKey(const KeyTy &key) {
-    return llvm::hash_combine(key.operandDef, key.resultDef, key.traitDefs);
+    return llvm::hash_combine(key.operandDef, key.resultDef, key.traitDefs,
+                              key.interfaceDefs);
   }
 
   static KeyTy getKey(ArgDefs operandDefs, ArgDefs resultDefs,
-                      TraitDefs traitDefs) {
-    return KeyTy({operandDefs, resultDefs, traitDefs});
+                      TraitDefs traitDefs, InterfaceDefs interfaceDefs) {
+    return KeyTy({operandDefs, resultDefs, traitDefs, interfaceDefs});
   }
 
   static OpTypeDefAttrStorage *
@@ -136,10 +143,11 @@ public:
     auto allocatedOperandDefs = allocator.copyInto(ArgDefs(operandDefs));
     auto allocatedResultDefs = allocator.copyInto(ArgDefs(resultDefs));
     auto allocatedTraitDefs = allocator.copyInto(key.traitDefs);
+    auto allocatedInterfaceDefs = allocator.copyInto(key.interfaceDefs);
 
     return new (allocator.allocate<OpTypeDefAttrStorage>())
-        OpTypeDefAttrStorage(
-            {allocatedOperandDefs, allocatedResultDefs, allocatedTraitDefs});
+        OpTypeDefAttrStorage({allocatedOperandDefs, allocatedResultDefs,
+                              allocatedTraitDefs, allocatedInterfaceDefs});
   }
 
   OpTypeDef opTypeDef;
@@ -155,8 +163,9 @@ public:
   using Base::Base;
 
   static OpTypeDefAttr get(MLIRContext &ctx, ArgDefs operandDefs,
-                           ArgDefs resultDefs, TraitDefs traitDefs) {
-    return Base::get(&ctx, operandDefs, resultDefs, traitDefs);
+                           ArgDefs resultDefs, TraitDefs traitDefs,
+                           InterfaceDefs interfaceDefs) {
+    return Base::get(&ctx, operandDefs, resultDefs, traitDefs, interfaceDefs);
   }
 
   OpTypeDef getValue() { return getImpl()->opTypeDef; }
