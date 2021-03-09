@@ -8,6 +8,7 @@
 
 #include "Dyn/Dialect/IRDL/IR/IRDL.h"
 #include "Dyn/Dialect/IRDL/IR/IRDLAttributes.h"
+#include "Dyn/Dialect/IRDL/IR/StandardOpInterface.h"
 #include "Dyn/Dialect/IRDL/IRDLRegistration.h"
 #include "Dyn/Dialect/IRDL/TypeConstraint.h"
 #include "Dyn/DynamicContext.h"
@@ -30,7 +31,7 @@ void IRDLDialect::initialize() {
 #include "Dyn/Dialect/IRDL/IR/IRDLOps.cpp.inc"
       >();
   addAttributes<OpTypeDefAttr, EqTypeConstraintAttr, AnyOfTypeConstraintAttr,
-                AnyTypeConstraintAttr>();
+                AnyTypeConstraintAttr, DynMemoryEffectOpInterfaceAttr>();
 }
 
 //===----------------------------------------------------------------------===//

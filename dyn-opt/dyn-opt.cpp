@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Dyn/Dialect/IRDL/IR/IRDL.h"
+#include "Dyn/Dialect/IRDL/IR/StandardOpInterface.h"
 #include "Dyn/DynamicContext.h"
 #include "Dyn/DynamicDialect.h"
 #include "MlirOptMain.h"
@@ -23,6 +24,7 @@
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/ToolOutputFile.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace mlir;
 using namespace dyn;
@@ -35,8 +37,16 @@ int main(int argc, char **argv) {
   auto dynCtx = ctx.getOrLoadDialect<DynamicContext>();
 
   if (failed(dynCtx->createAndRegisterOpTrait<OpTrait::SameTypeOperands>(
-          "SameTypeOperands")))
-    llvm::errs() << "Failed to register trait";
+          "SameTypeOperands"))) {
+    llvm::errs() << "Failed to register trait\n";
+    return 1;
+  }
+
+  if (failed(dynCtx->createAndRegisterOpInterface<
+             irdl::DynMemoryEffectOpInterface>("MemoryEffect"))) {
+    llvm::errs() << "Failed to register interface\n";
+    return 1;
+  }
 
   // Register the standard dialect and the IRDL dialect in the MLIR context
   DialectRegistry registry;
