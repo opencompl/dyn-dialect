@@ -8,10 +8,10 @@ module {
         // CHECK: irdl.alias ccomplex = tuple<!cmath.real, !cmath.real>
         irdl.alias ccomplex = tuple<!cmath.real, !cmath.real>
         // CHECK: irdl.operation make_complex(re: !cmath.real, im: !cmath.real) -> (res: tuple<!cmath.real, !cmath.real>)
-        irdl.operation make_complex(re : real, im: real) -> (res: ccomplex)
-        irdl.operation mul(lhs: ccomplex, rhs: ccomplex) -> (res: ccomplex)
-        irdl.operation norm(c: ccomplex) -> (res: real)
-        irdl.operation get_real(c: ccomplex) -> (res: real)
-        irdl.operation get_imaginary(c: ccomplex) -> (res: real)
+        irdl.operation make_complex(re : real, im: real) -> (res: ccomplex) interfaces [MemoryEffect<>]
+        irdl.operation mul(lhs: ccomplex, rhs: ccomplex) -> (res: ccomplex) interfaces [MemoryEffect<>]
+        irdl.operation norm(c: ccomplex) -> (res: real) interfaces [MemoryEffect<>]
+        irdl.operation get_real(c: ccomplex) -> (res: real) interfaces [MemoryEffect<>]
+        irdl.operation get_imaginary(c: ccomplex) -> (res: real) interfaces [MemoryEffect<>]
     }
 }
