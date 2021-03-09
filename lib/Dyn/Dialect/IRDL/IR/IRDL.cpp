@@ -330,8 +330,10 @@ ParseResult parseTraitDef(OpAsmParser &p, DynamicContext *dynCtx,
   auto loc = p.getCurrentLocation();
 
   StringRef traitName;
-  if (p.parseKeyword(&traitName))
+  if (p.parseKeyword(&traitName)) {
+    p.emitError(loc, "expected trait name");
     return failure();
+  }
 
   auto res = dynCtx->lookupOpTrait(traitName);
   if (failed(res)) {
@@ -341,6 +343,29 @@ ParseResult parseTraitDef(OpAsmParser &p, DynamicContext *dynCtx,
   *trait = *res;
 
   return success();
+}
+
+/// Parse an interface implementation.
+/// This will first parse an interface name, then get the interface definition,
+/// and use its custom parser to parse the implementation.
+ParseResult parseInterfaceDef(OpAsmParser &p, DynamicContext *dynCtx,
+                              InterfaceImplAttrInterface *interface) {
+  auto loc = p.getCurrentLocation();
+
+  StringRef interfaceName;
+  if (p.parseKeyword(&interfaceName)) {
+    p.emitError(loc, "expected interface name");
+    return failure();
+  }
+
+  auto interfaceRes = dynCtx->lookupOpInterface(interfaceName);
+  if (failed(interfaceRes)) {
+    p.emitError(loc, "interface '")
+        .append(interfaceName, "' is not registered");
+    return failure();
+  }
+
+  return (*interfaceRes)->parseImpl(p, *interface);
 }
 
 /// Parse a TraitDefs with format '(traits [(name,)*])?'.
@@ -389,6 +414,54 @@ void printTraitDefs(OpAsmPrinter &p, TraitDefs traitDefs) {
   p << traitDefs.back()->name << "]";
 }
 
+/// Parse an InterfaceDefs with format '(interfaces [(interface,)*])?'.
+ParseResult parseInterfaceDefs(OpAsmParser &p,
+                               OwningInterfaceDefs *interfaceDefs) {
+  // If the interface keyword is not present, then it means that no interface is
+  // defined.
+  if (p.parseOptionalKeyword("interfaces"))
+    return success();
+
+  if (p.parseLSquare())
+    return failure();
+
+  // Empty
+  if (!p.parseOptionalRSquare())
+    return success();
+
+  auto *dynCtx =
+      p.getBuilder().getContext()->getLoadedDialect<DynamicContext>();
+
+  InterfaceImplAttrInterface interface;
+  if (parseInterfaceDef(p, dynCtx, &interface))
+    return failure();
+  interfaceDefs->push_back(interface);
+
+  while (p.parseOptionalRSquare()) {
+    if (p.parseComma())
+      return failure();
+
+    InterfaceImplAttrInterface interface;
+    if (parseInterfaceDef(p, dynCtx, &interface))
+      return failure();
+    interfaceDefs->push_back(interface);
+  }
+
+  return success();
+}
+
+void printInterfaceDefs(OpAsmPrinter &p, InterfaceDefs interfaceDefs) {
+  if (interfaceDefs.empty())
+    return;
+  p << "interfaces [";
+  for (size_t i = 0; i + 1 < interfaceDefs.size(); i++) {
+    interfaceDefs[i].print(p);
+    p << ", ";
+  }
+  interfaceDefs.back().print(p);
+  p << "]";
+}
+
 /// Parse an OpTypeDefAttr.
 /// The format is "operandDef -> resultDef (traits (name)+)?" where operandDef
 /// and resultDef have the ArgDefs format.
@@ -411,7 +484,12 @@ ParseResult parseOpTypeDefAttr(OpAsmParser &p, OpTypeDefAttr *opTypeDefAttr) {
   if (parseTraitDefs(p, &traitDefs))
     return failure();
 
-  *opTypeDefAttr = OpTypeDefAttr::get(*ctx, operandDefs, resultDefs, traitDefs);
+  OwningInterfaceDefs interfaceDefs;
+  if (parseInterfaceDefs(p, &interfaceDefs))
+    return failure();
+
+  *opTypeDefAttr = OpTypeDefAttr::get(*ctx, operandDefs, resultDefs, traitDefs,
+                                      interfaceDefs);
 
   return success();
 }
@@ -423,6 +501,10 @@ void printOpTypeDef(OpAsmPrinter &p, OpTypeDef opDef) {
   if (!opDef.traitDefs.empty()) {
     p << " ";
     printTraitDefs(p, opDef.traitDefs);
+  }
+  if (!opDef.interfaceDefs.empty()) {
+    p << " ";
+    printInterfaceDefs(p, opDef.interfaceDefs);
   }
 }
 

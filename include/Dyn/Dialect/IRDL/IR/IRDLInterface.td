@@ -30,4 +30,21 @@ def TypeConstraintAttrInterface : AttrInterface<"TypeConstraintAttrInterface"> {
   ];
 }
 
+def InterfaceImplAttrInterface : AttrInterface<"InterfaceImplAttrInterface"> {
+  let description = [{
+    Attribute representing the implementation of an interface.
+  }];
+
+  let methods = [
+    InterfaceMethod<
+      "Get the interface implementation",
+      "std::unique_ptr<mlir::dyn::DynamicOpInterfaceImpl>", "getInterfaceImpl"
+    >,
+    InterfaceMethod<
+      "Print the attribute",
+      "void", "print", (ins "mlir::OpAsmPrinter&":$p)
+    >
+  ];
+}
+
 #endif // DYN_DIALECT_IRDL_IR_IRDLATTRIBUTES

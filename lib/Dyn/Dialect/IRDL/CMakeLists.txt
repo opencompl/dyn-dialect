@@ -1,6 +1,7 @@
 add_mlir_dialect_library(MLIRIRDL
         IR/IRDL.cpp
         IR/IRDLAttributes.cpp
+        IR/StandardOpInterfaceAttrs.cpp
         IRDLRegistration.cpp
         TypeConstraint.cpp
 

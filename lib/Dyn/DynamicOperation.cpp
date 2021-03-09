@@ -12,6 +12,7 @@
 
 #include "Dyn/DynamicOperation.h"
 #include "Dyn/DynamicDialect.h"
+#include "Dyn/DynamicInterface.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/DenseMap.h"
@@ -42,9 +43,11 @@ mlir::LogicalResult DynamicOperation::verifyInvariants(Operation *op) {
   }));
 }
 
-DynamicOperation::DynamicOperation(StringRef name, DynamicDialect *dialect,
-                                   std::vector<VerifierFn> customVerifiers,
-                                   std::vector<DynamicOpTrait *> traits)
+DynamicOperation::DynamicOperation(
+    StringRef name, DynamicDialect *dialect,
+    std::vector<VerifierFn> customVerifiers,
+    std::vector<DynamicOpTrait *> traits,
+    std::vector<std::unique_ptr<DynamicOpInterfaceImpl>> interfacesImpl)
     : DynamicObject(dialect->getDynamicContext()),
       name((dialect->getName() + "." + name).str()), dialect(dialect),
       verifiers(std::move(customVerifiers)) {
@@ -54,8 +57,24 @@ DynamicOperation::DynamicOperation(StringRef name, DynamicDialect *dialect,
     verifiers.push_back(
         [trait](Operation *op) { return trait->verifyTrait(op); });
   }
+
+  for (auto &interface : interfacesImpl)
+    interfaces.push_back(
+        {interface->getInterface()->getRuntimeTypeID(), std::move(interface)});
 }
 
 bool DynamicOperation::hasTrait(TypeID traitId) {
   return llvm::any_of(traitsId, [traitId](auto id) { return id == traitId; });
+}
+
+DynamicOpInterfaceImpl *
+DynamicOperation::getInterfaceImpl(DynamicOpInterface *interface) {
+  auto res = llvm::find_if(interfaces, [interface](const auto &p) {
+    return p.first == interface->getRuntimeTypeID();
+  });
+
+  assert(res != interfaces.end() &&
+         "Trying to get an interface implementation in an operation that "
+         "doesn't implement the interface");
+  return res->second.get();
 }

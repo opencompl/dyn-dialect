@@ -31,6 +31,7 @@ namespace dyn {
 
 // Forward declaration.
 class DynamicContext;
+class DynamicOpTrait;
 
 /// Each instance of DynamicDialect correspond to a different dialect.
 class DynamicDialect : public DynamicObject, public mlir::Dialect {
@@ -48,10 +49,10 @@ public:
   /// Create and register a new operation to the dialect.
   /// The name of the operation should not begin with the name of the
   /// dialect.
-  FailureOr<DynamicOperation *>
-  createAndAddOperation(llvm::StringRef name,
-                        std::vector<DynamicOperation::VerifierFn> verifiers,
-                        std::vector<DynamicOpTrait *> traits);
+  FailureOr<DynamicOperation *> createAndAddOperation(
+      llvm::StringRef name, std::vector<DynamicOperation::VerifierFn> verifiers,
+      std::vector<DynamicOpTrait *> traits,
+      std::vector<std::unique_ptr<DynamicOpInterfaceImpl>> interfaces);
 
   /// Create and add a new type to the dialect.
   /// The name of the type should not begin with the name of the dialect.

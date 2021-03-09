@@ -111,6 +111,11 @@ LogicalResult registerOperation(dyn::DynamicDialect *dialect, StringRef name,
     constraints.second.emplace_back(name, std::move(constraint));
   }
 
+  // Add the interfaces implementations.
+  std::vector<std::unique_ptr<dyn::DynamicOpInterfaceImpl>> interfaces;
+  for (auto interfaceAttr : opTypeDef.getInterfaceDefinitions())
+    interfaces.push_back(interfaceAttr.getInterfaceImpl());
+
   // Create the type verifier.
   auto typeVerifier =
       [constraints{std::make_shared<OpTypeConstraints>(std::move(constraints))},
@@ -119,7 +124,8 @@ LogicalResult registerOperation(dyn::DynamicDialect *dialect, StringRef name,
       };
 
   return dialect->createAndAddOperation(name, {std::move(typeVerifier)},
-                                        opTypeDef.traitDefs);
+                                        opTypeDef.traitDefs,
+                                        std::move(interfaces));
 }
 } // namespace irdl
 } // namespace mlir

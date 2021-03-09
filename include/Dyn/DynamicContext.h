@@ -13,6 +13,7 @@
 #ifndef DYN_DYNAMICCONTEXT_H
 #define DYN_DYNAMICCONTEXT_H
 
+#include "Dyn/DynamicInterface.h"
 #include "Dyn/DynamicTrait.h"
 #include "Dyn/DynamicType.h"
 #include "TypeIDAllocator.h"
@@ -60,25 +61,42 @@ public:
 
 private:
   /// Register a dynamic trait.
-  /// Return an error if the trait with the same name was already registered.
+  /// Return an error if a trait with the same name was already registered.
   mlir::FailureOr<DynamicOpTrait *>
   registerOpTrait(llvm::StringRef name,
                   std::unique_ptr<DynamicOpTrait> opTrait);
 
+  /// Register a dynamic interface.
+  /// Return an error if an interface with the same name was already registered.
+  mlir::FailureOr<DynamicOpInterface *>
+  registerOpInterface(llvm::StringRef name,
+                      std::unique_ptr<DynamicOpInterface> opInterface);
+
 public:
   /// Create and register a dynamic trait.
-  /// Return an error if the trait with the same name was already registered.
+  /// Return an error if a trait with the same name was already registered.
   mlir::FailureOr<DynamicOpTrait *>
   createAndRegisterOpTrait(llvm::StringRef name, OpTraitVerifierFn verifier) {
     return registerOpTrait(name, std::make_unique<DynamicOpTrait>(
                                      this, name, std::move(verifier)));
   }
 
+  /// Create and register a wrapper around a c++-defined trait.
+  /// Return an error if a trait with the same name was already registered.
   template <template <typename ConcreteT> class TraitTy>
   mlir::FailureOr<DynamicOpTrait *>
   createAndRegisterOpTrait(llvm::StringRef name) {
     return registerOpTrait(name,
                            std::move(DynamicOpTrait::get<TraitTy>(this, name)));
+  }
+
+  /// Create and register a dynamic interface defined in C++.
+  /// Return an error if a trait with the same name was already registered.
+  template <typename InterfaceTy>
+  mlir::FailureOr<DynamicOpInterface *>
+  createAndRegisterOpInterface(llvm::StringRef name) {
+    return registerOpInterface(
+        name, std::unique_ptr<InterfaceTy>(new InterfaceTy(this)));
   }
 
   /// Get a type given its typeID.
@@ -117,6 +135,24 @@ public:
     return &*it->second;
   }
 
+  /// Get an operation interface given its name.
+  /// The pointer is guaranteed to be non-null.
+  FailureOr<DynamicOpInterface *> lookupOpInterface(StringRef name) const {
+    auto it = opInterfaces.find(name);
+    if (it == opInterfaces.end())
+      return failure();
+    return &*it->second;
+  }
+
+  /// Get an operation interface given its typeID.
+  /// The pointer is guaranteed to be non-null.
+  FailureOr<DynamicOpInterface *> lookupOpInterface(TypeID id) const {
+    auto it = typeIDToOpInterfaces.find(id);
+    if (it == typeIDToOpInterfaces.end())
+      return failure();
+    return &*it->second;
+  }
+
   /// Get a dialect given its typeID.
   /// The pointer is guaranteed to be non-null.
   FailureOr<DynamicDialect *> lookupDialect(StringRef name) const {
@@ -148,6 +184,12 @@ private:
 
   /// This structure allows to get in O(1) a dynamic trait given its typeID.
   llvm::DenseMap<TypeID, DynamicOpTrait *> typeIDToOpTraits;
+
+  /// The set of dynamically defined operation traits.
+  llvm::StringMap<std::unique_ptr<DynamicOpInterface>> opInterfaces;
+
+  /// This structure allows to get in O(1) a dynamic trait given its typeID.
+  llvm::DenseMap<TypeID, DynamicOpInterface *> typeIDToOpInterfaces;
 
   /// The MLIR context. It is used to register dialects, operations, types, ...
   MLIRContext *ctx;
