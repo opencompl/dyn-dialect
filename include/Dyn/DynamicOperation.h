@@ -81,7 +81,7 @@ private:
   std::vector<std::function<mlir::LogicalResult(mlir::Operation *op)>>
       verifiers;
 
-  /// Operation traits TypeID.
+  // Operation traits TypeID.
   std::vector<TypeID> traitsId;
 
   /// Interfaces and their implementations.
