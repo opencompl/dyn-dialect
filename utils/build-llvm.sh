@@ -18,7 +18,7 @@ INSTALL_DIR=${2:-"install"}
 mkdir -p llvm-project/$BUILD_DIR
 mkdir -p llvm-project/$INSTALL_DIR
 cd llvm-project/$BUILD_DIR
-cmake ../llvm \
+cmake -G Ninja ../llvm \
   -DLLVM_BUILD_EXAMPLES=OFF \
   -DLLVM_TARGETS_TO_BUILD="host" \
   -DCMAKE_INSTALL_PREFIX=../$INSTALL_DIR \
@@ -34,4 +34,4 @@ cmake ../llvm \
   -DLLVM_ENABLE_ASSERTIONS=ON \
   -DLLVM_MLIR_BINDINGS_PYTHON_ENABLED=ON
 
-cmake --build . --target install -- -j$(nproc)
+ninja install

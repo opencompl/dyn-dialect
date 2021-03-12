@@ -1,3 +1,3 @@
 #!/bin/bash
 cd build
-cmake --build . --target check-dyn
+ninja check-dyn
