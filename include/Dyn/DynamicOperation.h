@@ -15,6 +15,7 @@
 
 #include "Dyn/DynamicObject.h"
 #include "Dyn/DynamicTrait.h"
+#include "mlir/IR/OperationSupport.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/STLExtras.h"
@@ -29,16 +30,16 @@ class DynamicOpInterfaceImpl;
 class DynamicOpInterface;
 
 /// Each instance of DynamicOperation correspond to a different operation.
-class DynamicOperation : public mlir::Op<DynamicOperation>,
-                         public DynamicObject {
+class DynamicOperation : public DynamicObject {
 public:
-  using VerifierFn = std::function<mlir::LogicalResult(mlir::Operation *op)>;
+  using VerifierFn =
+      llvm::unique_function<mlir::LogicalResult(mlir::Operation *op)>;
 
   /// Create a new dynamic operation given the operation name and the defining
   /// dialect.
   /// The operation name should be `operation` and not `dialect.operation`.
   DynamicOperation(
-      mlir::StringRef name, DynamicDialect *dialect,
+      mlir::StringRef name, Dialect *dialect, DynamicContext *ctx,
       std::vector<VerifierFn> verifiers, std::vector<DynamicOpTrait *> traits,
       std::vector<std::unique_ptr<DynamicOpInterfaceImpl>> interfaces);
 
@@ -65,6 +66,11 @@ public:
     return failure();
   }
 
+  /// Get the canonicalization patterns of this operation.
+  /// There is no way to define canonicalization patterns yet.
+  static void getCanonicalizationPatterns(OwningRewritePatternList &,
+                                          MLIRContext *ctx) {}
+
   /// Check if the operation has a specific trait given the trait TypeID.
   bool hasTrait(TypeID traitId);
 
@@ -74,12 +80,11 @@ private:
   /// Full name of the operation: `dialect.operation`.
   const std::string name;
 
-  /// Pointer to the dialect defining the operation.
-  DynamicDialect *dialect;
+  /// Dialect that defines this operation.
+  Dialect *dialect;
 
   /// Custom verifiers for the operation.
-  std::vector<std::function<mlir::LogicalResult(mlir::Operation *op)>>
-      verifiers;
+  std::vector<VerifierFn> verifiers;
 
   // Operation traits TypeID.
   std::vector<TypeID> traitsId;

@@ -60,6 +60,51 @@ DynamicContext::createAndRegisterDialect(llvm::StringRef name) {
   return dynDialect;
 }
 
+mlir::FailureOr<DynamicOperation *> DynamicContext::createAndRegisterOperation(
+    StringRef name, Dialect *dialect,
+    std::vector<llvm::unique_function<mlir::LogicalResult(mlir::Operation *op)>>
+        verifiers,
+    std::vector<DynamicOpTrait *> traits,
+    std::vector<std::unique_ptr<DynamicOpInterfaceImpl>> interfaces) {
+  // Create the interfaceMap that will contain the implementation of the
+  // interfaces for this operation. Note that the actual implementation is
+  // stored inside the 'DynamicOp', and the functions given to the
+  // InterfaceMap will just be a redirection to the actual implementation.
+  std::vector<std::pair<TypeID, void *>> interfaceMapElements;
+  for (auto &interfaceImpl : interfaces) {
+    auto interface = interfaceImpl->getInterface();
+    interfaceMapElements.push_back(
+        {interface->getRuntimeTypeID(), interface->getConcept()});
+  }
+  auto interfaceMap = mlir::detail::InterfaceMap(
+      MutableArrayRef<std::pair<TypeID, void *>>(interfaceMapElements));
+
+  auto *absOp = new DynamicOperation(name, dialect, this, std::move(verifiers),
+                                     std::move(traits), std::move(interfaces));
+  auto typeID = absOp->getRuntimeTypeID();
+
+  // Register the operation to the dynamic dialect.
+  auto registered = dynOps.try_emplace(typeID, absOp);
+  if (!registered.second)
+    return failure();
+
+  nameToDynOps.insert({name, absOp});
+
+  // The hasTrait implementation for this operation.
+  auto hasTraitFn = [absOp](TypeID traitId) {
+    return absOp->hasTrait(traitId);
+  };
+
+  AbstractOperation::insert(
+      absOp->getName(), *dialect, absOp->getRuntimeTypeID(),
+      DynamicOperation::parseOperation, DynamicOperation::printOperation,
+      DynamicOperation::verifyInvariants, DynamicOperation::foldHook,
+      DynamicOperation::getCanonicalizationPatterns, std::move(interfaceMap),
+      hasTraitFn);
+
+  return absOp;
+}
+
 mlir::FailureOr<DynamicOpTrait *>
 DynamicContext::registerOpTrait(llvm::StringRef name,
                                 std::unique_ptr<DynamicOpTrait> opTrait) {
