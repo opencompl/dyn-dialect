@@ -46,69 +46,15 @@ public:
 
   mlir::StringRef getName() const { return name; }
 
-  /// Create and add a new type to the dialect.
-  /// The name of the type should not begin with the name of the dialect.
-  FailureOr<DynamicTypeDefinition *> createAndAddType(StringRef name);
-
-  /// Create and add a new type alias to the dialect.
-  /// The name of the type alias should not begin with the name of the dialect.
-  LogicalResult createAndAddTypeAlias(StringRef name, Type type);
-
   mlir::Type parseType(mlir::DialectAsmParser &parser) const override;
 
   void printType(mlir::Type type,
                  mlir::DialectAsmPrinter &printer) const override;
 
-  /// The pointer is guaranteed to be non-null.
-  /// The name format should be 'type' and not 'dialect.type'.
-  FailureOr<DynamicTypeDefinition *> lookupType(StringRef name) const {
-    auto it = dynTypes.find(name);
-    if (it == dynTypes.end())
-      return failure();
-    return it->second.get();
-  }
-
-  /// The pointer is guaranteed to be non-null.
-  FailureOr<DynamicTypeDefinition *> lookupType(TypeID id) const {
-    auto it = typeIDToDynTypes.find(id);
-    if (it == typeIDToDynTypes.end())
-      return failure();
-    return &*it->second;
-  }
-
-  /// The name format should be 'alias' and not 'dialect.alias'.
-  FailureOr<Type> lookupTypeAlias(StringRef name) const {
-    auto it = typeAliases.find(name);
-    if (it == typeAliases.end())
-      return failure();
-    return Type(it->second);
-  }
-
-  /// The name format should be 'type' and not 'dialect.type'
-  FailureOr<Type> lookupTypeOrTypeAlias(StringRef name) const {
-    auto dynType = lookupType(name);
-    if (succeeded(dynType))
-      return DynamicType::get(getContext(), *dynType);
-
-    return lookupTypeAlias(name);
-  }
-
 private:
   /// Name of the dialect.
   /// This name is used for parsing and printing.
   const std::string name;
-
-  /// Dynamic types registered in this dialect.
-  /// Their name is stored with the format `type` and not `dialect.type`.
-  llvm::StringMap<std::unique_ptr<DynamicTypeDefinition>> dynTypes;
-
-  /// This structure allows to get in O(1) a dynamic type given its typeID.
-  /// This is useful for accessing the printer efficiently for instance.
-  llvm::DenseMap<TypeID, DynamicTypeDefinition *> typeIDToDynTypes;
-
-  /// Type aliases registered in this dialect.
-  /// Their name is stored with the format `alias` and not `dialect.alias`.
-  llvm::StringMap<Type> typeAliases;
 
   /// Context in which the dialect is registered.
   DynamicContext *ctx;

@@ -27,12 +27,12 @@ using namespace irdl;
 namespace mlir {
 namespace irdl {
 LogicalResult registerType(dyn::DynamicDialect *dialect, StringRef name) {
-  return dialect->createAndAddType(name);
+  return dialect->getDynamicContext()->createAndRegisterType(name, dialect);
 }
 
 LogicalResult registerTypeAlias(dyn::DynamicDialect *dialect, StringRef name,
                                 Type type) {
-  return dialect->createAndAddTypeAlias(name, type);
+  return dialect->getDynamicContext()->addTypeAlias(name, dialect, type);
 }
 } // namespace irdl
 } // namespace mlir

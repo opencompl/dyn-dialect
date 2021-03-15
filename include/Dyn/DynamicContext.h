@@ -69,6 +69,15 @@ public:
       std::vector<DynamicOpTrait *> traits,
       std::vector<std::unique_ptr<DynamicOpInterfaceImpl>> interfaces);
 
+  /// Create and add a new type to the dialect.
+  /// The name of the type should not begin with the name of the dialect.
+  mlir::FailureOr<DynamicTypeDefinition *>
+  createAndRegisterType(StringRef name, Dialect *dialect);
+
+  /// Create and add a new type alias to the dialect.
+  /// The name of the type alias should not begin with the name of the dialect.
+  LogicalResult addTypeAlias(StringRef name, Dialect *dialect, Type type);
+
 private:
   /// Register a dynamic trait.
   /// Return an error if a trait with the same name was already registered.
@@ -107,15 +116,6 @@ public:
   createAndRegisterOpInterface(llvm::StringRef name) {
     return registerOpInterface(
         name, std::unique_ptr<InterfaceTy>(new InterfaceTy(this)));
-  }
-
-  /// Get a type given its typeID.
-  /// The pointer is guaranteed to be non-null.
-  FailureOr<DynamicTypeDefinition *> lookupType(TypeID id) const {
-    auto it = typeIDToDynTypes.find(id);
-    if (it == typeIDToDynTypes.end())
-      return failure();
-    return &*it->second;
   }
 
   /// Get an operation trait given its name.
@@ -180,6 +180,40 @@ public:
     return it->second.get();
   }
 
+  /// The pointer is guaranteed to be non-null.
+  /// The name format should be 'type' and not 'dialect.type'.
+  FailureOr<DynamicTypeDefinition *> lookupType(StringRef name) const {
+    auto it = nameToDynTypes.find(name);
+    if (it == nameToDynTypes.end())
+      return failure();
+    return &*it->second;
+  }
+
+  /// The pointer is guaranteed to be non-null.
+  FailureOr<DynamicTypeDefinition *> lookupType(TypeID id) const {
+    auto it = dynTypes.find(id);
+    if (it == dynTypes.end())
+      return failure();
+    return it->second.get();
+  }
+
+  /// The name format should be 'dialectname.aliasname'.
+  FailureOr<Type> lookupTypeAlias(StringRef name) const {
+    auto it = typeAliases.find(name);
+    if (it == typeAliases.end())
+      return failure();
+    return Type(it->second);
+  }
+
+  /// The name format should be 'dialectname.typename'.
+  FailureOr<Type> lookupTypeOrTypeAlias(StringRef name) const {
+    auto dynType = lookupType(name);
+    if (succeeded(dynType))
+      return DynamicType::get(getContext(), *dynType);
+
+    return lookupTypeAlias(name);
+  }
+
   /// We declare DynamicDialect friend so it can register types and operations
   /// in the context.
   friend DynamicDialect;
@@ -212,6 +246,17 @@ private:
   /// This structure allows to get in O(1) a dynamic operation given its name.
   /// The name format should be 'dialect.opname'.
   llvm::StringMap<DynamicOperation *> nameToDynOps;
+
+  /// The set of all dynamic types registered.
+  llvm::DenseMap<TypeID, std::unique_ptr<DynamicTypeDefinition>> dynTypes;
+
+  /// This structure allows to get in O(1) a dynamic type given its name.
+  /// The name format should be 'dialect.type'.
+  llvm::StringMap<DynamicTypeDefinition *> nameToDynTypes;
+
+  /// Type aliases registered in this dialect.
+  /// Their name is stored with the format `alias` and not `dialect.alias`.
+  llvm::StringMap<Type> typeAliases;
 
   /// The MLIR context. It is used to register dialects, operations, types, ...
   MLIRContext *ctx;

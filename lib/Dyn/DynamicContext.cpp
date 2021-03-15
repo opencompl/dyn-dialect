@@ -105,6 +105,38 @@ mlir::FailureOr<DynamicOperation *> DynamicContext::createAndRegisterOperation(
   return absOp;
 }
 
+FailureOr<DynamicTypeDefinition *>
+DynamicContext::createAndRegisterType(StringRef name, Dialect *dialect) {
+  auto fullName = (dialect->getNamespace() + "." + name).str();
+  auto *dynType = new DynamicTypeDefinition(dialect, name);
+  auto typeID = dynType->getRuntimeTypeID();
+
+  // If an alias with the same name is already defined, fail.
+  if (typeAliases.count(fullName))
+    return failure();
+
+  // If a type with the same name is already defined, fail.
+  auto registered = dynTypes.try_emplace(typeID, dynType);
+  if (!registered.second)
+    return failure();
+
+  nameToDynTypes.insert({fullName, dynType});
+
+  /// Add the type to the dialect and the type uniquer.
+  addType(typeID, AbstractType(*dialect, detail::InterfaceMap::template get<>(),
+                               typeID));
+  detail::TypeUniquer::registerType<DynamicType>(ctx, typeID);
+
+  return dynType;
+}
+
+LogicalResult DynamicContext::addTypeAlias(StringRef name, Dialect *dialect,
+                                           Type type) {
+  auto fullName = (dialect->getNamespace() + "." + name).str();
+  auto registered = typeAliases.try_emplace(fullName, type);
+  return success(registered.second);
+}
+
 mlir::FailureOr<DynamicOpTrait *>
 DynamicContext::registerOpTrait(llvm::StringRef name,
                                 std::unique_ptr<DynamicOpTrait> opTrait) {
