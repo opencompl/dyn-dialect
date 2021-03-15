@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Dyn/DynamicType.h"
+#include "Dyn/DynamicContext.h"
 #include "Dyn/DynamicDialect.h"
 #include "mlir/IR/TypeSupport.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -18,10 +19,10 @@
 using namespace mlir;
 using namespace dyn;
 
-DynamicTypeDefinition::DynamicTypeDefinition(DynamicDialect *dialect,
+DynamicTypeDefinition::DynamicTypeDefinition(Dialect *dialect,
                                              llvm::StringRef name)
-    : DynamicObject(dialect->getDynamicContext()), dialect(dialect),
-      name(name.str()) {}
+    : DynamicObject(dialect->getContext()->getLoadedDialect<DynamicContext>()),
+      dialect(dialect), name(name.str()) {}
 
 DynamicTypeDefinition *DynamicType::getTypeDef() { return getImpl()->typeDef; }
 

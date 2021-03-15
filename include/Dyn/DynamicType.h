@@ -28,10 +28,10 @@ class DynamicDialect;
 /// Each dynamic type instance refer to one instance of this class.
 class DynamicTypeDefinition : public DynamicObject {
 public:
-  DynamicTypeDefinition(DynamicDialect *dialect, llvm::StringRef name);
+  DynamicTypeDefinition(Dialect *dialect, llvm::StringRef name);
 
   /// Dialect in which this type is defined.
-  const DynamicDialect *dialect;
+  const Dialect *dialect;
 
   /// Name of the type.
   /// Does not contain the name of the dialect beforehand.

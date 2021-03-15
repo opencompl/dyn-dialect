@@ -148,7 +148,8 @@ Optional<ParseResult> parseOptionalType(OpAsmParser &p, Type *type) {
                     "no 'irdl.dialect' currently being parsed.");
 
   /// Get the type from the dialect.
-  auto dynType = dialect->lookupTypeOrTypeAlias(typeName);
+  auto dynType = dynCtx->lookupTypeOrTypeAlias(
+      (dialect->getName() + "." + typeName).str());
   if (failed(dynType))
     return ParseResult(p.emitError(loc, "type ")
                            .append(typeName,

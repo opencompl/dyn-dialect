@@ -32,32 +32,6 @@ DynamicDialect::DynamicDialect(llvm::StringRef name, DynamicContext *ctx,
     : DynamicObject{ctx, id},
       Dialect(name, ctx->getMLIRCtx(), id), name{name}, ctx{ctx} {}
 
-FailureOr<DynamicTypeDefinition *>
-DynamicDialect::createAndAddType(StringRef name) {
-  /// If a type with same name is already defined, fail.
-  auto registered =
-      dynTypes.try_emplace(name, new DynamicTypeDefinition(this, name));
-  if (!registered.second)
-    return failure();
-
-  DynamicTypeDefinition *type = registered.first->second.get();
-  auto typeID = type->getRuntimeTypeID();
-  typeIDToDynTypes.insert({typeID, type});
-  ctx->typeIDToDynTypes.insert({typeID, type});
-
-  /// Add the type to the dialect and the type uniquer.
-  addType(typeID,
-          AbstractType(*this, detail::InterfaceMap::template get<>(), typeID));
-  detail::TypeUniquer::registerType<DynamicType>(ctx->getMLIRCtx(), typeID);
-
-  return type;
-}
-
-LogicalResult DynamicDialect::createAndAddTypeAlias(StringRef name, Type type) {
-  auto registered = typeAliases.try_emplace(name, type);
-  return success(registered.second);
-}
-
 Type DynamicDialect::parseType(mlir::DialectAsmParser &parser) const {
   llvm::SMLoc typeLoc = parser.getCurrentLocation();
   StringRef name;
@@ -69,11 +43,13 @@ Type DynamicDialect::parseType(mlir::DialectAsmParser &parser) const {
     return Type();
   }
 
-  auto type = lookupType(name);
+  auto fullName = (getName() + "." + name).str();
+
+  auto type = getDynamicContext()->lookupType(fullName);
   if (succeeded(type))
     return DynamicType::get(ctx->getMLIRCtx(), *type);
 
-  auto alias = lookupTypeAlias(name);
+  auto alias = getDynamicContext()->lookupTypeAlias(fullName);
   if (succeeded(alias))
     return *alias;
 
@@ -83,7 +59,7 @@ Type DynamicDialect::parseType(mlir::DialectAsmParser &parser) const {
 }
 
 void DynamicDialect::printType(Type type, DialectAsmPrinter &printer) const {
-  auto dynType = lookupType(type.getTypeID());
+  auto dynType = getDynamicContext()->lookupType(type.getTypeID());
   assert(!failed(dynType));
   printer << (*dynType)->name;
 }
