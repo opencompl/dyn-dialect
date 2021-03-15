@@ -59,6 +59,16 @@ public:
   mlir::FailureOr<DynamicDialect *>
   createAndRegisterDialect(llvm::StringRef name);
 
+  /// Create and add a new dynamic operation to an existing dialect.
+  /// Its name should be in the format 'opname' and not 'dialectname.opname'.
+  mlir::FailureOr<DynamicOperation *> createAndRegisterOperation(
+      StringRef name, Dialect *dialect,
+      std::vector<
+          llvm::unique_function<mlir::LogicalResult(mlir::Operation *op)>>
+          verifiers,
+      std::vector<DynamicOpTrait *> traits,
+      std::vector<std::unique_ptr<DynamicOpInterfaceImpl>> interfaces);
+
 private:
   /// Register a dynamic trait.
   /// Return an error if a trait with the same name was already registered.
@@ -108,15 +118,6 @@ public:
     return &*it->second;
   }
 
-  /// Get an operation given its typeID.
-  /// The pointer is guaranteed to be non-null.
-  FailureOr<DynamicOperation *> lookupOp(TypeID id) const {
-    auto it = typeIDToDynOps.find(id);
-    if (it == typeIDToDynOps.end())
-      return failure();
-    return &*it->second;
-  }
-
   /// Get an operation trait given its name.
   /// The pointer is guaranteed to be non-null.
   FailureOr<DynamicOpTrait *> lookupOpTrait(StringRef name) const {
@@ -162,6 +163,23 @@ public:
     return &*it->second;
   }
 
+  /// The pointer is guaranteed to be non-null.
+  /// The name format should be 'dialect.operation'.
+  FailureOr<DynamicOperation *> lookupOp(StringRef name) const {
+    auto it = nameToDynOps.find(name);
+    if (it == nameToDynOps.end())
+      return failure();
+    return &*it->second;
+  }
+
+  /// The pointer is guaranteed to be non-null.
+  FailureOr<DynamicOperation *> lookupOp(TypeID id) const {
+    auto it = dynOps.find(id);
+    if (it == dynOps.end())
+      return failure();
+    return it->second.get();
+  }
+
   /// We declare DynamicDialect friend so it can register types and operations
   /// in the context.
   friend DynamicDialect;
@@ -176,9 +194,6 @@ private:
   /// This structure allows to get in O(1) a dynamic type given its typeID.
   llvm::DenseMap<TypeID, DynamicTypeDefinition *> typeIDToDynTypes;
 
-  /// This structure allows to get in O(1) a dynamic type given its typeID.
-  llvm::DenseMap<TypeID, DynamicOperation *> typeIDToDynOps;
-
   /// The set of dynamically defined operation traits.
   llvm::StringMap<std::unique_ptr<DynamicOpTrait>> opTraits;
 
@@ -190,6 +205,13 @@ private:
 
   /// This structure allows to get in O(1) a dynamic trait given its typeID.
   llvm::DenseMap<TypeID, DynamicOpInterface *> typeIDToOpInterfaces;
+
+  /// The set of all dynamic operations registered.
+  llvm::DenseMap<TypeID, std::unique_ptr<DynamicOperation>> dynOps;
+
+  /// This structure allows to get in O(1) a dynamic operation given its name.
+  /// The name format should be 'dialect.opname'.
+  llvm::StringMap<DynamicOperation *> nameToDynOps;
 
   /// The MLIR context. It is used to register dialects, operations, types, ...
   MLIRContext *ctx;

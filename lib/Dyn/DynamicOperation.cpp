@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Dyn/DynamicOperation.h"
+#include "Dyn/DynamicContext.h"
 #include "Dyn/DynamicDialect.h"
 #include "Dyn/DynamicInterface.h"
 #include "mlir/IR/OpImplementation.h"
@@ -28,29 +29,26 @@ void DynamicOperation::printOperation(Operation *op, OpAsmPrinter &printer) {
 
 mlir::LogicalResult DynamicOperation::verifyInvariants(Operation *op) {
   auto typeID = op->getAbstractOperation()->typeID;
+  auto *dynCtx = op->getContext()->getLoadedDialect<DynamicContext>();
 
-  /// This is necessary, since it is not possible to know if a dialect is
-  /// dynamic or not without the DynamicContext.
-  /// However, this reinterpret_cast is safe, since a DynamicOperation can
-  /// only be created with a DynamicDialect.
-  auto *dialect = reinterpret_cast<DynamicDialect *>(op->getDialect());
-  auto dynOp = dialect->lookupOp(typeID);
-  assert(!failed(dynOp));
+  auto dynOp = dynCtx->lookupOp(typeID);
+  assert(!failed(dynOp) &&
+         "Trying to verify the invariants of a dynamic operation that wasn't "
+         "registered in the dynamic context.");
 
   /// Call each custom verifier provided to the operation.
-  return success(llvm::all_of((*dynOp)->verifiers, [op](auto verifier) {
+  return success(llvm::all_of((*dynOp)->verifiers, [op](auto &verifier) {
     return succeeded(verifier(op));
   }));
 }
 
 DynamicOperation::DynamicOperation(
-    StringRef name, DynamicDialect *dialect,
+    StringRef name, Dialect *dialect, DynamicContext *ctx,
     std::vector<VerifierFn> customVerifiers,
     std::vector<DynamicOpTrait *> traits,
     std::vector<std::unique_ptr<DynamicOpInterfaceImpl>> interfacesImpl)
-    : DynamicObject(dialect->getDynamicContext()),
-      name((dialect->getName() + "." + name).str()), dialect(dialect),
-      verifiers(std::move(customVerifiers)) {
+    : DynamicObject(ctx), name((dialect->getNamespace() + "." + name).str()),
+      dialect(dialect), verifiers(std::move(customVerifiers)) {
   // Add traits to verifiers and traitIDs.
   for (auto trait : traits) {
     traitsId.push_back(trait->getRuntimeTypeID());

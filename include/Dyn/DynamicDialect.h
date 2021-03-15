@@ -46,14 +46,6 @@ public:
 
   mlir::StringRef getName() const { return name; }
 
-  /// Create and register a new operation to the dialect.
-  /// The name of the operation should not begin with the name of the
-  /// dialect.
-  FailureOr<DynamicOperation *> createAndAddOperation(
-      llvm::StringRef name, std::vector<DynamicOperation::VerifierFn> verifiers,
-      std::vector<DynamicOpTrait *> traits,
-      std::vector<std::unique_ptr<DynamicOpInterfaceImpl>> interfaces);
-
   /// Create and add a new type to the dialect.
   /// The name of the type should not begin with the name of the dialect.
   FailureOr<DynamicTypeDefinition *> createAndAddType(StringRef name);
@@ -101,23 +93,6 @@ public:
     return lookupTypeAlias(name);
   }
 
-  /// The pointer is guaranteed to be non-null.
-  /// The name format should be 'dialect.operation'.
-  FailureOr<DynamicOperation *> lookupOp(StringRef name) const {
-    auto it = dynOps.find(name);
-    if (it == dynOps.end())
-      return failure();
-    return it->second.get();
-  }
-
-  /// The pointer is guaranteed to be non-null.
-  FailureOr<DynamicOperation *> lookupOp(TypeID id) const {
-    auto it = typeIDToDynOps.find(id);
-    if (it == typeIDToDynOps.end())
-      return failure();
-    return &*it->second;
-  }
-
 private:
   /// Name of the dialect.
   /// This name is used for parsing and printing.
@@ -130,14 +105,6 @@ private:
   /// This structure allows to get in O(1) a dynamic type given its typeID.
   /// This is useful for accessing the printer efficiently for instance.
   llvm::DenseMap<TypeID, DynamicTypeDefinition *> typeIDToDynTypes;
-
-  /// Dynamic operations registered in this dialect.
-  /// Their name is stored with the format `op` and not `dialect.op`.
-  llvm::StringMap<std::unique_ptr<DynamicOperation>> dynOps;
-
-  /// This structure allows to get in O(1) a dynamic type given its typeID.
-  /// This is useful for accessing the verifier efficiently for instance.
-  llvm::DenseMap<TypeID, DynamicOperation *> typeIDToDynOps;
 
   /// Type aliases registered in this dialect.
   /// Their name is stored with the format `alias` and not `dialect.alias`.

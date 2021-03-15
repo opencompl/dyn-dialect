@@ -117,15 +117,17 @@ LogicalResult registerOperation(dyn::DynamicDialect *dialect, StringRef name,
     interfaces.push_back(interfaceAttr.getInterfaceImpl());
 
   // Create the type verifier.
-  auto typeVerifier =
-      [constraints{std::make_shared<OpTypeConstraints>(std::move(constraints))},
-       ctx](Operation *op) {
-        return verifyOpTypeConstraints(op, *constraints, *ctx);
+  dyn::DynamicOperation::VerifierFn typeVerifier =
+      [constraints{std::move(constraints)}, ctx](Operation *op) {
+        return verifyOpTypeConstraints(op, constraints, *ctx);
       };
 
-  return dialect->createAndAddOperation(name, {std::move(typeVerifier)},
-                                        opTypeDef.traitDefs,
-                                        std::move(interfaces));
+  std::vector<dyn::DynamicOperation::VerifierFn> verifiers;
+  verifiers.push_back(std::move(typeVerifier));
+
+  return ctx->createAndRegisterOperation(name, dialect, std::move(verifiers),
+                                         opTypeDef.traitDefs,
+                                         std::move(interfaces));
 }
 } // namespace irdl
 } // namespace mlir

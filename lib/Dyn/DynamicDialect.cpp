@@ -58,51 +58,6 @@ LogicalResult DynamicDialect::createAndAddTypeAlias(StringRef name, Type type) {
   return success(registered.second);
 }
 
-FailureOr<DynamicOperation *> DynamicDialect::createAndAddOperation(
-    StringRef name, std::vector<DynamicOperation::VerifierFn> verifiers,
-    std::vector<DynamicOpTrait *> traits,
-    std::vector<std::unique_ptr<DynamicOpInterfaceImpl>> interfaces) {
-
-  // Create the interfaceMap that will contain the implementation of the
-  // interfaces for this operation. Note that the actual implementation is
-  // stored inside the 'DynamicOp', and the functions given to the
-  // InterfaceMap will just be a redirection to the actual implementation.
-  std::vector<std::pair<TypeID, void *>> interfaceMapElements;
-  for (auto &interfaceImpl : interfaces) {
-    auto interface = interfaceImpl->getInterface();
-    interfaceMapElements.push_back(
-        {interface->getRuntimeTypeID(), interface->getConcept()});
-  }
-  auto interfaceMap = mlir::detail::InterfaceMap(
-      MutableArrayRef<std::pair<TypeID, void *>>(interfaceMapElements));
-
-  // Register the operation to the dynamic dialect.
-  auto registered = dynOps.try_emplace(
-      name, new DynamicOperation(name, this, std::move(verifiers),
-                                 std::move(traits), std::move(interfaces)));
-  if (!registered.second)
-    return failure();
-
-  DynamicOperation *absOp = registered.first->second.get();
-  auto typeID = absOp->getRuntimeTypeID();
-  typeIDToDynOps.insert({typeID, absOp});
-  ctx->typeIDToDynOps.insert({typeID, absOp});
-
-  // The hasTrait implementation for this operation.
-  auto hasTraitFn = [absOp](TypeID traitId) {
-    return absOp->hasTrait(traitId);
-  };
-
-  AbstractOperation::insert(
-      absOp->getName(), *this, absOp->getRuntimeTypeID(),
-      DynamicOperation::parseOperation, DynamicOperation::printOperation,
-      DynamicOperation::verifyInvariants, DynamicOperation::foldHook,
-      DynamicOperation::getCanonicalizationPatterns, std::move(interfaceMap),
-      hasTraitFn);
-
-  return absOp;
-}
-
 Type DynamicDialect::parseType(mlir::DialectAsmParser &parser) const {
   llvm::SMLoc typeLoc = parser.getCurrentLocation();
   StringRef name;
