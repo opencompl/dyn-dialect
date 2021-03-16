@@ -34,7 +34,6 @@ class OperationOp;
 
 namespace detail {
 // Forward declaration.
-struct StringAttributeStorage;
 struct TypeAttributeStorage;
 struct TypeArrayAttrStorage;
 } // namespace detail
