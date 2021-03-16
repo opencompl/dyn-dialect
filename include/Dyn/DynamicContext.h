@@ -229,10 +229,6 @@ public:
     return lookupTypeAlias(name);
   }
 
-  /// We declare DynamicDialect friend so it can register types and operations
-  /// in the context.
-  friend DynamicDialect;
-
 private:
   /// TypeID allocator used for dialects, operations, types, ...
   TypeIDAllocator typeIDAllocator;
