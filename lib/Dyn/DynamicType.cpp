@@ -13,6 +13,7 @@
 #include "Dyn/DynamicType.h"
 #include "Dyn/DynamicContext.h"
 #include "Dyn/DynamicDialect.h"
+#include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/TypeSupport.h"
 #include "llvm/ADT/ArrayRef.h"
 
@@ -29,4 +30,30 @@ DynamicTypeDefinition *DynamicType::getTypeDef() { return getImpl()->typeDef; }
 DynamicType DynamicType::get(MLIRContext *ctx, DynamicTypeDefinition *typeDef) {
   return detail::TypeUniquer::getWithTypeID<DynamicType>(
       ctx, typeDef->getRuntimeTypeID(), typeDef);
+}
+
+OptionalParseResult DynamicType::parseOptionalDynamicType(
+    const Dialect *dialect, StringRef typeName, DialectAsmParser &parser,
+    Type &resultType) {
+  auto fullName = (dialect->getNamespace() + "." + typeName).str();
+
+  auto dynCtx = dialect->getContext()->getLoadedDialect<DynamicContext>();
+  auto type = dynCtx->lookupTypeOrTypeAlias(fullName);
+  if (succeeded(type)) {
+    resultType = *type;
+    return {success()};
+  }
+
+  return {};
+}
+
+LogicalResult DynamicType::printIfDynamicType(Type type,
+                                              DialectAsmPrinter &printer) {
+  auto dynType = type.getContext()
+                     ->getLoadedDialect<DynamicContext>()
+                     ->lookupTypeDefinition(type.getTypeID());
+  if (failed(dynType))
+    return failure();
+  printer << (*dynType)->name;
+  return success();
 }

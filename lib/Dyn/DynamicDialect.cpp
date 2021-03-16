@@ -43,15 +43,15 @@ Type DynamicDialect::parseType(mlir::DialectAsmParser &parser) const {
     return Type();
   }
 
-  auto fullName = (getName() + "." + name).str();
+  Type typeRes;
+  auto parsedDyn =
+      DynamicType::parseOptionalDynamicType(this, name, parser, typeRes);
 
-  auto type = getDynamicContext()->lookupType(fullName);
-  if (succeeded(type))
-    return DynamicType::get(ctx->getMLIRCtx(), *type);
-
-  auto alias = getDynamicContext()->lookupTypeAlias(fullName);
-  if (succeeded(alias))
-    return *alias;
+  if (parsedDyn.hasValue()) {
+    if (failed(parsedDyn.getValue()))
+      return Type();
+    return typeRes;
+  }
 
   parser.emitError(typeLoc, "dynamic type '")
       << name << "' was not registered in the dialect " << getName();
@@ -59,7 +59,7 @@ Type DynamicDialect::parseType(mlir::DialectAsmParser &parser) const {
 }
 
 void DynamicDialect::printType(Type type, DialectAsmPrinter &printer) const {
-  auto dynType = getDynamicContext()->lookupType(type.getTypeID());
-  assert(!failed(dynType));
-  printer << (*dynType)->name;
+  auto res = DynamicType::printIfDynamicType(type, printer);
+  assert(succeeded(res) &&
+         "type registered in dynamic dialect was not dynamic");
 }

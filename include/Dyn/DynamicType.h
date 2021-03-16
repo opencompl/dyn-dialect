@@ -15,17 +15,23 @@
 
 #include "DynamicObject.h"
 #include "mlir/IR/MLIRContext.h"
+#include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/TypeSupport.h"
 #include "mlir/IR/Types.h"
 
 namespace mlir {
+
+// Forward declaration.
+class DialectAsmPrinter;
+class DialectAsmParser;
+
 namespace dyn {
 
 // Forward declaration.
 class DynamicDialect;
 
-/// This is the definition of a dynamic type. It stores the parser and printer.
-/// Each dynamic type instance refer to one instance of this class.
+/// This is the definition of a dynamic type. It stores the parser and
+/// printer. Each dynamic type instance refer to one instance of this class.
 class DynamicTypeDefinition : public DynamicObject {
 public:
   DynamicTypeDefinition(Dialect *dialect, llvm::StringRef name);
@@ -82,6 +88,22 @@ public:
   static bool isa(Type type, DynamicTypeDefinition *typeDef) {
     return type.getTypeID() == typeDef->getRuntimeTypeID();
   }
+
+  /// Parse the dynamic type 'typeName' in the dialect 'dialect'.
+  /// If there is no such dynamic type, returns no value.
+  /// If there is such dynamic type, then parse it, and returns the parse
+  /// result.
+  /// If this succeed, put the resulting type in 'resultType'.
+  static OptionalParseResult parseOptionalDynamicType(const Dialect *dialect,
+                                                      StringRef typeName,
+                                                      DialectAsmParser &parser,
+                                                      Type &resultType);
+
+  /// If 'type' is a dynamic type, print it.
+  /// Returns success if the type was printed, and failure if the type was not a
+  /// dynamic type.
+  static LogicalResult printIfDynamicType(Type type,
+                                          DialectAsmPrinter &printer);
 };
 
 } // namespace dyn

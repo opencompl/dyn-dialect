@@ -182,19 +182,37 @@ public:
 
   /// The pointer is guaranteed to be non-null.
   /// The name format should be 'type' and not 'dialect.type'.
-  FailureOr<DynamicTypeDefinition *> lookupType(StringRef name) const {
+  FailureOr<DynamicTypeDefinition *>
+  lookupTypeDefinition(StringRef name) const {
     auto it = nameToDynTypes.find(name);
     if (it == nameToDynTypes.end())
       return failure();
     return &*it->second;
   }
 
+  /// The type is guaranteed to be non-null.
+  /// The name should have the format 'type' and not 'dialect.type'.
+  FailureOr<Type> lookupType(StringRef name) const {
+    auto type = lookupTypeDefinition(name);
+    if (failed(type))
+      return failure();
+    return DynamicType::get(ctx, *type);
+  }
+
   /// The pointer is guaranteed to be non-null.
-  FailureOr<DynamicTypeDefinition *> lookupType(TypeID id) const {
+  FailureOr<DynamicTypeDefinition *> lookupTypeDefinition(TypeID id) const {
     auto it = dynTypes.find(id);
     if (it == dynTypes.end())
       return failure();
     return it->second.get();
+  }
+
+  /// The type is guaranteed to be non-null.
+  FailureOr<Type> lookupType(TypeID id) const {
+    auto type = lookupTypeDefinition(id);
+    if (failed(type))
+      return failure();
+    return DynamicType::get(ctx, *type);
   }
 
   /// The name format should be 'dialectname.aliasname'.
@@ -207,9 +225,9 @@ public:
 
   /// The name format should be 'dialectname.typename'.
   FailureOr<Type> lookupTypeOrTypeAlias(StringRef name) const {
-    auto dynType = lookupType(name);
-    if (succeeded(dynType))
-      return DynamicType::get(getContext(), *dynType);
+    auto type = lookupType(name);
+    if (succeeded(type))
+      return type;
 
     return lookupTypeAlias(name);
   }
