@@ -278,12 +278,6 @@ private:
 
   /// The MLIR context. It is used to register dialects, operations, types, ...
   MLIRContext *ctx;
-
-public:
-  /// This field is used during parsing, and may be needed to be moved somewhere
-  /// else. If this field is non-null, it points to the dialect that is
-  /// currently being parsed by MLIR.
-  DynamicDialect *currentlyParsedDialect = nullptr;
 };
 
 } // namespace dyn

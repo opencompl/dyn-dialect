@@ -25,6 +25,10 @@ namespace irdl {
 class OpTypeDef;
 class OpTypeDefAttr;
 } // namespace irdl
+
+namespace dyn {
+class DynamicDialect;
+} // namespace dyn
 } // namespace mlir
 
 //===----------------------------------------------------------------------===//
