@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Dyn/Dialect/IRDL/IR/IRDLAttributes.h"
+#include "Dyn/Dialect/IRDL/IR/IRDL.h"
 #include "Dyn/Dialect/IRDL/TypeConstraint.h"
 
 using namespace mlir;
@@ -19,6 +20,14 @@ using namespace irdl;
 
 namespace mlir {
 namespace irdl {
+
+void IRDLDialect::registerAttributes() {
+  addAttributes<OpTypeDefAttr>();
+  addAttributes<EqTypeConstraintAttr>();
+  addAttributes<AnyOfTypeConstraintAttr>();
+  addAttributes<AnyTypeConstraintAttr>();
+}
+
 namespace detail {
 
 StringArrayAttrStorage *

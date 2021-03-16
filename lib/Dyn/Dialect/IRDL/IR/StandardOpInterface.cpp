@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Dyn/Dialect/IRDL/IR/StandardOpInterface.h"
+#include "Dyn/Dialect/IRDL/IR/IRDL.h"
 #include "Dyn/Dialect/IRDL/IR/IRDLAttributes.h"
 #include "Dyn/Dialect/IRDL/IR/IRDLInterface.h"
 #include "Dyn/DynamicContext.h"
@@ -28,6 +29,10 @@ using mlir::OpAsmParser;
 
 using namespace mlir;
 using namespace irdl;
+
+void IRDLDialect::registerStandardInterfaceAttributes() {
+  addNewAttribute<irdl::DynMemoryEffectOpInterfaceAttr>();
+}
 
 namespace {
 
