@@ -52,7 +52,8 @@ static ParseResult parseDialectOp(OpAsmParser &p, OperationState &state) {
   state.addAttribute("name", builder.getStringAttr(name));
 
   // Register the dialect in the dynamic context.
-  auto *dynCtx = state.getContext()->getOrLoadDialect<DynamicContext>();
+  auto *ctx = state.getContext();
+  auto *dynCtx = ctx->getOrLoadDialect<DynamicContext>();
   auto dialectRes = dynCtx->createAndRegisterDialect(name);
   if (failed(dialectRes))
     return failure();
@@ -61,7 +62,8 @@ static ParseResult parseDialectOp(OpAsmParser &p, OperationState &state) {
   // Set the current dialect to the dialect that we are currently defining.
   // Every IRDL operation that is parsed in the next region will be registered
   // inside this dialect.
-  dynCtx->currentlyParsedDialect = dialect;
+  auto irdlDialect = ctx->getLoadedDialect<irdl::IRDLDialect>();
+  irdlDialect->currentlyParsedDialect = dialect;
 
   // Parse the dialect body.
   Region *region = state.addRegion();
@@ -69,7 +71,7 @@ static ParseResult parseDialectOp(OpAsmParser &p, OperationState &state) {
     return failure();
 
   // We are not parsing the dialect anymore.
-  dynCtx->currentlyParsedDialect = nullptr;
+  irdlDialect->currentlyParsedDialect = nullptr;
 
   DialectOp::ensureTerminator(*region, builder, state.location);
 
@@ -100,8 +102,9 @@ static ParseResult parseTypeOp(OpAsmParser &p, OperationState &state) {
   state.addAttribute("name", builder.getStringAttr(name));
 
   // Get the currently parsed dialect, and register the type in it.
-  auto *dynCtx = state.getContext()->getOrLoadDialect<DynamicContext>();
-  auto *dialect = dynCtx->currentlyParsedDialect;
+  auto *ctx = state.getContext();
+  auto *irdlDialect = ctx->getOrLoadDialect<irdl::IRDLDialect>();
+  auto *dialect = irdlDialect->currentlyParsedDialect;
   assert(dialect != nullptr && "Trying to parse an 'irdl.type' when there is "
                                "no 'irdl.dialect' currently being parsed.");
   if (failed(registerType(dialect, name)))
@@ -142,8 +145,11 @@ Optional<ParseResult> parseOptionalType(OpAsmParser &p, Type *type) {
   if (p.parseOptionalKeyword(&typeName))
     return {};
 
-  auto dynCtx = p.getBuilder().getContext()->getLoadedDialect<DynamicContext>();
-  auto *dialect = dynCtx->currentlyParsedDialect;
+  auto *ctx = p.getBuilder().getContext();
+  auto *dynCtx = ctx->getOrLoadDialect<DynamicContext>();
+  auto *irdlDialect = ctx->getOrLoadDialect<irdl::IRDLDialect>();
+
+  auto *dialect = irdlDialect->currentlyParsedDialect;
   assert(dialect && "Trying to parse a possible dynamic type when there is "
                     "no 'irdl.dialect' currently being parsed.");
 
@@ -529,8 +535,10 @@ static ParseResult parseTypeAliasOp(OpAsmParser &p, OperationState &state) {
   state.addAttribute("type", TypeAttr::get(type));
 
   // Get the currently parsed dialect.
-  auto *dynCtx = state.getContext()->getOrLoadDialect<DynamicContext>();
-  auto *dialect = dynCtx->currentlyParsedDialect;
+
+  auto *ctx = p.getBuilder().getContext();
+  auto *irdlDialect = ctx->getOrLoadDialect<irdl::IRDLDialect>();
+  auto *dialect = irdlDialect->currentlyParsedDialect;
   assert(dialect != nullptr);
 
   // and register the type aliast in the dialect.
@@ -562,8 +570,9 @@ static ParseResult parseOperationOp(OpAsmParser &p, OperationState &state) {
   state.addAttribute("op_def", opTypeDef);
 
   // Get the currently parsed dialect
-  auto *dynCtx = state.getContext()->getOrLoadDialect<DynamicContext>();
-  auto *dialect = dynCtx->currentlyParsedDialect;
+  auto *ctx = p.getBuilder().getContext();
+  auto *irdlDialect = ctx->getOrLoadDialect<irdl::IRDLDialect>();
+  auto *dialect = irdlDialect->currentlyParsedDialect;
   assert(dialect != nullptr &&
          "Trying to parse an 'irdl.operation' when there is "
          "no 'irdl.dialect' currently being parsed.");
