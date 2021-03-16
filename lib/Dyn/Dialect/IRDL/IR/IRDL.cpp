@@ -155,12 +155,12 @@ Optional<ParseResult> parseOptionalType(OpAsmParser &p, Type *type) {
 
   /// Get the type from the dialect.
   auto dynType = dynCtx->lookupTypeOrTypeAlias(
-      (dialect->getName() + "." + typeName).str());
+      (dialect->getNamespace() + "." + typeName).str());
   if (failed(dynType))
     return ParseResult(p.emitError(loc, "type ")
                            .append(typeName,
                                    " is not registered in the dialect ",
-                                   dialect->getName(), "."));
+                                   dialect->getNamespace(), "."));
 
   *type = *dynType;
   return ParseResult(success());

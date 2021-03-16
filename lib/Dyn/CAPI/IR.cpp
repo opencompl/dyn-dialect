@@ -15,7 +15,7 @@ void mlirDynamicContextDestroy(MlirDynamicContext context) {
 
 // Dialect
 MlirStringRef mlirDynamicDialectGetNamespace(MlirDynamicDialect dialect) {
-  return wrap(unwrap(dialect)->getName());
+  return wrap(unwrap(dialect)->getNamespace());
 }
 
 MlirDynamicDialect mlirDynamicDialectCreate(MlirStringRef prefix,

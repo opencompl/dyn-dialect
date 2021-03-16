@@ -24,13 +24,12 @@ using namespace mlir;
 using namespace dyn;
 
 DynamicDialect::DynamicDialect(llvm::StringRef name, DynamicContext *ctx)
-    : DynamicObject{ctx}, Dialect(name, ctx->getMLIRCtx(), getRuntimeTypeID()),
-      name{name}, ctx{ctx} {}
+    : DynamicObject{ctx},
+      Dialect(name, ctx->getMLIRCtx(), getRuntimeTypeID()), ctx{ctx} {}
 
 DynamicDialect::DynamicDialect(llvm::StringRef name, DynamicContext *ctx,
                                TypeID id)
-    : DynamicObject{ctx, id},
-      Dialect(name, ctx->getMLIRCtx(), id), name{name}, ctx{ctx} {}
+    : DynamicObject{ctx, id}, Dialect(name, ctx->getMLIRCtx(), id), ctx{ctx} {}
 
 Type DynamicDialect::parseType(mlir::DialectAsmParser &parser) const {
   llvm::SMLoc typeLoc = parser.getCurrentLocation();
@@ -54,7 +53,7 @@ Type DynamicDialect::parseType(mlir::DialectAsmParser &parser) const {
   }
 
   parser.emitError(typeLoc, "dynamic type '")
-      << name << "' was not registered in the dialect " << getName();
+      << name << "' was not registered in the dialect " << getNamespace();
   return Type();
 }
 

@@ -44,18 +44,12 @@ public:
   /// The dialect will contain no operations or types.
   DynamicDialect(llvm::StringRef name, DynamicContext *ctx, TypeID id);
 
-  mlir::StringRef getName() const { return name; }
-
   mlir::Type parseType(mlir::DialectAsmParser &parser) const override;
 
   void printType(mlir::Type type,
                  mlir::DialectAsmPrinter &printer) const override;
 
 private:
-  /// Name of the dialect.
-  /// This name is used for parsing and printing.
-  const std::string name;
-
   /// Context in which the dialect is registered.
   DynamicContext *ctx;
 };
