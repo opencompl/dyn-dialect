@@ -138,11 +138,11 @@ LogicalResult DynamicContext::addTypeAlias(StringRef name, Dialect *dialect,
 }
 
 mlir::FailureOr<DynamicOpTrait *>
-DynamicContext::registerOpTrait(llvm::StringRef name,
-                                std::unique_ptr<DynamicOpTrait> opTrait) {
+DynamicContext::registerOpTrait(std::unique_ptr<DynamicOpTrait> opTrait) {
+  auto traitName = opTrait->name;
   auto opTraitPtr = opTrait.get();
 
-  auto inserted = opTraits.try_emplace(name, std::move(opTrait));
+  auto inserted = opTraits.try_emplace(traitName, std::move(opTrait));
   if (!inserted.second)
     return failure();
 
@@ -152,10 +152,12 @@ DynamicContext::registerOpTrait(llvm::StringRef name,
 }
 
 mlir::FailureOr<DynamicOpInterface *> DynamicContext::registerOpInterface(
-    llvm::StringRef name, std::unique_ptr<DynamicOpInterface> opInterface) {
+    std::unique_ptr<DynamicOpInterface> opInterface) {
+  auto interfaceName = opInterface->name;
   auto opInterfacePtr = opInterface.get();
 
-  auto inserted = opInterfaces.try_emplace(name, std::move(opInterface));
+  auto inserted =
+      opInterfaces.try_emplace(interfaceName, std::move(opInterface));
   if (!inserted.second)
     return failure();
 
