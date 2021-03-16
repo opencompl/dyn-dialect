@@ -82,22 +82,20 @@ private:
   /// Register a dynamic trait.
   /// Return an error if a trait with the same name was already registered.
   mlir::FailureOr<DynamicOpTrait *>
-  registerOpTrait(llvm::StringRef name,
-                  std::unique_ptr<DynamicOpTrait> opTrait);
+  registerOpTrait(std::unique_ptr<DynamicOpTrait> opTrait);
 
   /// Register a dynamic interface.
   /// Return an error if an interface with the same name was already registered.
   mlir::FailureOr<DynamicOpInterface *>
-  registerOpInterface(llvm::StringRef name,
-                      std::unique_ptr<DynamicOpInterface> opInterface);
+  registerOpInterface(std::unique_ptr<DynamicOpInterface> opInterface);
 
 public:
   /// Create and register a dynamic trait.
   /// Return an error if a trait with the same name was already registered.
   mlir::FailureOr<DynamicOpTrait *>
   createAndRegisterOpTrait(llvm::StringRef name, OpTraitVerifierFn verifier) {
-    return registerOpTrait(name, std::make_unique<DynamicOpTrait>(
-                                     this, name, std::move(verifier)));
+    return registerOpTrait(
+        std::make_unique<DynamicOpTrait>(this, name, std::move(verifier)));
   }
 
   /// Create and register a wrapper around a c++-defined trait.
@@ -105,8 +103,7 @@ public:
   template <template <typename ConcreteT> class TraitTy>
   mlir::FailureOr<DynamicOpTrait *>
   createAndRegisterOpTrait(llvm::StringRef name) {
-    return registerOpTrait(name,
-                           std::move(DynamicOpTrait::get<TraitTy>(this, name)));
+    return registerOpTrait(std::move(DynamicOpTrait::get<TraitTy>(this, name)));
   }
 
   /// Create and register a dynamic interface defined in C++.
@@ -115,7 +112,7 @@ public:
   mlir::FailureOr<DynamicOpInterface *>
   createAndRegisterOpInterface(llvm::StringRef name) {
     return registerOpInterface(
-        name, std::unique_ptr<InterfaceTy>(new InterfaceTy(this)));
+        std::unique_ptr<InterfaceTy>(new InterfaceTy(this)));
   }
 
   /// Get an operation trait given its name.
