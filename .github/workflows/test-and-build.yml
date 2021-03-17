@@ -23,7 +23,10 @@ jobs:
       - name: Install python deps
         run:  |
           python -m pip install --upgrade pip
-          pip install numpy pybind11 
+          pip install numpy pybind11
+      - name: Install ninja
+        run:  |
+          sudo apt install build-essential && sudo apt-get install ninja-build && ninja --version
       # Clone the dyn-dialect repo and its submodules. Do shallow clone to save clone
       # time.
       - name: Get Dyn-dialect

@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Dyn/Dialect/IRDL/IR/IRDLAttributes.h"
+#include "Dyn/Dialect/IRDL/IR/IRDL.h"
 #include "Dyn/Dialect/IRDL/TypeConstraint.h"
 
 using namespace mlir;
@@ -19,6 +20,14 @@ using namespace irdl;
 
 namespace mlir {
 namespace irdl {
+
+void IRDLDialect::registerAttributes() {
+  addAttributes<OpTypeDefAttr>();
+  addAttributes<EqTypeConstraintAttr>();
+  addAttributes<AnyOfTypeConstraintAttr>();
+  addAttributes<AnyTypeConstraintAttr>();
+}
+
 namespace detail {
 
 StringArrayAttrStorage *
@@ -31,26 +40,6 @@ StringArrayAttrStorage::construct(AttributeStorageAllocator &allocator,
   return new (allocator.allocate<StringArrayAttrStorage>())
       StringArrayAttrStorage(allocator.copyInto(ArrayRef<StringRef>(strings)));
 }
-
-/// An attribute representing a string value.
-/// This implementation already exists in MLIR, but is not public.
-struct StringAttributeStorage : public AttributeStorage {
-  using KeyTy = StringRef;
-
-  StringAttributeStorage(StringRef value) : value(value) {}
-
-  /// Key equality function.
-  bool operator==(const KeyTy &key) const { return key == KeyTy(value); }
-
-  /// Construct a new storage instance.
-  static StringAttributeStorage *construct(AttributeStorageAllocator &allocator,
-                                           const KeyTy &key) {
-    return new (allocator.allocate<StringAttributeStorage>())
-        StringAttributeStorage(allocator.copyInto(key));
-  }
-
-  StringRef value;
-};
 
 /// An attribute representing a reference to a type.
 /// This implementation already exists in MLIR, but is not public.

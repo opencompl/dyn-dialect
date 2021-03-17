@@ -45,6 +45,21 @@ def IRDL_Dialect : Dialect {
     a `mul` operation.
   }];
 
+  let extraClassDeclaration = [{
+  private:
+    /// Register the attributes used by default by IRDL.
+    void registerAttributes();
+    /// Register the attributes used by standard interfaces wrappers in IRDL.
+    void registerStandardInterfaceAttributes();
+
+  public:
+    /// Register new attributes that can be used by IRDL.
+    template <typename Attr>
+    void addNewAttribute() {
+      addAttributes<Attr>();
+    }
+  }];
+
   let name = "irdl";
   let cppNamespace = "::mlir::irdl";
 }
