@@ -134,6 +134,7 @@ DynMemoryEffectOpInterfaceAttr::parse(mlir::OpAsmParser &p,
 
 namespace {
 void getEffectsConcept(
+    const mlir::detail::MemoryEffectOpInterfaceInterfaceTraits::Concept *impl,
     Operation *op,
     SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
         &effects) {
