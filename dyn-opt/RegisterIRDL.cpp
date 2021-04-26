@@ -23,6 +23,7 @@
 #include "mlir/Support/FileUtilities.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/SourceMgr.h"
 
 using namespace llvm;
 using namespace mlir;
