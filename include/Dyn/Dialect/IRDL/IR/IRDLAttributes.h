@@ -17,7 +17,6 @@
 #include "mlir/IR/AttributeSupport.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/TypeSupport.h"
-#include "llvm/ADT/Hashing.h"
 
 namespace mlir {
 
