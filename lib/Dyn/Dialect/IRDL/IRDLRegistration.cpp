@@ -16,6 +16,7 @@
 #include "Dyn/Dialect/IRDL/TypeConstraint.h"
 #include "Dyn/DynamicContext.h"
 #include "Dyn/DynamicDialect.h"
+#include "Dyn/DynamicType.h"
 #include "mlir/IR/Visitors.h"
 #include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/STLExtras.h"
@@ -27,7 +28,16 @@ using namespace irdl;
 namespace mlir {
 namespace irdl {
 LogicalResult registerType(dyn::DynamicDialect *dialect, StringRef name) {
-  return dialect->getDynamicContext()->createAndRegisterType(name, dialect);
+  return dialect->getDynamicContext()->createAndRegisterType(
+      name, dialect,
+      [name = std::string(name)](function_ref<InFlightDiagnostic()> emitError,
+                                 ArrayRef<Attribute> params) {
+        if (params.empty()) {
+          return success();
+        }
+        return LogicalResult(
+            emitError().append("Type ", name, " does not have parameters"));
+      });
 }
 
 LogicalResult registerTypeAlias(dyn::DynamicDialect *dialect, StringRef name,
