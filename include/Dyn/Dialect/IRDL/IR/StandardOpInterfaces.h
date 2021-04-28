@@ -1,4 +1,4 @@
-//===- StandardOpInterfaceAttrs.h - Std Interface Attributes ----*- C++ -*-===//
+//===- StandardOpInterfaces.h - Std interface definitions -------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,11 +11,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef DYN_DIALECT_IRDL_IR_STANDARDOPINTERFACEATTRS_H_
-#define DYN_DIALECT_IRDL_IR_STANDARDOPINTERFACEATTRS_H_
+#ifndef DYN_DIALECT_IRDL_IR_STANDARDOPINTERFACES_H_
+#define DYN_DIALECT_IRDL_IR_STANDARDOPINTERFACES_H_
 
 #include "Dyn/Dialect/IRDL/IR/IRDLAttributes.h"
-#include "Dyn/Dialect/IRDL/IR/IRDLInterface.h"
+#include "Dyn/Dialect/IRDL/IR/IRDLInterfaces.h"
 #include "Dyn/DynamicInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
@@ -73,4 +73,4 @@ public:
 } // namespace irdl
 } // namespace mlir
 
-#endif //  DYN_DIALECT_IRDL_IR_STANDARDOPINTERFACEATTRS_H_
+#endif //  DYN_DIALECT_IRDL_IR_STANDARDOPINTERFACES_H_

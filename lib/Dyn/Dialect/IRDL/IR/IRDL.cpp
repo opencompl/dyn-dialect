@@ -8,7 +8,7 @@
 
 #include "Dyn/Dialect/IRDL/IR/IRDL.h"
 #include "Dyn/Dialect/IRDL/IR/IRDLAttributes.h"
-#include "Dyn/Dialect/IRDL/IR/StandardOpInterface.h"
+#include "Dyn/Dialect/IRDL/IR/StandardOpInterfaces.h"
 #include "Dyn/Dialect/IRDL/IRDLRegistration.h"
 #include "Dyn/Dialect/IRDL/TypeConstraint.h"
 #include "Dyn/DynamicContext.h"
@@ -554,4 +554,4 @@ static void print(OpAsmPrinter &p, OperationOp operationOp) {
 // IRDL interfaces.
 //===----------------------------------------------------------------------===//
 
-#include "Dyn/Dialect/IRDL/IR/IRDLInterface.cpp.inc"
+#include "Dyn/Dialect/IRDL/IR/IRDLInterfaces.cpp.inc"

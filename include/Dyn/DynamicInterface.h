@@ -13,7 +13,7 @@
 #ifndef DYN_DYNAMICINTERFACE_H
 #define DYN_DYNAMICINTERFACE_H
 
-#include "Dyn/Dialect/IRDL/IR/IRDLInterface.h"
+#include "Dyn/Dialect/IRDL/IR/IRDLInterfaces.h"
 #include "Dyn/DynamicObject.h"
 #include "mlir/IR/AttributeSupport.h"
 #include "mlir/IR/Operation.h"

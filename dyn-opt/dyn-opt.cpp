@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Dyn/Dialect/IRDL/IR/IRDL.h"
-#include "Dyn/Dialect/IRDL/IR/StandardOpInterface.h"
+#include "Dyn/Dialect/IRDL/IR/StandardOpInterfaces.h"
 #include "Dyn/DynamicContext.h"
 #include "Dyn/DynamicDialect.h"
 #include "MlirOptMain.h"

@@ -1,4 +1,4 @@
-//===- IRDLInterface.td - IRDL Attributes ------------------*- tablegen -*-===//
+//===- IRDLInterfaces.td - IRDL Attributes -----------------*- tablegen -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef DYN_DIALECT_IRDL_IR_IRDLATTRIBUTES
-#define DYN_DIALECT_IRDL_IR_IRDLATTRIBUTES
+#ifndef DYN_DIALECT_IRDL_IR_IRDLINTERFACES
+#define DYN_DIALECT_IRDL_IR_IRDLINTERFACES
 
 include "mlir/IR/OpBase.td"
 include "mlir/IR/SymbolInterfaces.td"
@@ -47,4 +47,4 @@ def InterfaceImplAttrInterface : AttrInterface<"InterfaceImplAttrInterface"> {
   ];
 }
 
-#endif // DYN_DIALECT_IRDL_IR_IRDLATTRIBUTES
+#endif // DYN_DIALECT_IRDL_IR_IRDLINTERFACES

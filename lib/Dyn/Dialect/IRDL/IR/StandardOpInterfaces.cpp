@@ -1,4 +1,4 @@
-//===- StandardInterfaceAttrs.cpp - Std Interface Attributes ----*- C++ -*-===//
+//===- StandardInterfaces.cpp - Std interface definitions -------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,10 +11,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Dyn/Dialect/IRDL/IR/StandardOpInterface.h"
+#include "Dyn/Dialect/IRDL/IR/StandardOpInterfaces.h"
 #include "Dyn/Dialect/IRDL/IR/IRDL.h"
 #include "Dyn/Dialect/IRDL/IR/IRDLAttributes.h"
-#include "Dyn/Dialect/IRDL/IR/IRDLInterface.h"
+#include "Dyn/Dialect/IRDL/IR/IRDLInterfaces.h"
 #include "Dyn/DynamicContext.h"
 #include "Dyn/DynamicDialect.h"
 #include "Dyn/DynamicInterface.h"

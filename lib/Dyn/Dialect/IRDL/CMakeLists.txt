@@ -1,7 +1,7 @@
 add_mlir_dialect_library(MLIRIRDL
         IR/IRDL.cpp
         IR/IRDLAttributes.cpp
-        IR/StandardOpInterface.cpp
+        IR/StandardOpInterfaces.cpp
         IRDLRegistration.cpp
         TypeConstraint.cpp
 
@@ -10,7 +10,7 @@ add_mlir_dialect_library(MLIRIRDL
 
         DEPENDS
         MLIRIRDLOpsIncGen
-        MLIRIRDLInterfaceIncGen
+        MLIRIRDLInterfacesIncGen
 
   LINK_LIBS PUBLIC
   MLIRIR

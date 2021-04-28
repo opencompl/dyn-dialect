@@ -13,7 +13,7 @@
 #ifndef DYN_DIALECT_IRDL_IR_IRDLATTRIBUTES_H_
 #define DYN_DIALECT_IRDL_IR_IRDLATTRIBUTES_H_
 
-#include "Dyn/Dialect/IRDL/IR/IRDLInterface.h"
+#include "Dyn/Dialect/IRDL/IR/IRDLInterfaces.h"
 #include "mlir/IR/AttributeSupport.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/TypeSupport.h"
