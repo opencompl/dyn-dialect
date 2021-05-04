@@ -25,6 +25,9 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/ErrorHandling.h"
 
+#define GET_ATTRDEF_CLASSES
+#include "Dyn/Dialect/IRDL/IR/StandardOpInterfaces.cpp.inc"
+
 using mlir::OpAsmParser;
 
 using namespace mlir;
@@ -37,8 +40,7 @@ void IRDLDialect::registerStandardInterfaceAttributes() {
 namespace {
 
 /// Get the list of available effects, and their names.
-std::vector<std::pair<StringRef, MemoryEffects::EffectInstance>>
-availableEffects() {
+std::vector<std::pair<StringRef, MemoryEffects::Effect *>> availableEffects() {
   return {std::make_pair("Allocate", MemoryEffects::Allocate::get()),
           std::make_pair("Free", MemoryEffects::Free::get()),
           std::make_pair("Read", MemoryEffects::Read::get()),
@@ -52,23 +54,25 @@ bool isEffectName(StringRef name) {
 }
 
 /// Get the effect associated with the name.
-MemoryEffects::EffectInstance getEffect(StringRef name) {
+MemoryEffects::Effect *getEffect(StringRef name) {
   assert(isEffectName(name) && "getEffect called with an invalid name");
   return llvm::find_if(availableEffects(),
                        [name](auto a) { return a.first == name; })
       ->second;
 }
 
+/// Get the name associated with the effect.
+StringRef getEffectName(MemoryEffects::Effect *effect) {
+  return llvm::find_if(availableEffects(),
+                       [effect](auto a) { return a.second == effect; })
+      ->first;
+}
+
 } // namespace
 
 std::unique_ptr<dyn::DynamicOpInterfaceImpl>
-DynMemoryEffectOpInterfaceAttr::getInterfaceImpl() {
-  auto effectNames = getImpl()->values;
-  std::vector<MemoryEffects::EffectInstance> effects;
-  for (auto name : effectNames) {
-    effects.push_back(getEffect(name));
-  }
-
+DynMemoryEffectOpInterfaceAttr::getInterfaceImpl() const {
+  auto effects = getEffects();
   auto dynCtx = getContext()->getLoadedDialect<dyn::DynamicContext>();
 
   return std::make_unique<DynMemoryEffectOpInterfaceImpl>(dynCtx,
@@ -78,8 +82,10 @@ DynMemoryEffectOpInterfaceAttr::getInterfaceImpl() {
 namespace {
 /// Parse a memory effect name.
 /// Emit an error in case the name is not a memory effect name.
-ParseResult parseEffectName(mlir::OpAsmParser &p, StringRef &name) {
+ParseResult parseEffectName(mlir::OpAsmParser &p,
+                            MemoryEffects::Effect *&effect) {
   auto loc = p.getCurrentLocation();
+  StringRef name;
 
   if (p.parseKeyword(name))
     return failure();
@@ -89,16 +95,19 @@ ParseResult parseEffectName(mlir::OpAsmParser &p, StringRef &name) {
     return failure();
   }
 
+  effect = getEffect(name);
   return success();
 }
 } // namespace
 
-void DynMemoryEffectOpInterfaceAttr::print(mlir::OpAsmPrinter &p) {
+void DynMemoryEffectOpInterfaceAttr::print(mlir::OpAsmPrinter &p) const {
   p << "MemoryEffect";
-  auto values = getImpl()->values;
+  auto values = getEffects();
 
   p << "<";
-  llvm::interleaveComma(values, p);
+  llvm::interleaveComma(values, p, [&p](MemoryEffects::EffectInstance effect) {
+    p << getEffectName(effect.getEffect());
+  });
   p << ">";
 }
 
@@ -107,28 +116,29 @@ DynMemoryEffectOpInterfaceAttr::parse(mlir::OpAsmParser &p,
                                       DynMemoryEffectOpInterfaceAttr &attr) {
   p.parseLess();
 
-  std::vector<StringRef> effects;
+  std::vector<MemoryEffects::Effect *> effects;
 
   // empty
   if (!p.parseOptionalGreater()) {
-    attr = DynMemoryEffectOpInterfaceAttr::get(*p.getBuilder().getContext(),
+    attr = DynMemoryEffectOpInterfaceAttr::get(p.getBuilder().getContext(),
                                                effects);
     return success();
   }
 
-  StringRef name;
-  if (parseEffectName(p, name))
+  MemoryEffects::Effect *effect;
+  if (parseEffectName(p, effect))
     return failure();
+  effects.push_back(effect);
 
   while (p.parseOptionalGreater()) {
-    StringRef name;
-    if (p.parseComma() || parseEffectName(p, name))
+    MemoryEffects::Effect *effect;
+    if (p.parseComma() || parseEffectName(p, effect))
       return failure();
-    effects.push_back(name);
+    effects.push_back(effect);
   }
 
-  attr = DynMemoryEffectOpInterfaceAttr::get(*p.getBuilder().getContext(),
-                                             effects);
+  attr =
+      DynMemoryEffectOpInterfaceAttr::get(p.getBuilder().getContext(), effects);
   return success();
 }
 
@@ -187,8 +197,7 @@ ParseResult DynMemoryEffectOpInterface::parseImpl(
 }
 
 DynMemoryEffectOpInterfaceImpl::DynMemoryEffectOpInterfaceImpl(
-    dyn::DynamicContext *dynCtx,
-    std::vector<MemoryEffects::EffectInstance> effects)
+    dyn::DynamicContext *dynCtx, std::vector<MemoryEffects::Effect *> effects)
     : dyn::DynamicOpInterfaceImpl(*dynCtx->lookupOpInterface(
           mlir::MemoryEffectOpInterface::getInterfaceID())),
       effects(std::move(effects)) {}

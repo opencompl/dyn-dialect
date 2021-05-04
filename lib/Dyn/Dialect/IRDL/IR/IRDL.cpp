@@ -133,7 +133,7 @@ parseOptionalAnyTypeConstraint(OpAsmParser &p, Attribute *typeConstraint) {
   if (p.parseOptionalKeyword("irdl.Any"))
     return {};
 
-  *typeConstraint = AnyTypeConstraintAttr::get(*p.getBuilder().getContext());
+  *typeConstraint = AnyTypeConstraintAttr::get(p.getBuilder().getContext());
   return {success()};
 }
 
@@ -165,7 +165,7 @@ parseOptionalAnyOfTypeConstraint(OpAsmParser &p, Attribute *typeConstraint) {
   }
 
   *typeConstraint =
-      AnyOfTypeConstraintAttr::get(*p.getBuilder().getContext(), types);
+      AnyOfTypeConstraintAttr::get(p.getBuilder().getContext(), types);
   return {success()};
 }
 
@@ -195,7 +195,7 @@ ParseResult parseTypeConstraint(OpAsmParser &p, Attribute *typeConstraint) {
     return failure();
 
   *typeConstraint =
-      EqTypeConstraintAttr::get(*p.getBuilder().getContext(), type);
+      EqTypeConstraintAttr::get(p.getBuilder().getContext(), type);
   return success();
 }
 
@@ -203,7 +203,7 @@ ParseResult parseTypeConstraint(OpAsmParser &p, Attribute *typeConstraint) {
 /// It has the format 'irdl.AnyOf<type, (, type)*>'.
 void printAnyOfTypeConstraint(OpAsmPrinter &p,
                               AnyOfTypeConstraintAttr anyOfConstr) {
-  auto types = anyOfConstr.getValue();
+  auto types = anyOfConstr.getTypes();
 
   p << "irdl.AnyOf<";
   for (size_t i = 0; i + 1 < types.size(); i++) {
@@ -215,7 +215,7 @@ void printAnyOfTypeConstraint(OpAsmPrinter &p,
 /// Print a type constraint.
 void printTypeConstraint(OpAsmPrinter &p, Attribute typeConstraint) {
   if (auto eqConstr = typeConstraint.dyn_cast<EqTypeConstraintAttr>()) {
-    p << eqConstr.getValue();
+    p << eqConstr.getType();
   } else if (auto anyConstr =
                  typeConstraint.dyn_cast<AnyTypeConstraintAttr>()) {
     p << "irdl.Any";
@@ -445,8 +445,8 @@ ParseResult parseOpTypeDefAttr(OpAsmParser &p, OpTypeDefAttr *opTypeDefAttr) {
   if (parseInterfaceDefs(p, &interfaceDefs))
     return failure();
 
-  *opTypeDefAttr = OpTypeDefAttr::get(*ctx, operandDefs, resultDefs, traitDefs,
-                                      interfaceDefs);
+  *opTypeDefAttr = OpTypeDefAttr::get(
+      ctx, {operandDefs, resultDefs, traitDefs, interfaceDefs});
 
   return success();
 }
@@ -527,7 +527,7 @@ static ParseResult parseOperationOp(OpAsmParser &p, OperationState &state) {
          "no 'irdl.dialect' currently being parsed.");
 
   // and register the operation in the dialect
-  if (failed(registerOperation(dialect, name, opTypeDef.getValue())))
+  if (failed(registerOperation(dialect, name, opTypeDef.getOpDef())))
     return failure();
 
   return success();
@@ -540,7 +540,7 @@ static void print(OpAsmPrinter &p, OperationOp operationOp) {
   p << operationOp.name();
 
   // Print the operation type constraints.
-  printOpTypeDef(p, operationOp.op_def());
+  printOpTypeDef(p, operationOp.op_def().getOpDef());
 }
 
 //===----------------------------------------------------------------------===//

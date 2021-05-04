@@ -6,8 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file declares the attributes used in the IRDL dialect to represent
-// standard interfaces.
+// This file declares the standard interfaces used by IRDL.
 //
 //===----------------------------------------------------------------------===//
 
@@ -19,30 +18,11 @@
 #include "Dyn/DynamicInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
+#define GET_ATTRDEF_CLASSES
+#include "Dyn/Dialect/IRDL/IR/StandardOpInterfaces.h.inc"
+
 namespace mlir {
 namespace irdl {
-
-/// Attribute used in IRDL to represent the implementation of a
-/// MemoryEffectInterface.
-class DynMemoryEffectOpInterfaceAttr
-    : public mlir::Attribute::AttrBase<
-          DynMemoryEffectOpInterfaceAttr, mlir::Attribute,
-          detail::StringArrayAttrStorage, InterfaceImplAttrInterface::Trait> {
-public:
-  // Using Attribute constructors.
-  using Base::Base;
-
-  static DynMemoryEffectOpInterfaceAttr get(MLIRContext &ctx,
-                                            ArrayRef<StringRef> effects) {
-    return Base::get(&ctx, effects);
-  }
-
-  std::unique_ptr<mlir::dyn::DynamicOpInterfaceImpl> getInterfaceImpl();
-
-  void print(mlir::OpAsmPrinter &p);
-  static ParseResult parse(mlir::OpAsmParser &p,
-                           DynMemoryEffectOpInterfaceAttr &attr);
-};
 
 /// Operation interface wrapper for MemoryEffectInterface.
 class DynMemoryEffectOpInterface : public dyn::DynamicOpInterface {
@@ -63,11 +43,10 @@ public:
 /// Implementation of a MemoryEffectInterface.
 class DynMemoryEffectOpInterfaceImpl : public dyn::DynamicOpInterfaceImpl {
 public:
-  DynMemoryEffectOpInterfaceImpl(
-      dyn::DynamicContext *dynCtx,
-      std::vector<MemoryEffects::EffectInstance> effects);
+  DynMemoryEffectOpInterfaceImpl(dyn::DynamicContext *dynCtx,
+                                 std::vector<MemoryEffects::Effect *> effects);
 
-  const std::vector<MemoryEffects::EffectInstance> effects;
+  const std::vector<MemoryEffects::Effect *> effects;
 };
 
 } // namespace irdl

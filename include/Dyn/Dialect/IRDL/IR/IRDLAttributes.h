@@ -27,16 +27,14 @@ class DynamicOpTrait;
 } // namespace dyn
 
 namespace irdl {
-
 // Forward declaration.
 class OperationOp;
 
-namespace detail {
-// Forward declaration.
-struct TypeAttributeStorage;
-struct TypeArrayAttrStorage;
-} // namespace detail
+} // namespace irdl
+} // namespace mlir
 
+namespace mlir {
+namespace irdl {
 namespace detail {
 /// Attribute storage for string arrays.
 /// This should be moved somewhere else in MLIR.
@@ -98,136 +96,33 @@ public:
     return o.operandDef == operandDef && o.resultDef == resultDef &&
            o.traitDefs == traitDefs && o.interfaceDefs == interfaceDefs;
   }
+
+  friend llvm::hash_code hash_value(mlir::irdl::OpTypeDef typeDef);
 };
 
-/// Storage for OpTypeDefAttr.
-class OpTypeDefAttrStorage : public AttributeStorage {
-public:
-  using KeyTy = OpTypeDef;
+inline ArgDefs argDefAllocator(mlir::AttributeStorageAllocator &allocator,
+                               ArgDefs argDefs) {
+  OwningArgDefs ownArgDefs;
+  for (auto &p : argDefs)
+    ownArgDefs.emplace_back(allocator.copyInto(p.first), p.second);
+  return allocator.copyInto(ArgDefs(ownArgDefs));
+}
 
-  OpTypeDefAttrStorage(ArgDefs operandDefs, ArgDefs resultDefs,
-                       TraitDefs traitDefs, InterfaceDefs interfaceDefs)
-      : opTypeDef({operandDefs, resultDefs, traitDefs, interfaceDefs}) {}
+inline OpTypeDef opTypeDefAllocator(mlir::AttributeStorageAllocator &allocator,
+                                    OpTypeDef typeDef) {
+  auto allocatedOperandDefs = argDefAllocator(allocator, typeDef.operandDef);
+  auto allocatedResultDefs = argDefAllocator(allocator, typeDef.resultDef);
+  auto allocatedTraitDefs = allocator.copyInto(typeDef.traitDefs);
+  auto allocatedInterfaceDefs = allocator.copyInto(typeDef.interfaceDefs);
 
-  bool operator==(const KeyTy &key) const { return key == opTypeDef; }
-
-  static llvm::hash_code hashKey(const KeyTy &key) {
-    return llvm::hash_combine(key.operandDef, key.resultDef, key.traitDefs,
-                              key.interfaceDefs);
-  }
-
-  static KeyTy getKey(ArgDefs operandDefs, ArgDefs resultDefs,
-                      TraitDefs traitDefs, InterfaceDefs interfaceDefs) {
-    return KeyTy({operandDefs, resultDefs, traitDefs, interfaceDefs});
-  }
-
-  static OpTypeDefAttrStorage *
-  construct(mlir::AttributeStorageAllocator &allocator, const KeyTy &key) {
-    // Here, we need to put the KeyTy (which is OpTypeDef) inside the allocator.
-    // For that, we need to walk through the object.
-
-    // We first need to make sure that all the StringRefs are in the allocator.
-    // The StringRefs are the name of the operands and results.
-    // We are creating new vectors to represent key.operandDef and
-    // key.resultDef because we are modifying the StringRef (because we allocate
-    // them somewhere else), and we cannot modify key.
-    OwningArgDefs operandDefs, resultDefs;
-    for (auto &p : key.operandDef)
-      operandDefs.emplace_back(allocator.copyInto(p.first), p.second);
-    for (auto &p : key.resultDef)
-      resultDefs.emplace_back(allocator.copyInto(p.first), p.second);
-
-    // Then we can put the ArgDefs themselves in the allocator.
-    auto allocatedOperandDefs = allocator.copyInto(ArgDefs(operandDefs));
-    auto allocatedResultDefs = allocator.copyInto(ArgDefs(resultDefs));
-    auto allocatedTraitDefs = allocator.copyInto(key.traitDefs);
-    auto allocatedInterfaceDefs = allocator.copyInto(key.interfaceDefs);
-
-    return new (allocator.allocate<OpTypeDefAttrStorage>())
-        OpTypeDefAttrStorage({allocatedOperandDefs, allocatedResultDefs,
-                              allocatedTraitDefs, allocatedInterfaceDefs});
-  }
-
-  OpTypeDef opTypeDef;
-};
-
-/// Attribute representing the type definition of a dynamic operation.
-/// It contains a name and type constraints for each operand and result.
-class OpTypeDefAttr
-    : public mlir::Attribute::AttrBase<OpTypeDefAttr, mlir::Attribute,
-                                       OpTypeDefAttrStorage> {
-public:
-  /// Using Attribute constructors.
-  using Base::Base;
-
-  static OpTypeDefAttr get(MLIRContext &ctx, ArgDefs operandDefs,
-                           ArgDefs resultDefs, TraitDefs traitDefs,
-                           InterfaceDefs interfaceDefs) {
-    return Base::get(&ctx, operandDefs, resultDefs, traitDefs, interfaceDefs);
-  }
-
-  OpTypeDef getValue() { return getImpl()->opTypeDef; }
-};
-
-//===----------------------------------------------------------------------===//
-// IRDL Equality type constraint attribute
-//===----------------------------------------------------------------------===//
-
-/// Attribute for equality type constraint.
-class EqTypeConstraintAttr
-    : public mlir::Attribute::AttrBase<EqTypeConstraintAttr, mlir::Attribute,
-                                       mlir::irdl::detail::TypeAttributeStorage,
-                                       TypeConstraintAttrInterface::Trait> {
-public:
-  using Base::Base;
-
-  static EqTypeConstraintAttr get(MLIRContext &context, Type type);
-
-  std::unique_ptr<mlir::irdl::TypeConstraint>
-  getTypeConstraint(dyn::DynamicContext &ctx);
-
-  Type getValue();
-};
-
-//===----------------------------------------------------------------------===//
-// IRDL AnyOf type constraint attribute
-//===----------------------------------------------------------------------===//
-
-/// Attribute for the AnyOf type constraint.
-class AnyOfTypeConstraintAttr
-    : public mlir::Attribute::AttrBase<AnyOfTypeConstraintAttr, mlir::Attribute,
-                                       mlir::irdl::detail::TypeArrayAttrStorage,
-                                       TypeConstraintAttrInterface::Trait> {
-public:
-  using Base::Base;
-
-  static AnyOfTypeConstraintAttr get(MLIRContext &context, ArrayRef<Type> type);
-
-  std::unique_ptr<mlir::irdl::TypeConstraint>
-  getTypeConstraint(dyn::DynamicContext &ctx);
-
-  ArrayRef<Type> getValue();
-};
-
-//===----------------------------------------------------------------------===//
-// Always true type constraint attribute
-//===----------------------------------------------------------------------===//
-
-/// Attribute for equality type constraint.
-class AnyTypeConstraintAttr
-    : public mlir::Attribute::AttrBase<AnyTypeConstraintAttr, mlir::Attribute,
-                                       mlir::AttributeStorage,
-                                       TypeConstraintAttrInterface::Trait> {
-public:
-  using Base::Base;
-
-  static AnyTypeConstraintAttr get(MLIRContext &context);
-
-  std::unique_ptr<mlir::irdl::TypeConstraint>
-  getTypeConstraint(dyn::DynamicContext &ctx);
-};
+  return {allocatedOperandDefs, allocatedResultDefs, allocatedTraitDefs,
+          allocatedInterfaceDefs};
+}
 
 } // namespace irdl
 } // namespace mlir
+
+#define GET_ATTRDEF_CLASSES
+#include "Dyn/Dialect/IRDL/IR/IRDLAttributes.h.inc"
 
 #endif // DYN_DIALECT_IRDL_IR_IRDL_H_

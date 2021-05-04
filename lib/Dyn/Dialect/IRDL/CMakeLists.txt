@@ -9,8 +9,11 @@ add_mlir_dialect_library(MLIRIRDL
         ${PROJECT_SOURCE_DIR}/include/Dyn/Dialect/IRDL
 
         DEPENDS
+        MLIRIRDLIncGen
         MLIRIRDLOpsIncGen
         MLIRIRDLInterfacesIncGen
+        MLIRIRDLAttributesIncGen
+        MLIRStandardOpInterfacesIncGen
 
   LINK_LIBS PUBLIC
   MLIRIR
