@@ -39,7 +39,7 @@ public:
   /// is on an operand or a resuls, and pos is the position of the
   /// operand/result.
   virtual LogicalResult verifyType(Operation *op, Type type, bool isOperand,
-                                   unsigned pos, dyn::DynamicContext &ctx) = 0;
+                                   unsigned pos) = 0;
 };
 
 //===----------------------------------------------------------------------===//
@@ -51,8 +51,7 @@ public:
   EqTypeConstraint(Type type) : type(type) {}
 
   virtual LogicalResult verifyType(Operation *op, Type argType, bool isOperand,
-                                   unsigned pos,
-                                   dyn::DynamicContext &ctx) override;
+                                   unsigned pos) override;
 
   Type type;
 };
@@ -69,8 +68,7 @@ public:
       : types(types.begin(), types.end()) {}
 
   virtual LogicalResult verifyType(Operation *op, Type argType, bool isOperand,
-                                   unsigned pos,
-                                   dyn::DynamicContext &ctx) override;
+                                   unsigned pos) override;
 
   llvm::SmallVector<Type, 4> types;
 };
@@ -86,8 +84,7 @@ public:
   AnyTypeConstraint() {}
 
   virtual LogicalResult verifyType(Operation *op, Type argType, bool isOperand,
-                                   unsigned pos,
-                                   dyn::DynamicContext &ctx) override {
+                                   unsigned pos) override {
     return success();
   };
 };

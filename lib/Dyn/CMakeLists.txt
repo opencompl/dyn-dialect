@@ -2,7 +2,6 @@ add_subdirectory(CAPI)
 add_subdirectory(Dialect)
 add_mlir_dialect_library(MLIRDyn
         DynamicObject.cpp
-        DynamicOperation.cpp
         DynamicDialect.cpp
         DynamicContext.cpp
         DynamicType.cpp

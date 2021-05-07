@@ -13,7 +13,6 @@
 #include "Dyn/DynamicDialect.h"
 #include "Dyn/DynamicContext.h"
 #include "Dyn/DynamicObject.h"
-#include "Dyn/DynamicOperation.h"
 #include "Dyn/DynamicType.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/DialectImplementation.h"

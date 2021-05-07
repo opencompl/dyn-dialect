@@ -56,8 +56,7 @@ using OpTypeConstraints = std::pair<std::vector<NamedTypeConstraint>,
                                     std::vector<NamedTypeConstraint>>;
 
 LogicalResult verifyOpTypeConstraints(Operation *op,
-                                      const OpTypeConstraints &typeConstrs,
-                                      dyn::DynamicContext &ctx) {
+                                      const OpTypeConstraints &typeConstrs) {
   auto &operandConstrs = typeConstrs.first;
   auto &resultConstrs = typeConstrs.second;
 
@@ -81,7 +80,7 @@ LogicalResult verifyOpTypeConstraints(Operation *op,
   for (unsigned i = 0; i < numOperands; ++i) {
     auto operandType = op->getOperand(i).getType();
     auto &constraint = operandConstrs[i].second;
-    if (failed(constraint->verifyType(op, operandType, true, i, ctx)))
+    if (failed(constraint->verifyType(op, operandType, true, i)))
       return failure();
   }
 
@@ -89,11 +88,25 @@ LogicalResult verifyOpTypeConstraints(Operation *op,
   for (unsigned i = 0; i < numResults; ++i) {
     auto resultType = op->getResult(i).getType();
     auto &constraint = resultConstrs[i].second;
-    if (failed(constraint->verifyType(op, resultType, true, i, ctx)))
+    if (failed(constraint->verifyType(op, resultType, true, i)))
       return failure();
   }
 
   return success();
+}
+
+/// Create a verifier given type constraints and trait implementations
+AbstractOperation::VerifyInvariantsFn
+createVerifier(OpTypeConstraints constraints,
+               std::vector<dyn::DynamicOpTrait *> traits) {
+  return [traits{std::move(traits)},
+          constraints{std::move(constraints)}](Operation *op) {
+    if (failed(verifyOpTypeConstraints(op, constraints)))
+      return failure();
+    return success(llvm::all_of(traits, [op](auto *trait) {
+      return succeeded(trait->verifyTrait(op));
+    }));
+  };
 }
 } // namespace
 
@@ -126,18 +139,20 @@ LogicalResult registerOperation(dyn::DynamicDialect *dialect, StringRef name,
   for (auto interfaceAttr : opTypeDef.getInterfaceDefinitions())
     interfaces.push_back(interfaceAttr.getInterfaceImpl());
 
-  // Create the type verifier.
-  dyn::DynamicOperation::VerifierFn typeVerifier =
-      [constraints{std::move(constraints)}, ctx](Operation *op) {
-        return verifyOpTypeConstraints(op, constraints, *ctx);
-      };
+  // TODO define custom parsers and printers.
+  // For now, we can only parse with the operation quote syntax.
+  auto parser = [](OpAsmParser &parser, OperationState &result) {
+    return failure();
+  };
+  auto printer = [](Operation *op, OpAsmPrinter &printer) {
+    printer.printGenericOp(op);
+  };
 
-  std::vector<dyn::DynamicOperation::VerifierFn> verifiers;
-  verifiers.push_back(std::move(typeVerifier));
+  auto verifier = createVerifier(std::move(constraints), opTypeDef.traitDefs);
 
-  return ctx->createAndRegisterOperation(name, dialect, std::move(verifiers),
-                                         opTypeDef.traitDefs,
-                                         std::move(interfaces));
+  return ctx->createAndRegisterOperation(
+      name, dialect, std::move(parser), std::move(printer), std::move(verifier),
+      opTypeDef.traitDefs, std::move(interfaces));
 }
 } // namespace irdl
 } // namespace mlir
