@@ -13,8 +13,8 @@
 #ifndef DYN_DYNAMICDIALECT_H
 #define DYN_DYNAMICDIALECT_H
 
+#include "Dyn/DynamicInterface.h"
 #include "Dyn/DynamicObject.h"
-#include "Dyn/DynamicOperation.h"
 #include "Dyn/DynamicTrait.h"
 #include "Dyn/DynamicType.h"
 #include "mlir/IR/Dialect.h"
@@ -32,6 +32,7 @@ namespace dyn {
 // Forward declaration.
 class DynamicContext;
 class DynamicOpTrait;
+class DynamicOpInterfaceImpl;
 
 /// Each instance of DynamicDialect correspond to a different dialect.
 class DynamicDialect : public DynamicObject, public mlir::Dialect {

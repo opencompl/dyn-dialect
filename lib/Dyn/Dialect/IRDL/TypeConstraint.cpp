@@ -21,8 +21,7 @@ using namespace dyn;
 using namespace irdl;
 
 LogicalResult EqTypeConstraint::verifyType(Operation *op, Type argType,
-                                           bool isOperand, unsigned pos,
-                                           dyn::DynamicContext &ctx) {
+                                           bool isOperand, unsigned pos) {
   if (type == argType)
     return success();
 
@@ -34,8 +33,7 @@ LogicalResult EqTypeConstraint::verifyType(Operation *op, Type argType,
 }
 
 LogicalResult AnyOfTypeConstraint::verifyType(Operation *op, Type argType,
-                                              bool isOperand, unsigned pos,
-                                              dyn::DynamicContext &ctx) {
+                                              bool isOperand, unsigned pos) {
   if (std::find(types.begin(), types.end(), argType) != types.end())
     return success();
 

@@ -34,16 +34,21 @@ void mlirDynamicDialectDestroy(MlirDynamicDialect dialect) {
 // Option: mlirDynamicOperationDestroy (not good).
 MlirDynamicOperation mlirDynamicOperationCreate(MlirStringRef name,
                                                 MlirDynamicDialect dialect) {
-  auto res = unwrap(dialect)->getDynamicContext()->createAndRegisterOperation(
-      unwrap(name), unwrap(dialect), {}, {}, {});
-  assert(
-      succeeded(res) &&
-      "Trying to register a dynamic operation with an already existing name.");
-  return wrap(*res);
+  // auto res =
+  // unwrap(dialect)->getDynamicContext()->createAndRegisterOperation(
+  //    unwrap(name), unwrap(dialect), {}, {}, {});
+  // TODO rewrite this when the MLIR API is fixed.
+  // assert(
+  //     succeeded(res) &&
+  //     "Trying to register a dynamic operation with an already existing
+  //     name.");
+  // return wrap(*res);
+  assert(false && "Can't create new dynamic operations");
 }
 
 void mlirDynamicOperationDestroy(MlirDynamicOperation operation) {}
 
 MlirStringRef mlirDynamicOperationGetName(MlirDynamicOperation operation) {
-  return wrap(unwrap(operation)->getName());
+  assert(false && "Can't get the name of a dynamic operation");
+  // return wrap(unwrap(operation)->getName());
 }

@@ -4,7 +4,6 @@
 #include "Dyn-c/IR.h"
 #include "Dyn/DynamicContext.h"
 #include "Dyn/DynamicDialect.h"
-#include "Dyn/DynamicOperation.h"
 #include "mlir/CAPI/Wrap.h"
 
 #include "mlir-c/IR.h"

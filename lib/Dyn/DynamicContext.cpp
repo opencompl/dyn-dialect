@@ -12,7 +12,7 @@
 
 #include "Dyn/DynamicContext.h"
 #include "Dyn/DynamicDialect.h"
-#include "Dyn/DynamicOperation.h"
+#include "Dyn/DynamicInterface.h"
 #include "Dyn/DynamicTrait.h"
 #include "Dyn/DynamicType.h"
 #include "mlir/IR/Dialect.h"
@@ -60,10 +60,10 @@ DynamicContext::createAndRegisterDialect(llvm::StringRef name) {
   return dynDialect;
 }
 
-mlir::FailureOr<DynamicOperation *> DynamicContext::createAndRegisterOperation(
-    StringRef name, Dialect *dialect,
-    std::vector<llvm::unique_function<mlir::LogicalResult(mlir::Operation *op)>>
-        verifiers,
+LogicalResult DynamicContext::createAndRegisterOperation(
+    StringRef name, Dialect *dialect, AbstractOperation::ParseAssemblyFn parser,
+    AbstractOperation::PrintAssemblyFn printer,
+    AbstractOperation::VerifyInvariantsFn verifier,
     std::vector<DynamicOpTrait *> traits,
     std::vector<std::unique_ptr<DynamicOpInterfaceImpl>> interfaces) {
   // Create the interfaceMap that will contain the implementation of the
@@ -79,30 +79,43 @@ mlir::FailureOr<DynamicOperation *> DynamicContext::createAndRegisterOperation(
   auto interfaceMap = mlir::detail::InterfaceMap(
       MutableArrayRef<std::pair<TypeID, void *>>(interfaceMapElements));
 
-  auto *absOp = new DynamicOperation(name, dialect, this, std::move(verifiers),
-                                     std::move(traits), std::move(interfaces));
-  auto typeID = absOp->getRuntimeTypeID();
+  auto typeID = typeIDAllocator.allocateID();
+  auto opName = (dialect->getNamespace() + "." + name).str();
 
-  // Register the operation to the dynamic dialect.
-  auto registered = dynOps.try_emplace(typeID, absOp);
-  if (!registered.second)
-    return failure();
+  std::vector<std::pair<TypeID, std::unique_ptr<DynamicOpInterfaceImpl>>>
+      interfacesImpl;
 
-  nameToDynOps.insert({name, absOp});
+  for (auto &interfaceImpl : interfaces) {
+    auto interfaceID = interfaceImpl->getInterface()->getRuntimeTypeID();
+    interfacesImpl.emplace_back(interfaceID, std::move(interfaceImpl));
+  }
+  opInterfaceImpls.insert(std::make_pair(typeID, std::move(interfacesImpl)));
+
+  std::vector<TypeID> traitsId = {};
+  for (auto *trait : traits)
+    traitsId.push_back(trait->getRuntimeTypeID());
 
   // The hasTrait implementation for this operation.
-  auto hasTraitFn = [absOp](TypeID traitId) {
-    return absOp->hasTrait(traitId);
+  auto hasTraitFn = [traitsId{std::move(traitsId)}](TypeID traitId) {
+    return llvm::any_of(traitsId, [traitId](auto id) { return id == traitId; });
   };
 
-  AbstractOperation::insert(
-      absOp->getName(), *dialect, absOp->getRuntimeTypeID(),
-      DynamicOperation::parseOperation, DynamicOperation::printOperation,
-      DynamicOperation::verifyInvariants, DynamicOperation::foldHook,
-      DynamicOperation::getCanonicalizationPatterns, std::move(interfaceMap),
-      hasTraitFn);
+  auto foldHook = [](mlir::Operation *op,
+                     llvm::ArrayRef<mlir::Attribute> operands,
+                     llvm::SmallVectorImpl<mlir::OpFoldResult> &results) {
+    return failure();
+  };
 
-  return absOp;
+  auto getCanonicalizationPatterns = [](OwningRewritePatternList &,
+                                        MLIRContext *) {};
+
+  AbstractOperation::insert(opName, *dialect, typeID, std::move(parser),
+                            std::move(printer), std::move(verifier),
+                            std::move(foldHook),
+                            std::move(getCanonicalizationPatterns),
+                            std::move(interfaceMap), std::move(hasTraitFn));
+
+  return success();
 }
 
 FailureOr<DynamicTypeDefinition *> DynamicContext::createAndRegisterType(

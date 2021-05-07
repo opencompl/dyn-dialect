@@ -18,7 +18,6 @@
 #include "Dyn/DynamicContext.h"
 #include "Dyn/DynamicDialect.h"
 #include "Dyn/DynamicInterface.h"
-#include "Dyn/DynamicOperation.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
@@ -178,13 +177,12 @@ FailureOr<dyn::DynamicOpInterfaceImpl *>
 DynMemoryEffectOpInterface::getImpl(Operation *op) {
   auto ctx = op->getContext();
   auto dynCtx = ctx->getLoadedDialect<dyn::DynamicContext>();
-
-  auto dynOpRes = dynCtx->lookupOp(op->getAbstractOperation()->typeID);
-  assert(succeeded(dynOpRes) &&
-         "Dynamic interfaces can only be used by dynamic operations.");
-  auto *dynOp = *dynOpRes;
-
-  return dynOp->getInterfaceImpl(this);
+  auto opID = op->getAbstractOperation()->typeID;
+  auto interfaceImpl = dynCtx->lookupOpInterfaceImpl(opID, this);
+  assert(succeeded(interfaceImpl) &&
+         "Trying to get an interface implementation in an operation that "
+         "doesn't implement the interface");
+  return interfaceImpl;
 }
 
 ParseResult DynMemoryEffectOpInterface::parseImpl(

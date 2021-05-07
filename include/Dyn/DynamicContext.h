@@ -58,11 +58,12 @@ public:
 
   /// Create and add a new dynamic operation to an existing dialect.
   /// Its name should be in the format 'opname' and not 'dialectname.opname'.
-  mlir::FailureOr<DynamicOperation *> createAndRegisterOperation(
+  LogicalResult createAndRegisterOperation(
       StringRef name, Dialect *dialect,
-      std::vector<
-          llvm::unique_function<mlir::LogicalResult(mlir::Operation *op)>>
-          verifiers,
+      AbstractOperation::ParseAssemblyFn parser,
+      AbstractOperation::PrintAssemblyFn printer,
+      llvm::unique_function<mlir::LogicalResult(mlir::Operation *op) const>
+          verifier,
       std::vector<DynamicOpTrait *> traits,
       std::vector<std::unique_ptr<DynamicOpInterfaceImpl>> interfaces);
 
@@ -159,23 +160,6 @@ public:
   }
 
   /// The pointer is guaranteed to be non-null.
-  /// The name format should be 'dialect.operation'.
-  FailureOr<DynamicOperation *> lookupOp(StringRef name) const {
-    auto it = nameToDynOps.find(name);
-    if (it == nameToDynOps.end())
-      return failure();
-    return &*it->second;
-  }
-
-  /// The pointer is guaranteed to be non-null.
-  FailureOr<DynamicOperation *> lookupOp(TypeID id) const {
-    auto it = dynOps.find(id);
-    if (it == dynOps.end())
-      return failure();
-    return it->second.get();
-  }
-
-  /// The pointer is guaranteed to be non-null.
   /// The name format should be 'type' and not 'dialect.type'.
   FailureOr<DynamicTypeDefinition *>
   lookupTypeDefinition(StringRef name) const {
@@ -218,6 +202,24 @@ public:
     return Type(it->second);
   }
 
+  FailureOr<DynamicOpInterfaceImpl *>
+  lookupOpInterfaceImpl(TypeID opId, DynamicOpInterface *interface) const {
+    auto interfaceID = interface->getRuntimeTypeID();
+    auto interfaces = opInterfaceImpls.find(opId);
+
+    assert(interfaces != opInterfaceImpls.end() &&
+           "Trying to get an interface implementation of an operation that"
+           "isn't declared in the dynamic context");
+
+    auto res = llvm::find_if(interfaces->second, [interfaceID](const auto &p) {
+      return p.first == interfaceID;
+    });
+
+    if (res == interfaces->second.end())
+      return failure();
+    return res->second.get();
+  }
+
 private:
   /// TypeID allocator used for dialects, operations, types, ...
   TypeIDAllocator typeIDAllocator;
@@ -240,12 +242,11 @@ private:
   /// This structure allows to get in O(1) a dynamic trait given its typeID.
   llvm::DenseMap<TypeID, DynamicOpInterface *> typeIDToOpInterfaces;
 
-  /// The set of all dynamic operations registered.
-  llvm::DenseMap<TypeID, std::unique_ptr<DynamicOperation>> dynOps;
-
-  /// This structure allows to get in O(1) a dynamic operation given its name.
-  /// The name format should be 'dialect.opname'.
-  llvm::StringMap<DynamicOperation *> nameToDynOps;
+  /// Maps operation TypeIDs to interface implementation
+  llvm::DenseMap<
+      TypeID,
+      std::vector<std::pair<TypeID, std::unique_ptr<DynamicOpInterfaceImpl>>>>
+      opInterfaceImpls;
 
   /// The set of all dynamic types registered.
   llvm::DenseMap<TypeID, std::unique_ptr<DynamicTypeDefinition>> dynTypes;
