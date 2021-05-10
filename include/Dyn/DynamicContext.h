@@ -150,15 +150,6 @@ public:
     return &*it->second;
   }
 
-  /// Get a dialect given its typeID.
-  /// The pointer is guaranteed to be non-null.
-  FailureOr<DynamicDialect *> lookupDialect(StringRef name) const {
-    auto it = dialects.find(name);
-    if (it == dialects.end())
-      return failure();
-    return &*it->second;
-  }
-
   /// The pointer is guaranteed to be non-null.
   /// The name format should be 'type' and not 'dialect.type'.
   FailureOr<DynamicTypeDefinition *>
@@ -223,9 +214,6 @@ public:
 private:
   /// TypeID allocator used for dialects, operations, types, ...
   TypeIDAllocator typeIDAllocator;
-
-  /// The set of dynamically defined dialects.
-  llvm::StringMap<DynamicDialect *> dialects;
 
   /// This structure allows to get in O(1) a dynamic type given its typeID.
   llvm::DenseMap<TypeID, DynamicTypeDefinition *> typeIDToDynTypes;

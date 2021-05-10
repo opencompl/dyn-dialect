@@ -55,8 +55,6 @@ DynamicContext::createAndRegisterDialect(llvm::StringRef name) {
   // class.
   auto *dynDialect = reinterpret_cast<DynamicDialect *>(dialect);
 
-  dialects.insert({name, dynDialect});
-
   return dynDialect;
 }
 
