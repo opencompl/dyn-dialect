@@ -215,9 +215,6 @@ private:
   /// TypeID allocator used for dialects, operations, types, ...
   TypeIDAllocator typeIDAllocator;
 
-  /// This structure allows to get in O(1) a dynamic type given its typeID.
-  llvm::DenseMap<TypeID, DynamicTypeDefinition *> typeIDToDynTypes;
-
   /// The set of dynamically defined operation traits.
   llvm::StringMap<std::unique_ptr<DynamicOpTrait>> opTraits;
 
