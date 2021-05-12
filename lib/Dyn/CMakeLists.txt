@@ -5,6 +5,7 @@ add_mlir_dialect_library(MLIRDyn
         DynamicDialect.cpp
         DynamicContext.cpp
         DynamicType.cpp
+        DynamicInterface.cpp
 
         ADDITIONAL_HEADER_DIRS
         ${PROJECT_SOURCE_DIR}/include/Dyn

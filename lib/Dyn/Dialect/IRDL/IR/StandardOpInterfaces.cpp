@@ -153,14 +153,11 @@ void getEffectsConcept(
   assert(succeeded(interface) &&
          "MemoryEffect concept is used but the interface was not declared");
 
-  auto interfaceImplGeneric = (*interface)->getImpl(op);
-  assert(succeeded(interfaceImplGeneric) &&
-         "MemoryEffect concept is used on an operation that doesn't have an "
-         "implementation the interface");
-
-  auto *interfaceImpl =
-      reinterpret_cast<DynMemoryEffectOpInterfaceImpl *>(*interfaceImplGeneric);
-  for (auto effect : interfaceImpl->effects)
+  const auto &interfaceImplGeneric = (*interface)->getImpl(op);
+  const auto &interfaceImpl =
+      reinterpret_cast<const DynMemoryEffectOpInterfaceImpl &>(
+          interfaceImplGeneric);
+  for (auto effect : interfaceImpl.effects)
     effects.push_back(effect);
 }
 } // namespace
@@ -171,18 +168,6 @@ void *DynMemoryEffectOpInterface::getConcept() {
           mlir::detail::MemoryEffectOpInterfaceInterfaceTraits::Concept)))
           mlir::detail::MemoryEffectOpInterfaceInterfaceTraits::Concept{
               getEffectsConcept});
-}
-
-FailureOr<dyn::DynamicOpInterfaceImpl *>
-DynMemoryEffectOpInterface::getImpl(Operation *op) {
-  auto ctx = op->getContext();
-  auto dynCtx = ctx->getLoadedDialect<dyn::DynamicContext>();
-  auto opID = op->getAbstractOperation()->typeID;
-  auto interfaceImpl = dynCtx->lookupOpInterfaceImpl(opID, this);
-  assert(succeeded(interfaceImpl) &&
-         "Trying to get an interface implementation in an operation that "
-         "doesn't implement the interface");
-  return interfaceImpl;
 }
 
 ParseResult DynMemoryEffectOpInterface::parseImpl(
