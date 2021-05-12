@@ -33,9 +33,6 @@ public:
 
   virtual void *getConcept() override;
 
-  virtual FailureOr<dyn::DynamicOpInterfaceImpl *>
-  getImpl(Operation *op) override;
-
   virtual ParseResult parseImpl(OpAsmParser &p,
                                 InterfaceImplAttrInterface &interface) override;
 };

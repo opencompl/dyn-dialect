@@ -57,7 +57,7 @@ public:
 
   /// Get the interface implementation of an operation.
   /// The operation must be a dynamic operation.
-  virtual FailureOr<DynamicOpInterfaceImpl *> getImpl(Operation *op) = 0;
+  const DynamicOpInterfaceImpl &getImpl(Operation *op) const;
 
   /// Parse a textual representation of the interface implementation.
   virtual ParseResult parseImpl(OpAsmParser &p,

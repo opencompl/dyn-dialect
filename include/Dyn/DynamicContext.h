@@ -194,8 +194,9 @@ public:
   }
 
   FailureOr<DynamicOpInterfaceImpl *>
-  lookupOpInterfaceImpl(TypeID opId, DynamicOpInterface *interface) const {
-    auto interfaceID = interface->getRuntimeTypeID();
+  lookupOpInterfaceImpl(TypeID opId,
+                        const DynamicOpInterface &interface) const {
+    auto interfaceID = interface.getRuntimeTypeID();
     auto interfaces = opInterfaceImpls.find(opId);
 
     assert(interfaces != opInterfaceImpls.end() &&
