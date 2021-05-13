@@ -8,6 +8,7 @@
 
 #include "Dyn/Dialect/IRDL/IR/IRDL.h"
 #include "Dyn/Dialect/IRDL/IR/IRDLAttributes.h"
+#include "Dyn/Dialect/IRDL/IR/IRDLInterface.h"
 #include "Dyn/Dialect/IRDL/IR/StandardOpInterfaces.h"
 #include "Dyn/Dialect/IRDL/IRDLRegistration.h"
 #include "Dyn/Dialect/IRDL/TypeConstraint.h"
@@ -32,6 +33,16 @@ void IRDLDialect::initialize() {
       >();
   registerAttributes();
   registerStandardInterfaceAttributes();
+}
+
+/// Get an interface implementation parser given its name.
+/// The pointer is guaranteed to be non-null.
+FailureOr<DynamicOpInterfaceImplParser *>
+IRDLDialect::lookupOpInterfaceImplParser(StringRef name) const {
+  auto it = opInterfaceImplParsers.find(name);
+  if (it == opInterfaceImplParsers.end())
+    return failure();
+  return &*it->second;
 }
 
 //===----------------------------------------------------------------------===//
@@ -308,6 +319,7 @@ ParseResult parseTraitDef(OpAsmParser &p, DynamicContext *dynCtx,
 ParseResult parseInterfaceDef(OpAsmParser &p, DynamicContext *dynCtx,
                               InterfaceImplAttrInterface *interface) {
   auto loc = p.getCurrentLocation();
+  auto irdl = p.getBuilder().getContext()->getLoadedDialect<IRDLDialect>();
 
   StringRef interfaceName;
   if (p.parseKeyword(&interfaceName)) {
@@ -315,14 +327,14 @@ ParseResult parseInterfaceDef(OpAsmParser &p, DynamicContext *dynCtx,
     return failure();
   }
 
-  auto interfaceRes = dynCtx->lookupOpInterface(interfaceName);
-  if (failed(interfaceRes)) {
+  auto interfaceParser = irdl->lookupOpInterfaceImplParser(interfaceName);
+  if (failed(interfaceParser)) {
     p.emitError(loc, "interface '")
         .append(interfaceName, "' is not registered");
     return failure();
   }
 
-  return (*interfaceRes)->parseImpl(p, *interface);
+  return (*interfaceParser)->parseImpl(p, *interface);
 }
 
 /// Parse a TraitDefs with format '(traits [(name,)*])?'.

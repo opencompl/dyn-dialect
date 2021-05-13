@@ -13,6 +13,7 @@
 #ifndef DYN_DIALECT_IRDL_IR_IRDL_H_
 #define DYN_DIALECT_IRDL_IR_IRDL_H_
 
+#include "Dyn/Dialect/IRDL/IR/IRDLInterface.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
@@ -24,6 +25,7 @@ namespace mlir {
 namespace irdl {
 class OpTypeDef;
 class OpTypeDefAttr;
+class DynamicOpInterfaceImplParser;
 } // namespace irdl
 
 namespace dyn {
@@ -36,6 +38,20 @@ class DynamicDialect;
 //===----------------------------------------------------------------------===//
 
 #include "Dyn/Dialect/IRDL/IR/IRDLDialect.h.inc"
+
+namespace mlir {
+namespace irdl {
+template <typename InterfaceParser>
+LogicalResult IRDLDialect::registerOpInterfaceImplParser() {
+  auto registered = opInterfaceImplParsers.try_emplace(
+      InterfaceParser::Interface::getInterfaceNamespace(),
+      new InterfaceParser());
+  if (!registered.second)
+    return failure();
+  return success();
+}
+} // namespace irdl
+} // namespace mlir
 
 //===----------------------------------------------------------------------===//
 // IRDL Dialect Operations

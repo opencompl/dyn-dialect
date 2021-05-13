@@ -45,12 +45,6 @@ def IRDL_Dialect : Dialect {
   }];
 
   let extraClassDeclaration = [{
-  private:
-    /// Register the attributes used by default by IRDL.
-    void registerAttributes();
-    /// Register the attributes used by standard interfaces wrappers in IRDL.
-    void registerStandardInterfaceAttributes();
-
   public:
     /// Register new attributes that can be used by IRDL.
     template <typename Attr>
@@ -60,6 +54,23 @@ def IRDL_Dialect : Dialect {
     /// This field is used during parsing. If this field is non-null, it points
     /// to the dialect that is currently being parsed by MLIR.
     mlir::dyn::DynamicDialect *currentlyParsedDialect = nullptr;
+
+    /// Get an interface implementation parser given its name.
+    FailureOr<DynamicOpInterfaceImplParser*> lookupOpInterfaceImplParser(StringRef name) const;
+
+    /// Register a parser for an operation interface implementation.
+    /// The parser will be used during the parsing of the interface
+    /// implementations during the operation definition parsing.
+    template<typename Interface>
+    LogicalResult registerOpInterfaceImplParser();
+
+  private:
+    /// Register the attributes used by default by IRDL.
+    void registerAttributes();
+    /// Register the attributes used by standard interfaces wrappers in IRDL.
+    void registerStandardInterfaceAttributes();
+
+    llvm::StringMap<std::unique_ptr<mlir::irdl::DynamicOpInterfaceImplParser>> opInterfaceImplParsers;
   }];
 
   let name = "irdl";

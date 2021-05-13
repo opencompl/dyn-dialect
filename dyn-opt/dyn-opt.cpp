@@ -28,6 +28,7 @@
 
 using namespace mlir;
 using namespace dyn;
+using namespace irdl;
 
 int main(int argc, char **argv) {
   mlir::registerAllPasses();
@@ -35,6 +36,7 @@ int main(int argc, char **argv) {
 
   MLIRContext ctx;
   auto dynCtx = ctx.getOrLoadDialect<DynamicContext>();
+  auto irdl = ctx.getOrLoadDialect<irdl::IRDLDialect>();
 
   if (failed(dynCtx->createAndRegisterOpTrait<OpTrait::SameTypeOperands>(
           "SameTypeOperands"))) {
@@ -48,9 +50,15 @@ int main(int argc, char **argv) {
     return 1;
   }
 
+  if (failed(irdl->registerOpInterfaceImplParser<
+             DynMemoryEffectOpInterfaceImplParser>())) {
+    llvm::errs() << "Failed to register interface parser\n";
+    return 1;
+  }
+
   // Register the standard dialect and the IRDL dialect in the MLIR context
   DialectRegistry registry;
-  registry.insert<StandardOpsDialect, irdl::IRDLDialect>();
+  registry.insert<StandardOpsDialect>();
   ctx.appendDialectRegistry(registry);
 
   return failed(
