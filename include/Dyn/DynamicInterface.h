@@ -59,10 +59,6 @@ public:
   /// The operation must be a dynamic operation.
   const DynamicOpInterfaceImpl &getImpl(Operation *op) const;
 
-  /// Parse a textual representation of the interface implementation.
-  virtual ParseResult parseImpl(OpAsmParser &p,
-                                InterfaceImplAttrInterface &interface) = 0;
-
   const std::string name;
 };
 

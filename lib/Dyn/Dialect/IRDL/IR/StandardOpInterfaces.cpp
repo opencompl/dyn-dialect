@@ -170,7 +170,13 @@ void *DynMemoryEffectOpInterface::getConcept() {
               getEffectsConcept});
 }
 
-ParseResult DynMemoryEffectOpInterface::parseImpl(
+DynMemoryEffectOpInterfaceImpl::DynMemoryEffectOpInterfaceImpl(
+    dyn::DynamicContext *dynCtx, std::vector<MemoryEffects::Effect *> effects)
+    : dyn::DynamicOpInterfaceImpl(*dynCtx->lookupOpInterface(
+          mlir::MemoryEffectOpInterface::getInterfaceID())),
+      effects(std::move(effects)) {}
+
+ParseResult DynMemoryEffectOpInterfaceImplParser::parseImpl(
     OpAsmParser &p, InterfaceImplAttrInterface &attrInterface) {
   DynMemoryEffectOpInterfaceAttr attr;
   if (DynMemoryEffectOpInterfaceAttr::parse(p, attr))
@@ -178,9 +184,3 @@ ParseResult DynMemoryEffectOpInterface::parseImpl(
   attrInterface = attr;
   return success();
 }
-
-DynMemoryEffectOpInterfaceImpl::DynMemoryEffectOpInterfaceImpl(
-    dyn::DynamicContext *dynCtx, std::vector<MemoryEffects::Effect *> effects)
-    : dyn::DynamicOpInterfaceImpl(*dynCtx->lookupOpInterface(
-          mlir::MemoryEffectOpInterface::getInterfaceID())),
-      effects(std::move(effects)) {}

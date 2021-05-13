@@ -17,6 +17,8 @@ include "mlir/IR/OpBase.td"
 include "mlir/IR/SymbolInterfaces.td"
 
 def TypeConstraintAttrInterface : AttrInterface<"TypeConstraintAttrInterface"> {
+  let cppNamespace = "::mlir::irdl";
+
   let description = [{
     Attribute representing a constraint on a dynamic type.
   }];
@@ -31,6 +33,8 @@ def TypeConstraintAttrInterface : AttrInterface<"TypeConstraintAttrInterface"> {
 }
 
 def InterfaceImplAttrInterface : AttrInterface<"InterfaceImplAttrInterface"> {
+  let cppNamespace = "::mlir::irdl";
+
   let description = [{
     Attribute representing the implementation of an interface.
   }];
