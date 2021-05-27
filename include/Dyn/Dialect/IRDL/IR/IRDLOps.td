@@ -13,59 +13,9 @@
 #ifndef DYN_DIALECT_IRDL_IR_IRDLOPS
 #define DYN_DIALECT_IRDL_IR_IRDLOPS
 
-include "mlir/IR/OpBase.td"
+include "IRDL.td"
+include "IRDLAttributes.td"
 include "mlir/IR/SymbolInterfaces.td"
-
-//===----------------------------------------------------------------------===//
-// IRDL Dialect
-//===----------------------------------------------------------------------===//
-
-def IRDL_Dialect : Dialect {
-  let summary = "IR Definition Language Dialect";
-  let description = [{
-    IRDL presents a high-level abstraction for the definition of dialects. It
-    can represent dialects, types, and operations.
-
-    The IRDL programs can be used to register dialects at runtime, which enables
-    users to plug-in new dialects without having to recompile the project.
-
-    Operation `irdl.dialect` defines a dialect, `irdl.type` defines a type,
-    and `irdl.operation` defines an operation.
-
-    A dialect example is shown below:
-
-    ```mlir
-    irdl.dialect "cmath" {
-      irdl.type "complex"
-      irdl.operation "mul"
-    }
-    ```
-
-    This program defines a `cmath` dialect that defines a `complex` type, and
-    a `mul` operation.
-  }];
-
-  let extraClassDeclaration = [{
-  private:
-    /// Register the attributes used by default by IRDL.
-    void registerAttributes();
-    /// Register the attributes used by standard interfaces wrappers in IRDL.
-    void registerStandardInterfaceAttributes();
-
-  public:
-    /// Register new attributes that can be used by IRDL.
-    template <typename Attr>
-    void addNewAttribute() {
-      addAttributes<Attr>();
-    }
-    /// This field is used during parsing. If this field is non-null, it points
-    /// to the dialect that is currently being parsed by MLIR.
-    mlir::dyn::DynamicDialect *currentlyParsedDialect = nullptr;
-  }];
-
-  let name = "irdl";
-  let cppNamespace = "::mlir::irdl";
-}
 
 class IRDL_Op<string mnemonic, list<OpTrait> traits = []>
     : Op<IRDL_Dialect, mnemonic, traits> {
@@ -175,15 +125,6 @@ def IRDL_TypeAliasOp : IRDL_Op<"alias", [HasParent<"DialectOp">]> {
 
 
 //===----------------------------------------------------------------------===//
-// IRDL Attribute definition
-//===----------------------------------------------------------------------===//
-
-def OpDefAttr : Attr<CPred<"$_self.isa<OpTypeDefAttr>()">, "OperationOp type constraints definition"> {
-  let storageType = "OpTypeDefAttr";
-  let returnType = "OpTypeDef";
-}
-
-//===----------------------------------------------------------------------===//
 // IRDL Operation definition
 //===----------------------------------------------------------------------===//
 
@@ -207,7 +148,7 @@ def IRDL_OperationOp : IRDL_Op<"operation", [HasParent<"DialectOp">]> {
     The above program defines an operation `mul` inside the dialect `cmath`.
   }];
 
-  let arguments = (ins StrAttr:$name, OpDefAttr:$op_def);
+  let arguments = (ins StrAttr:$name, OpTypeDefAttr:$op_def);
   let printer = [{ ::print(p, *this); }];
   let parser = [{ return ::parse$cppClass(parser, result); }];
 

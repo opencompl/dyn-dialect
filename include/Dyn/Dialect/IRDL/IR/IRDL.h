@@ -35,7 +35,7 @@ class DynamicDialect;
 // IRDL Dialect
 //===----------------------------------------------------------------------===//
 
-#include "Dyn/Dialect/IRDL/IR/IRDLOpsDialect.h.inc"
+#include "Dyn/Dialect/IRDL/IR/IRDLDialect.h.inc"
 
 //===----------------------------------------------------------------------===//
 // IRDL Dialect Operations
