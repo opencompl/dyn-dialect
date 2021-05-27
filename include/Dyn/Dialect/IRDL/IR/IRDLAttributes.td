@@ -37,7 +37,6 @@ def AnyTypeConstraintAttr : IRDL_AttrDef<"AnyTypeConstraintAttr", [TypeConstrain
   }];
 }
 
-
 def AnyOfTypeConstraintAttr : IRDL_AttrDef<"AnyOfTypeConstraintAttr", [TypeConstraintAttrInterface]> {
   let summary = "AnyOf type constraint attribute";
   let description = [{ TODO }];
