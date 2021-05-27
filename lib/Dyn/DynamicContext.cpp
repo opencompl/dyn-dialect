@@ -105,10 +105,11 @@ mlir::FailureOr<DynamicOperation *> DynamicContext::createAndRegisterOperation(
   return absOp;
 }
 
-FailureOr<DynamicTypeDefinition *>
-DynamicContext::createAndRegisterType(StringRef name, Dialect *dialect) {
+FailureOr<DynamicTypeDefinition *> DynamicContext::createAndRegisterType(
+    StringRef name, Dialect *dialect,
+    DynamicTypeDefinition::VerifierFn verifier) {
   auto fullName = (dialect->getNamespace() + "." + name).str();
-  auto *dynType = new DynamicTypeDefinition(dialect, name);
+  auto *dynType = new DynamicTypeDefinition(dialect, name, std::move(verifier));
   auto typeID = dynType->getRuntimeTypeID();
 
   // If an alias with the same name is already defined, fail.

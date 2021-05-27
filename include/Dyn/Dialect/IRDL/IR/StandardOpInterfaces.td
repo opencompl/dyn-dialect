@@ -28,9 +28,9 @@ def DynMemoryEffectOpInterfaceAttr : IRDL_AttrDef<"DynMemoryEffectOpInterfaceAtt
   let extraClassDeclaration = [{
     /// Get the interface implementation.
     std::unique_ptr<mlir::dyn::DynamicOpInterfaceImpl> getInterfaceImpl() const;
-    // Print the attribute.
+    /// Print the attribute.
     void print(mlir::OpAsmPrinter& p) const;
-    // Parse the attribute.
+    /// Parse the attribute.
     static ParseResult parse(mlir::OpAsmParser &p, mlir::irdl::DynMemoryEffectOpInterfaceAttr &attrInterface);
   }];
 

@@ -31,9 +31,6 @@ class MLIRContext;
 namespace dyn {
 
 // Forward declaration.
-class DynamicTypeDefinition;
-
-// Forward declaration.
 class DynamicDialect;
 
 // Forward declaration.
@@ -72,7 +69,8 @@ public:
   /// Create and add a new type to the dialect.
   /// The name of the type should not begin with the name of the dialect.
   mlir::FailureOr<DynamicTypeDefinition *>
-  createAndRegisterType(StringRef name, Dialect *dialect);
+  createAndRegisterType(StringRef name, Dialect *dialect,
+                        DynamicTypeDefinition::VerifierFn verifier);
 
   /// Create and add a new type alias to the dialect.
   /// The name of the type alias should not begin with the name of the dialect.
@@ -193,7 +191,7 @@ public:
     auto type = lookupTypeDefinition(name);
     if (failed(type))
       return failure();
-    return DynamicType::get(ctx, *type);
+    return DynamicType::get(*type);
   }
 
   /// The pointer is guaranteed to be non-null.
@@ -209,7 +207,7 @@ public:
     auto type = lookupTypeDefinition(id);
     if (failed(type))
       return failure();
-    return DynamicType::get(ctx, *type);
+    return DynamicType::get(*type);
   }
 
   /// The name format should be 'dialectname.aliasname'.
@@ -218,15 +216,6 @@ public:
     if (it == typeAliases.end())
       return failure();
     return Type(it->second);
-  }
-
-  /// The name format should be 'dialectname.typename'.
-  FailureOr<Type> lookupTypeOrTypeAlias(StringRef name) const {
-    auto type = lookupType(name);
-    if (succeeded(type))
-      return type;
-
-    return lookupTypeAlias(name);
   }
 
 private:
