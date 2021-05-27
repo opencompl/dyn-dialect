@@ -13,7 +13,7 @@
 #ifndef DYN_DYNAMICOBJECT_H
 #define DYN_DYNAMICOBJECT_H
 
-#include "TypeIDAllocator.h"
+#include "mlir/Support/TypeID.h"
 
 namespace mlir {
 namespace dyn {

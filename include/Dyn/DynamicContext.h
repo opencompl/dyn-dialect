@@ -16,11 +16,11 @@
 #include "Dyn/DynamicInterface.h"
 #include "Dyn/DynamicTrait.h"
 #include "Dyn/DynamicType.h"
-#include "TypeIDAllocator.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
+#include "mlir/Support/TypeID.h"
 #include "llvm/ADT/StringMap.h"
 
 namespace mlir {
