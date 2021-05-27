@@ -19,7 +19,11 @@ include "IRDL.td"
 
 def EqTypeConstraintAttr : IRDL_AttrDef<"EqTypeConstraintAttr", [TypeConstraintAttrInterface]> {
   let summary = "IRDL equality type constraint attribute";
-  let description = [{ TODO }];
+  let description = [{
+    Attribute representing the data of an equality type constraint.
+    It contains a single type, and the associated type constraint is only
+    satisfied when given this type.
+  }];
   let parameters = (ins "Type":$type);
 
   let extraClassDeclaration = [{
@@ -29,7 +33,10 @@ def EqTypeConstraintAttr : IRDL_AttrDef<"EqTypeConstraintAttr", [TypeConstraintA
 
 def AnyTypeConstraintAttr : IRDL_AttrDef<"AnyTypeConstraintAttr", [TypeConstraintAttrInterface]> {
   let summary = "Any type constraint attribute";
-  let description = [{ TODO }];
+  let description = [{
+    Attribute representing an Any type constraint.
+    The associated type constraint is always satisfied.
+  }];
   let parameters = (ins);
 
   let extraClassDeclaration = [{
@@ -37,10 +44,13 @@ def AnyTypeConstraintAttr : IRDL_AttrDef<"AnyTypeConstraintAttr", [TypeConstrain
   }];
 }
 
-
 def AnyOfTypeConstraintAttr : IRDL_AttrDef<"AnyOfTypeConstraintAttr", [TypeConstraintAttrInterface]> {
   let summary = "AnyOf type constraint attribute";
-  let description = [{ TODO }];
+  let description = [{
+    Attribute representing an AnyOf type constraint.
+    It contains a set of types.
+    The associated type constraint is satisfied when any of the types is given. 
+  }];
   let parameters = (ins ArrayRefParameter<"mlir::Type", "list of types">:$types);
 
   let extraClassDeclaration = [{
@@ -55,7 +65,11 @@ class OpTypeDefParameter<string desc = ""> :
 
 def OpTypeDefAttr : IRDL_AttrDef<"OpTypeDefAttr"> {
   let summary = "Declaration of a dynamic operation";
-  let description = [{ TODO }];
+  let description = [{
+    Attribute representing an operation definition.
+    It contains the arguments/results constraints, as well as trait
+    and interface implementation.
+  }];
   let parameters = (ins OpTypeDefParameter<>:$opDef);
 }
 
