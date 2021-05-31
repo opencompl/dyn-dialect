@@ -94,20 +94,6 @@ LogicalResult verifyOpTypeConstraints(Operation *op,
 
   return success();
 }
-
-/// Create a verifier given type constraints and trait implementations
-AbstractOperation::VerifyInvariantsFn
-createVerifier(OpTypeConstraints constraints,
-               std::vector<dyn::DynamicOpTrait *> traits) {
-  return [traits{std::move(traits)},
-          constraints{std::move(constraints)}](Operation *op) {
-    if (failed(verifyOpTypeConstraints(op, constraints)))
-      return failure();
-    return success(llvm::all_of(traits, [op](auto *trait) {
-      return succeeded(trait->verifyTrait(op));
-    }));
-  };
-}
 } // namespace
 
 namespace mlir {
@@ -148,7 +134,9 @@ LogicalResult registerOperation(dyn::DynamicDialect *dialect, StringRef name,
     printer.printGenericOp(op);
   };
 
-  auto verifier = createVerifier(std::move(constraints), opTypeDef.traitDefs);
+  auto verifier = [constraints{std::move(constraints)}](Operation *op) {
+    return verifyOpTypeConstraints(op, constraints);
+  };
 
   return ctx->createAndRegisterOperation(
       name, dialect, std::move(parser), std::move(printer), std::move(verifier),

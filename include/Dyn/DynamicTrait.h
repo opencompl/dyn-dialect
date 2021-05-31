@@ -41,7 +41,7 @@ public:
         ctx, name, TraitTy<Operation>::verifyTrait, TypeID::get<TraitTy>()));
   }
 
-  /// Check that the operation satisfies the trait.
+  /// Check that the operatio satisfies the trait.
   LogicalResult verifyTrait(Operation *op) { return verifier(op); }
 
   const std::string name;

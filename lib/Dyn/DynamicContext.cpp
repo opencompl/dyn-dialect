@@ -107,8 +107,17 @@ LogicalResult DynamicContext::createAndRegisterOperation(
   auto getCanonicalizationPatterns = [](OwningRewritePatternList &,
                                         MLIRContext *) {};
 
+  auto verifierWithTraits = [traits{std::move(traits)},
+                             verifier{std::move(verifier)}](Operation *op) {
+    if (failed(verifier(op)))
+      return failure();
+    return success(llvm::all_of(traits, [op](auto *trait) {
+      return succeeded(trait->verifyTrait(op));
+    }));
+  };
+
   AbstractOperation::insert(opName, *dialect, typeID, std::move(parser),
-                            std::move(printer), std::move(verifier),
+                            std::move(printer), std::move(verifierWithTraits),
                             std::move(foldHook),
                             std::move(getCanonicalizationPatterns),
                             std::move(interfaceMap), std::move(hasTraitFn));
