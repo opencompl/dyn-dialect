@@ -26,27 +26,7 @@ def TypeConstraintAttrInterface : AttrInterface<"TypeConstraintAttrInterface"> {
   let methods = [
     InterfaceMethod<
       "Get the type constraint",
-      "std::unique_ptr<mlir::irdl::TypeConstraint>", "getTypeConstraint",
-      (ins "mlir::dyn::DynamicContext &":$ctx)
-    >
-  ];
-}
-
-def InterfaceImplAttrInterface : AttrInterface<"InterfaceImplAttrInterface"> {
-  let cppNamespace = "::mlir::irdl";
-
-  let description = [{
-    Attribute representing the implementation of an interface.
-  }];
-
-  let methods = [
-    InterfaceMethod<
-      "Get the interface implementation",
-      "std::unique_ptr<mlir::dyn::DynamicOpInterfaceImpl>", "getInterfaceImpl"
-    >,
-    InterfaceMethod<
-      "Print the attribute",
-      "void", "print", (ins "mlir::OpAsmPrinter&":$p)
+      "std::unique_ptr<mlir::irdl::TypeConstraint>", "getTypeConstraint"
     >
   ];
 }

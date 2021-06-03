@@ -7,10 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "Dyn/Dialect/IRDL/IR/IRDL.h"
-#include "Dyn/Dialect/IRDL/IR/StandardOpInterfaces.h"
-#include "Dyn/DynamicContext.h"
-#include "Dyn/DynamicDialect.h"
 #include "MlirOptMain.h"
+#include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/InitAllDialects.h"
@@ -19,15 +17,16 @@
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Support/FileUtilities.h"
 #include "mlir/Support/LogicalResult.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/raw_ostream.h"
+#include <type_traits>
 
 using namespace mlir;
-using namespace dyn;
 using namespace irdl;
 
 int main(int argc, char **argv) {
@@ -35,32 +34,23 @@ int main(int argc, char **argv) {
   // TODO: Register passes here.
 
   MLIRContext ctx;
-  auto dynCtx = ctx.getOrLoadDialect<DynamicContext>();
-  auto irdl = ctx.getOrLoadDialect<irdl::IRDLDialect>();
+  ctx.getOrLoadDialect<irdl::IRDLDialect>();
 
-  if (failed(dynCtx->createAndRegisterOpTrait<OpTrait::SameTypeOperands>(
-          "SameTypeOperands"))) {
-    llvm::errs() << "Failed to register trait\n";
-    return 1;
-  }
-
-  if (failed(dynCtx->createAndRegisterOpInterface<
-             irdl::DynMemoryEffectOpInterface>("MemoryEffect"))) {
-    llvm::errs() << "Failed to register interface\n";
-    return 1;
-  }
-
-  if (failed(irdl->registerOpInterfaceImplParser<
-             DynMemoryEffectOpInterfaceImplParser>())) {
-    llvm::errs() << "Failed to register interface parser\n";
-    return 1;
-  }
+  auto trait = DynamicOpTrait::get(&ctx, [](Operation *op) {
+    if (op->getNumOperands() == 0) {
+      return success();
+    }
+    auto type = op->getOperand(0).getType();
+    return success(
+        llvm::all_of(op->getOperandTypes(),
+                     [type](auto operandType) { return operandType == type; }));
+  });
+  ctx.registerDynamicTrait("SameTypeOperands", std::move(trait));
 
   // Register the standard dialect and the IRDL dialect in the MLIR context
   DialectRegistry registry;
   registry.insert<StandardOpsDialect>();
   ctx.appendDialectRegistry(registry);
 
-  return failed(
-      mlir::MlirOptMain(argc, argv, "Dyn optimizer driver\n", *dynCtx));
+  return failed(mlir::MlirOptMain(argc, argv, "Dyn optimizer driver\n", ctx));
 }

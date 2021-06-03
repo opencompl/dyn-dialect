@@ -14,9 +14,7 @@
 #include "Dyn/Dialect/IRDL/IR/IRDL.h"
 #include "Dyn/Dialect/IRDL/IR/IRDLAttributes.h"
 #include "Dyn/Dialect/IRDL/TypeConstraint.h"
-#include "Dyn/DynamicContext.h"
-#include "Dyn/DynamicDialect.h"
-#include "Dyn/DynamicType.h"
+#include "mlir/IR/ExtensibleDialect.h"
 #include "mlir/IR/Visitors.h"
 #include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/STLExtras.h"
@@ -27,8 +25,8 @@ using namespace irdl;
 
 namespace mlir {
 namespace irdl {
-LogicalResult registerType(dyn::DynamicDialect *dialect, StringRef name) {
-  return dialect->getDynamicContext()->createAndRegisterType(
+void registerType(ExtensibleDialect *dialect, StringRef name) {
+  auto type = DynamicTypeDefinition::get(
       name, dialect,
       [name = std::string(name)](function_ref<InFlightDiagnostic()> emitError,
                                  ArrayRef<Attribute> params) {
@@ -38,11 +36,7 @@ LogicalResult registerType(dyn::DynamicDialect *dialect, StringRef name) {
         return LogicalResult(
             emitError().append("Type ", name, " does not have parameters"));
       });
-}
-
-LogicalResult registerTypeAlias(dyn::DynamicDialect *dialect, StringRef name,
-                                Type type) {
-  return dialect->getDynamicContext()->addTypeAlias(name, dialect, type);
+  dialect->addDynamicType(std::move(type));
 }
 } // namespace irdl
 } // namespace mlir
@@ -99,16 +93,15 @@ LogicalResult verifyOpTypeConstraints(Operation *op,
 namespace mlir {
 namespace irdl {
 /// Register an operation represented by a `irdl.operation` operation.
-LogicalResult registerOperation(dyn::DynamicDialect *dialect, StringRef name,
-                                OpTypeDef opTypeDef) {
+void registerOperation(ExtensibleDialect *dialect, StringRef name,
+                       OpTypeDef opTypeDef) {
   OpTypeConstraints constraints;
-  auto *ctx = dialect->getDynamicContext();
 
   // Add the operand constraints to the type constraints.
   for (auto &def : opTypeDef.operandDef) {
     auto name = def.first;
     auto constraint =
-        def.second.cast<TypeConstraintAttrInterface>().getTypeConstraint(*ctx);
+        def.second.cast<TypeConstraintAttrInterface>().getTypeConstraint();
     constraints.first.emplace_back(name, std::move(constraint));
   }
 
@@ -116,14 +109,9 @@ LogicalResult registerOperation(dyn::DynamicDialect *dialect, StringRef name,
   for (auto &def : opTypeDef.resultDef) {
     auto name = def.first;
     auto constraint =
-        def.second.cast<TypeConstraintAttrInterface>().getTypeConstraint(*ctx);
+        def.second.cast<TypeConstraintAttrInterface>().getTypeConstraint();
     constraints.second.emplace_back(name, std::move(constraint));
   }
-
-  // Add the interfaces implementations.
-  std::vector<std::unique_ptr<dyn::DynamicOpInterfaceImpl>> interfaces;
-  for (auto interfaceAttr : opTypeDef.getInterfaceDefinitions())
-    interfaces.push_back(interfaceAttr.getInterfaceImpl());
 
   // TODO define custom parsers and printers.
   // For now, we can only parse with the operation quote syntax.
@@ -138,9 +126,12 @@ LogicalResult registerOperation(dyn::DynamicDialect *dialect, StringRef name,
     return verifyOpTypeConstraints(op, constraints);
   };
 
-  return ctx->createAndRegisterOperation(
-      name, dialect, std::move(parser), std::move(printer), std::move(verifier),
-      opTypeDef.traitDefs, std::move(interfaces));
+  auto op = DynamicOpDefinition::get(name, dialect, std::move(verifier),
+                                     std::move(parser), std::move(printer));
+  for (auto trait : opTypeDef.traitDefs) {
+    op->addTrait(trait.second);
+  }
+  dialect->addDynamicOp(std::move(op));
 }
 } // namespace irdl
 } // namespace mlir

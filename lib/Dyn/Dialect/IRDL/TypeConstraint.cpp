@@ -13,11 +13,8 @@
 
 #include "Dyn/Dialect/IRDL/TypeConstraint.h"
 #include "Dyn/Dialect/IRDL/IR/IRDL.h"
-#include "Dyn/DynamicContext.h"
-#include "Dyn/DynamicDialect.h"
 
 using namespace mlir;
-using namespace dyn;
 using namespace irdl;
 
 LogicalResult EqTypeConstraint::verifyType(Operation *op, Type argType,

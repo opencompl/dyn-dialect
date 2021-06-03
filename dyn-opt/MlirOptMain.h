@@ -11,7 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Dyn/DynamicContext.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/StringRef.h"
@@ -58,7 +57,7 @@ LogicalResult MlirOptMain(llvm::raw_ostream &outputStream,
 ///   dialects from the global registry in the MLIRContext. This option is
 ///   deprecated and will be removed soon.
 LogicalResult MlirOptMain(int argc, char **argv, llvm::StringRef toolName,
-                          mlir::dyn::DynamicContext &ctx,
+                          MLIRContext &ctx,
                           bool preloadDialectsInContext = true);
 
 } // end namespace mlir

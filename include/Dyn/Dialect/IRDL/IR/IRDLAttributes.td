@@ -27,7 +27,7 @@ def EqTypeConstraintAttr : IRDL_AttrDef<"EqTypeConstraintAttr", [TypeConstraintA
   let parameters = (ins "Type":$type);
 
   let extraClassDeclaration = [{
-    std::unique_ptr<TypeConstraint> getTypeConstraint(mlir::dyn::DynamicContext &ctx);
+    std::unique_ptr<TypeConstraint> getTypeConstraint();
   }];
 }
 
@@ -40,7 +40,7 @@ def AnyTypeConstraintAttr : IRDL_AttrDef<"AnyTypeConstraintAttr", [TypeConstrain
   let parameters = (ins);
 
   let extraClassDeclaration = [{
-    std::unique_ptr<TypeConstraint> getTypeConstraint(mlir::dyn::DynamicContext &ctx);
+    std::unique_ptr<TypeConstraint> getTypeConstraint();
   }];
 }
 
@@ -54,7 +54,7 @@ def AnyOfTypeConstraintAttr : IRDL_AttrDef<"AnyOfTypeConstraintAttr", [TypeConst
   let parameters = (ins ArrayRefParameter<"mlir::Type", "list of types">:$types);
 
   let extraClassDeclaration = [{
-    std::unique_ptr<TypeConstraint> getTypeConstraint(mlir::dyn::DynamicContext &ctx);
+    std::unique_ptr<TypeConstraint> getTypeConstraint();
   }];
 }
 

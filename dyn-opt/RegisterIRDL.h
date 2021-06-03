@@ -14,7 +14,6 @@
 #ifndef DYNOPT_REGISTER_IRDL_H
 #define DYNOPT_REGISTER_IRDL_H
 
-#include "Dyn/DynamicContext.h"
 #include "mlir/Support/LogicalResult.h"
 
 namespace mlir {
@@ -22,7 +21,7 @@ namespace mlir {
 class MLIRContext;
 
 /// Register dialects defined in an IRDL file to a dynamic context.
-LogicalResult registerIRDL(StringRef irdlFile, dyn::DynamicContext *ctx);
+LogicalResult registerIRDL(StringRef irdlFile, MLIRContext *ctx);
 
 } // namespace mlir
 

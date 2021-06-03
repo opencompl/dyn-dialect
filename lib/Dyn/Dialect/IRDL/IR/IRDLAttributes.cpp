@@ -18,7 +18,6 @@
 #include "Dyn/Dialect/IRDL/IR/IRDLAttributes.cpp.inc"
 
 using namespace mlir;
-using namespace dyn;
 using namespace irdl;
 
 namespace mlir {
@@ -26,7 +25,7 @@ namespace irdl {
 
 llvm::hash_code hash_value(mlir::irdl::OpTypeDef typeDef) {
   return llvm::hash_combine(typeDef.operandDef, typeDef.resultDef,
-                            typeDef.traitDefs, typeDef.interfaceDefs);
+                            typeDef.traitDefs);
 }
 
 void IRDLDialect::registerAttributes() {
@@ -43,8 +42,7 @@ void IRDLDialect::registerAttributes() {
 // IRDL equality type constraint attribute
 //===----------------------------------------------------------------------===//
 
-std::unique_ptr<TypeConstraint>
-EqTypeConstraintAttr::getTypeConstraint(DynamicContext &ctx) {
+std::unique_ptr<TypeConstraint> EqTypeConstraintAttr::getTypeConstraint() {
   return std::make_unique<EqTypeConstraint>(getType());
 }
 
@@ -52,8 +50,7 @@ EqTypeConstraintAttr::getTypeConstraint(DynamicContext &ctx) {
 // IRDL AnyOf type constraint attribute
 //===----------------------------------------------------------------------===//
 
-std::unique_ptr<TypeConstraint>
-AnyOfTypeConstraintAttr::getTypeConstraint(DynamicContext &ctx) {
+std::unique_ptr<TypeConstraint> AnyOfTypeConstraintAttr::getTypeConstraint() {
   return std::make_unique<AnyOfTypeConstraint>(getTypes());
 }
 
@@ -61,7 +58,6 @@ AnyOfTypeConstraintAttr::getTypeConstraint(DynamicContext &ctx) {
 // Always true type constraint attribute
 //===----------------------------------------------------------------------===//
 
-std::unique_ptr<TypeConstraint>
-AnyTypeConstraintAttr::getTypeConstraint(DynamicContext &ctx) {
+std::unique_ptr<TypeConstraint> AnyTypeConstraintAttr::getTypeConstraint() {
   return std::make_unique<AnyTypeConstraint>();
 }

@@ -16,6 +16,7 @@
 #include "Dyn/Dialect/IRDL/IR/IRDLInterface.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Dialect.h"
+#include "mlir/IR/ExtensibleDialect.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/SymbolTable.h"
 #include <memory>
@@ -25,12 +26,7 @@ namespace mlir {
 namespace irdl {
 class OpTypeDef;
 class OpTypeDefAttr;
-class DynamicOpInterfaceImplParser;
 } // namespace irdl
-
-namespace dyn {
-class DynamicDialect;
-} // namespace dyn
 } // namespace mlir
 
 //===----------------------------------------------------------------------===//

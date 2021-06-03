@@ -14,13 +14,6 @@ mlir_tablegen(IRDLAttributes.cpp.inc -gen-attrdef-defs)
 add_public_tablegen_target(MLIRIRDLAttributesIncGen)
 add_dependencies(mlir-generic-headers MLIRIRDLAttributesIncGen)
 
-# Add IRDL standard OpInterface attributes
-set(LLVM_TARGET_DEFINITIONS StandardOpInterfaces.td)
-mlir_tablegen(StandardOpInterfaces.h.inc -gen-attrdef-decls)
-mlir_tablegen(StandardOpInterfaces.cpp.inc -gen-attrdef-defs)
-add_public_tablegen_target(MLIRStandardOpInterfacesIncGen)
-add_dependencies(mlir-generic-headers MLIRStandardOpInterfacesIncGen)
-
 # Add IRDL operations
 set(LLVM_TARGET_DEFINITIONS IRDLOps.td)
 mlir_tablegen(IRDLOps.h.inc -gen-op-decls)

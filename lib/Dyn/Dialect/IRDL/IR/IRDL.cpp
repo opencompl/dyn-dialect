@@ -9,18 +9,16 @@
 #include "Dyn/Dialect/IRDL/IR/IRDL.h"
 #include "Dyn/Dialect/IRDL/IR/IRDLAttributes.h"
 #include "Dyn/Dialect/IRDL/IR/IRDLInterface.h"
-#include "Dyn/Dialect/IRDL/IR/StandardOpInterfaces.h"
 #include "Dyn/Dialect/IRDL/IRDLRegistration.h"
 #include "Dyn/Dialect/IRDL/TypeConstraint.h"
-#include "Dyn/DynamicContext.h"
-#include "Dyn/DynamicDialect.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/ExtensibleDialect.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/Support/LogicalResult.h"
+#include "llvm/Support/Casting.h"
 
 using namespace mlir;
 using namespace mlir::irdl;
-using namespace mlir::dyn;
 
 //===----------------------------------------------------------------------===//
 // IRDL dialect.
@@ -32,17 +30,6 @@ void IRDLDialect::initialize() {
 #include "Dyn/Dialect/IRDL/IR/IRDLOps.cpp.inc"
       >();
   registerAttributes();
-  registerStandardInterfaceAttributes();
-}
-
-/// Get an interface implementation parser given its name.
-/// The pointer is guaranteed to be non-null.
-FailureOr<DynamicOpInterfaceImplParser *>
-IRDLDialect::lookupOpInterfaceImplParser(StringRef name) const {
-  auto it = opInterfaceImplParsers.find(name);
-  if (it == opInterfaceImplParsers.end())
-    return failure();
-  return &*it->second;
 }
 
 //===----------------------------------------------------------------------===//
@@ -64,11 +51,11 @@ static ParseResult parseDialectOp(OpAsmParser &p, OperationState &state) {
 
   // Register the dialect in the dynamic context.
   auto *ctx = state.getContext();
-  auto *dynCtx = ctx->getOrLoadDialect<DynamicContext>();
-  auto dialectRes = dynCtx->createAndRegisterDialect(name);
-  if (failed(dialectRes))
-    return failure();
-  auto *dialect = *dialectRes;
+  ctx->loadDynamicDialect(name);
+
+  auto *dialect =
+      llvm::dyn_cast<ExtensibleDialect>(ctx->getLoadedDialect(name));
+  assert(dialect && "extensible dialect should have been registered");
 
   // Set the current dialect to the dialect that we are currently defining.
   // Every IRDL operation that is parsed in the next region will be registered
@@ -118,8 +105,7 @@ static ParseResult parseTypeOp(OpAsmParser &p, OperationState &state) {
   auto *dialect = irdlDialect->currentlyParsedDialect;
   assert(dialect != nullptr && "Trying to parse an 'irdl.type' when there is "
                                "no 'irdl.dialect' currently being parsed.");
-  if (failed(registerType(dialect, name)))
-    return failure();
+  registerType(dialect, name);
 
   return success();
 }
@@ -293,8 +279,9 @@ void printArgDefs(OpAsmPrinter &p, ArgDefs typedVars) {
   p << ")";
 }
 
-ParseResult parseTraitDef(OpAsmParser &p, DynamicContext *dynCtx,
-                          DynamicOpTrait **trait) {
+ParseResult parseTraitDef(OpAsmParser &p,
+                          std::pair<std::string, DynamicOpTrait *> &trait) {
+  auto ctx = p.getBuilder().getContext();
   auto loc = p.getCurrentLocation();
 
   StringRef traitName;
@@ -303,42 +290,20 @@ ParseResult parseTraitDef(OpAsmParser &p, DynamicContext *dynCtx,
     return failure();
   }
 
-  auto res = dynCtx->lookupOpTrait(traitName);
-  if (failed(res)) {
-    p.emitError(loc, "trait '").append(traitName, "' is not defined");
+  auto res = ctx->getDynamicTrait(traitName);
+  if (!res) {
+    p.emitError(loc, "trait '")
+        .append(traitName, "' is not registered in the context");
     return failure();
   }
-  *trait = *res;
+  trait.first = traitName.str();
+  trait.second = res;
 
   return success();
 }
 
-/// Parse an interface implementation.
-/// This will first parse an interface name, then get the interface definition,
-/// and use its custom parser to parse the implementation.
-ParseResult parseInterfaceDef(OpAsmParser &p, DynamicContext *dynCtx,
-                              InterfaceImplAttrInterface *interface) {
-  auto loc = p.getCurrentLocation();
-  auto irdl = p.getBuilder().getContext()->getLoadedDialect<IRDLDialect>();
-
-  StringRef interfaceName;
-  if (p.parseKeyword(&interfaceName)) {
-    p.emitError(loc, "expected interface name");
-    return failure();
-  }
-
-  auto interfaceParser = irdl->lookupOpInterfaceImplParser(interfaceName);
-  if (failed(interfaceParser)) {
-    p.emitError(loc, "interface '")
-        .append(interfaceName, "' is not registered");
-    return failure();
-  }
-
-  return (*interfaceParser)->parseImpl(p, *interface);
-}
-
 /// Parse a TraitDefs with format '(traits [(name,)*])?'.
-ParseResult parseTraitDefs(OpAsmParser &p, OwningTraitDefs *traitDefs) {
+ParseResult parseTraitDefs(OpAsmParser &p, OwningTraitDefs &traitDefs) {
   // If the trait keyword is not present, then it means that no traits is
   // defined.
   if (p.parseOptionalKeyword("traits"))
@@ -351,22 +316,19 @@ ParseResult parseTraitDefs(OpAsmParser &p, OwningTraitDefs *traitDefs) {
   if (!p.parseOptionalRSquare())
     return success();
 
-  auto *dynCtx =
-      p.getBuilder().getContext()->getLoadedDialect<DynamicContext>();
-
-  DynamicOpTrait *trait;
-  if (parseTraitDef(p, dynCtx, &trait))
+  std::pair<std::string, DynamicOpTrait *> trait;
+  if (parseTraitDef(p, trait))
     return failure();
-  traitDefs->push_back(trait);
+  traitDefs.push_back(std::move(trait));
 
   while (p.parseOptionalRSquare()) {
     if (p.parseComma())
       return failure();
 
-    DynamicOpTrait *trait;
-    if (parseTraitDef(p, dynCtx, &trait))
+    std::pair<std::string, DynamicOpTrait *> trait;
+    if (parseTraitDef(p, trait))
       return failure();
-    traitDefs->push_back(trait);
+    traitDefs.push_back(trait);
   }
 
   return success();
@@ -377,58 +339,9 @@ void printTraitDefs(OpAsmPrinter &p, TraitDefs traitDefs) {
     return;
   p << "traits [";
   for (size_t i = 0; i + 1 < traitDefs.size(); i++) {
-    p << traitDefs[i]->name;
-    p << ", ";
+    p << traitDefs[i].first << ", ";
   }
-  p << traitDefs.back()->name << "]";
-}
-
-/// Parse an InterfaceDefs with format '(interfaces [(interface,)*])?'.
-ParseResult parseInterfaceDefs(OpAsmParser &p,
-                               OwningInterfaceDefs *interfaceDefs) {
-  // If the interface keyword is not present, then it means that no interface is
-  // defined.
-  if (p.parseOptionalKeyword("interfaces"))
-    return success();
-
-  if (p.parseLSquare())
-    return failure();
-
-  // Empty
-  if (!p.parseOptionalRSquare())
-    return success();
-
-  auto *dynCtx =
-      p.getBuilder().getContext()->getLoadedDialect<DynamicContext>();
-
-  InterfaceImplAttrInterface interface;
-  if (parseInterfaceDef(p, dynCtx, &interface))
-    return failure();
-  interfaceDefs->push_back(interface);
-
-  while (p.parseOptionalRSquare()) {
-    if (p.parseComma())
-      return failure();
-
-    InterfaceImplAttrInterface interface;
-    if (parseInterfaceDef(p, dynCtx, &interface))
-      return failure();
-    interfaceDefs->push_back(interface);
-  }
-
-  return success();
-}
-
-void printInterfaceDefs(OpAsmPrinter &p, InterfaceDefs interfaceDefs) {
-  if (interfaceDefs.empty())
-    return;
-  p << "interfaces [";
-  for (size_t i = 0; i + 1 < interfaceDefs.size(); i++) {
-    interfaceDefs[i].print(p);
-    p << ", ";
-  }
-  interfaceDefs.back().print(p);
-  p << "]";
+  p << traitDefs.back().first << "]";
 }
 
 /// Parse an OpTypeDefAttr.
@@ -450,15 +363,11 @@ ParseResult parseOpTypeDefAttr(OpAsmParser &p, OpTypeDefAttr *opTypeDefAttr) {
 
   // Parse the associated traits.
   OwningTraitDefs traitDefs;
-  if (parseTraitDefs(p, &traitDefs))
+  if (parseTraitDefs(p, traitDefs))
     return failure();
 
-  OwningInterfaceDefs interfaceDefs;
-  if (parseInterfaceDefs(p, &interfaceDefs))
-    return failure();
-
-  *opTypeDefAttr = OpTypeDefAttr::get(
-      ctx, {operandDefs, resultDefs, traitDefs, interfaceDefs});
+  *opTypeDefAttr =
+      OpTypeDefAttr::get(ctx, {operandDefs, resultDefs, traitDefs});
 
   return success();
 }
@@ -471,45 +380,9 @@ void printOpTypeDef(OpAsmPrinter &p, OpTypeDef opDef) {
     p << " ";
     printTraitDefs(p, opDef.traitDefs);
   }
-  if (!opDef.interfaceDefs.empty()) {
-    p << " ";
-    printInterfaceDefs(p, opDef.interfaceDefs);
-  }
 }
 
 } // namespace
-
-//===----------------------------------------------------------------------===//
-// irdl::TypeAliasOp
-//===----------------------------------------------------------------------===//
-
-static ParseResult parseTypeAliasOp(OpAsmParser &p, OperationState &state) {
-  Builder &builder = p.getBuilder();
-
-  // Parse the operation name.
-  StringRef name;
-  Type type;
-  if (p.parseKeyword(&name) || p.parseEqual() || p.parseType(type))
-    return failure();
-
-  state.addAttribute("name", builder.getStringAttr(name));
-  state.addAttribute("type", TypeAttr::get(type));
-
-  // Get the currently parsed dialect.
-
-  auto *ctx = p.getBuilder().getContext();
-  auto *irdlDialect = ctx->getOrLoadDialect<irdl::IRDLDialect>();
-  auto *dialect = irdlDialect->currentlyParsedDialect;
-  assert(dialect != nullptr);
-
-  // and register the type aliast in the dialect.
-  return registerTypeAlias(dialect, name, type);
-}
-
-static void print(OpAsmPrinter &p, TypeAliasOp typeAliasOp) {
-  p << TypeAliasOp::getOperationName() << " " << typeAliasOp.name() << " = "
-    << typeAliasOp.type();
-}
 
 //===----------------------------------------------------------------------===//
 // irdl::OperationOp
@@ -539,8 +412,7 @@ static ParseResult parseOperationOp(OpAsmParser &p, OperationState &state) {
          "no 'irdl.dialect' currently being parsed.");
 
   // and register the operation in the dialect
-  if (failed(registerOperation(dialect, name, opTypeDef.getOpDef())))
-    return failure();
+  registerOperation(dialect, name, opTypeDef.getOpDef());
 
   return success();
 }

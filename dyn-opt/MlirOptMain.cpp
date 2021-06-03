@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "MlirOptMain.h"
-#include "Dyn/DynamicContext.h"
 #include "RegisterIRDL.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/Attributes.h"
@@ -148,7 +147,7 @@ LogicalResult mlir::MlirOptMain(raw_ostream &outputStream,
 }
 
 LogicalResult mlir::MlirOptMain(int argc, char **argv, llvm::StringRef toolName,
-                                dyn::DynamicContext &dynContext,
+                                MLIRContext &context,
                                 bool preloadDialectsInContext) {
   static cl::opt<std::string> inputFilename(
       cl::Positional, cl::desc("<input file>"), cl::init("-"));
@@ -198,8 +197,7 @@ LogicalResult mlir::MlirOptMain(int argc, char **argv, llvm::StringRef toolName,
   registerPassManagerCLOptions();
   PassPipelineCLParser passPipeline("", "Compiler passes to run");
 
-  auto context = dynContext.getMLIRCtx();
-  auto registry = context->getDialectRegistry();
+  auto registry = context.getDialectRegistry();
 
   // Build the list of dialects as a header for the --help message.
   std::string helpHeader = (toolName + "\nAvailable Dialects: ").str();
@@ -212,13 +210,13 @@ LogicalResult mlir::MlirOptMain(int argc, char **argv, llvm::StringRef toolName,
   // Parse pass names in main to ensure static initialization completed.
   cl::ParseCommandLineOptions(argc, argv, helpHeader);
 
-  if (irdlFile != "" && failed(registerIRDL(irdlFile, &dynContext)))
+  if (irdlFile != "" && failed(registerIRDL(irdlFile, &context)))
     return failure();
 
   if (showDialects) {
     llvm::outs() << "Available Dialects:\n";
     interleave(
-        context->getAvailableDialects(), llvm::outs(),
+        context.getAvailableDialects(), llvm::outs(),
         [](auto &str) { llvm::outs() << str; }, "\n");
     return success();
   }
@@ -254,7 +252,7 @@ LogicalResult mlir::MlirOptMain(int argc, char **argv, llvm::StringRef toolName,
     return failure();
   }
 
-  if (failed(MlirOptMain(output->os(), std::move(file), passPipeline, *context,
+  if (failed(MlirOptMain(output->os(), std::move(file), passPipeline, context,
                          splitInputFile, verifyDiagnostics, verifyPasses,
                          allowUnregisteredDialects, preloadDialectsInContext)))
     return failure();

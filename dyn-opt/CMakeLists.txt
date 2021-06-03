@@ -4,7 +4,6 @@ set(LIBS
         ${dialect_libs}
         ${conversion_libs}
         MLIROptLib
-        MLIRDyn
         )
 add_llvm_executable(dyn-opt dyn-opt.cpp MlirOptMain.cpp RegisterIRDL.cpp)
 

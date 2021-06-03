@@ -5,18 +5,13 @@ module {
     irdl.dialect cmath {
         // CHECK: irdl.type real 
         irdl.type real
-        // CHECK: irdl.alias ccomplex = tuple<!cmath.real, !cmath.real>
-        irdl.alias ccomplex = tuple<!cmath.real, !cmath.real>
-        // CHECK: irdl.operation make_complex(re: !cmath.real, im: !cmath.real) -> (res: tuple<!cmath.real, !cmath.real>) interfaces [MemoryEffect<>]
+        // CHECK: irdl.type ccomplex
+        irdl.type ccomplex
+        // CHECK: irdl.operation make_complex(re: !cmath.real, im: !cmath.real) -> (res: !cmath.ccomplex)
         irdl.operation make_complex(re : !cmath.real, im: !cmath.real) -> (res: !cmath.ccomplex)
-            interfaces [MemoryEffect<>]
         irdl.operation mul(lhs: !cmath.ccomplex, rhs: !cmath.ccomplex) -> (res: !cmath.ccomplex)
-            interfaces [MemoryEffect<>]
         irdl.operation norm(c: !cmath.ccomplex) -> (res: !cmath.real)
-            interfaces [MemoryEffect<>]
         irdl.operation get_real(c: !cmath.ccomplex) -> (res: !cmath.real)
-            interfaces [MemoryEffect<>]
         irdl.operation get_imaginary(c: !cmath.ccomplex) -> (res: !cmath.real)
-            interfaces [MemoryEffect<>]
     }
 }

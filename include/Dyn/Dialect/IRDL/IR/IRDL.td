@@ -44,6 +44,8 @@ def IRDL_Dialect : Dialect {
     a `mul` operation.
   }];
 
+  let isExtensible = 1;
+
   let extraClassDeclaration = [{
   public:
     /// Register new attributes that can be used by IRDL.
@@ -53,7 +55,7 @@ def IRDL_Dialect : Dialect {
     }
     /// This field is used during parsing. If this field is non-null, it points
     /// to the dialect that is currently being parsed by MLIR.
-    mlir::dyn::DynamicDialect *currentlyParsedDialect = nullptr;
+    ExtensibleDialect *currentlyParsedDialect = nullptr;
 
     /// Get an interface implementation parser given its name.
     FailureOr<DynamicOpInterfaceImplParser*> lookupOpInterfaceImplParser(StringRef name) const;

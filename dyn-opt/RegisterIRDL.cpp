@@ -14,7 +14,6 @@
 #include "RegisterIRDL.h"
 #include "Dyn/Dialect/IRDL/IR/IRDL.h"
 #include "Dyn/Dialect/IRDL/IRDLRegistration.h"
-#include "Dyn/DynamicContext.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Dialect.h"
@@ -28,14 +27,10 @@
 using namespace llvm;
 using namespace mlir;
 
-LogicalResult mlir::registerIRDL(StringRef irdlFile,
-                                 dyn::DynamicContext *dynContext) {
-
-  auto *context = dynContext->getMLIRCtx();
-
+LogicalResult mlir::registerIRDL(StringRef irdlFile, MLIRContext *ctx) {
   DialectRegistry registry;
   registry.insert<irdl::IRDLDialect>();
-  context->appendDialectRegistry(registry);
+  ctx->appendDialectRegistry(registry);
 
   // Set up the input file.
   std::string errorMessage;
@@ -50,15 +45,15 @@ LogicalResult mlir::registerIRDL(StringRef irdlFile,
   SourceMgr sourceMgr;
   sourceMgr.AddNewSourceBuffer(std::move(file), SMLoc());
 
-  SourceMgrDiagnosticHandler sourceMgrHandler(sourceMgr, context);
+  SourceMgrDiagnosticHandler sourceMgrHandler(sourceMgr, ctx);
 
   // Disable multi-threading when parsing the input file. This removes the
   // unnecessary/costly context synchronization when parsing.
-  bool wasThreadingEnabled = context->isMultithreadingEnabled();
-  context->disableMultithreading();
+  bool wasThreadingEnabled = ctx->isMultithreadingEnabled();
+  ctx->disableMultithreading();
 
   // Parse the input file and reset the context threading state.
-  OwningModuleRef module(parseSourceFile(sourceMgr, context));
-  context->enableMultithreading(wasThreadingEnabled);
+  OwningModuleRef module(parseSourceFile(sourceMgr, ctx));
+  ctx->enableMultithreading(wasThreadingEnabled);
   return failure(!module);
 }

@@ -14,17 +14,11 @@
 #ifndef DYN_DIALECT_IRDL_IR_TYPECONSTRAINT_H_
 #define DYN_DIALECT_IRDL_IR_TYPECONSTRAINT_H_
 
-#include "Dyn/DynamicType.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/Hashing.h"
 
 namespace mlir {
-
-namespace dyn {
-// Forward declaration.
-class DynamicContext;
-} // namespace dyn
 
 namespace irdl {
 // Forward declaration.

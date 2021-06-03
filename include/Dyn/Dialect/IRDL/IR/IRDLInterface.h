@@ -19,9 +19,6 @@
 
 // Forward declaration
 namespace mlir {
-namespace dyn {
-class DynamicOpInterface;
-} // namespace dyn
 namespace irdl {
 class InterfaceImplAttrInterface;
 }

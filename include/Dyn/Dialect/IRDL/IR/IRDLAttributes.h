@@ -16,16 +16,10 @@
 #include "Dyn/Dialect/IRDL/IR/IRDLInterfaces.h"
 #include "mlir/IR/AttributeSupport.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/TypeSupport.h"
 
 namespace mlir {
-
-namespace dyn {
-// Forward declaration.
-class DynamicContext;
-class DynamicOpTrait;
-} // namespace dyn
-
 namespace irdl {
 // Forward declaration.
 class OperationOp;
@@ -57,11 +51,10 @@ struct StringArrayAttrStorage : public AttributeStorage {
 /// It is represented by a name an a type constraint.
 using ArgDef = std::pair<StringRef, Attribute>;
 using ArgDefs = ArrayRef<ArgDef>;
-using OwningArgDefs = std::vector<ArgDef>;
-using TraitDefs = ArrayRef<mlir::dyn::DynamicOpTrait *>;
-using OwningTraitDefs = std::vector<mlir::dyn::DynamicOpTrait *>;
-using InterfaceDefs = ArrayRef<InterfaceImplAttrInterface>;
-using OwningInterfaceDefs = std::vector<InterfaceImplAttrInterface>;
+using OwningArgDefs = llvm::SmallVector<ArgDef>;
+using TraitDefs = ArrayRef<std::pair<std::string, DynamicOpTrait *>>;
+using OwningTraitDefs =
+    llvm::SmallVector<std::pair<std::string, DynamicOpTrait *>>;
 
 /// Definition of a dynamic operation type.
 /// It contains the definition of every operand and result.
@@ -69,7 +62,6 @@ class OpTypeDef {
 public:
   ArgDefs operandDef, resultDef;
   TraitDefs traitDefs;
-  InterfaceDefs interfaceDefs;
 
   /// Get the number of operands.
   std::size_t getNumOperands() const { return operandDef.size(); }
@@ -89,12 +81,9 @@ public:
   /// A trait is defined by its name.
   TraitDefs getTraitsDefinitions() const { return traitDefs; };
 
-  /// Return the interface definitions.
-  InterfaceDefs getInterfaceDefinitions() const { return interfaceDefs; }
-
   bool operator==(const OpTypeDef &o) const {
     return o.operandDef == operandDef && o.resultDef == resultDef &&
-           o.traitDefs == traitDefs && o.interfaceDefs == interfaceDefs;
+           o.traitDefs == traitDefs;
   }
 
   friend llvm::hash_code hash_value(mlir::irdl::OpTypeDef typeDef);
@@ -113,10 +102,8 @@ inline OpTypeDef opTypeDefAllocator(mlir::AttributeStorageAllocator &allocator,
   auto allocatedOperandDefs = argDefAllocator(allocator, typeDef.operandDef);
   auto allocatedResultDefs = argDefAllocator(allocator, typeDef.resultDef);
   auto allocatedTraitDefs = allocator.copyInto(typeDef.traitDefs);
-  auto allocatedInterfaceDefs = allocator.copyInto(typeDef.interfaceDefs);
 
-  return {allocatedOperandDefs, allocatedResultDefs, allocatedTraitDefs,
-          allocatedInterfaceDefs};
+  return {allocatedOperandDefs, allocatedResultDefs, allocatedTraitDefs};
 }
 
 } // namespace irdl

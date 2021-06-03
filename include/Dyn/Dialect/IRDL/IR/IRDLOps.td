@@ -88,43 +88,6 @@ def IRDL_TypeOp : IRDL_Op<"type", [HasParent<"DialectOp">]> {
 }
 
 //===----------------------------------------------------------------------===//
-// IRDL Alias definition
-//===----------------------------------------------------------------------===//
-
-def IRDL_TypeAliasOp : IRDL_Op<"alias", [HasParent<"DialectOp">]> {
-  let summary = "Define a new type alias";
-  let description = [{
-    `irdl.alias` defines new type aliases belonging to the previously defined
-    dialect using `irdl.dialect`.
-
-    Types defined by `irdl.aliases` are singleton types.
-
-    Example:
-
-    ```mlir
-    irdl.dialect cmath {
-      irdl.alias complex = tuple<f32, f32>
-      irdl.operation create_complex(real: f32, imaginary: f32) -> !cmath.complex
-    }
-    ```
-
-    The above program defines a type alias `complex` inside the dialect `cmath`.
-    In the `create_complex` operation, `complex` is replaced by
-    `tuple<f32, f32>`.
-  }];
-
-  let arguments = (ins StrAttr:$name, TypeAttr:$type);
-  let printer = [{ ::print(p, *this); }];
-  let parser = [{ return ::parse$cppClass(parser, result); }];
-
-  let extraClassDeclaration = [{
-    /// Get the parent dialect operation.
-    DialectOp getDialectOp() { return cast<DialectOp>(getOperation()->getParentOp()); };
-  }];
-}
-
-
-//===----------------------------------------------------------------------===//
 // IRDL Operation definition
 //===----------------------------------------------------------------------===//
 

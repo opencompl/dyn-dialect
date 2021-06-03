@@ -22,10 +22,6 @@ namespace mlir {
 namespace irdl {
 class TypeConstraint;
 }
-namespace dyn {
-class DynamicContext;
-class DynamicOpInterfaceImpl;
-} // namespace dyn
 } // namespace mlir
 
 //===----------------------------------------------------------------------===//
