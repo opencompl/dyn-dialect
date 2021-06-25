@@ -77,7 +77,7 @@ def IRDL_TypeOp : IRDL_Op<"type", [HasParent<"DialectOp">]> {
     The above program defines a type `complex` inside the dialect `cmath`.
   }];
 
-  let arguments = (ins StrAttr:$name);
+  let arguments = (ins TypeDefAttr:$def);
   let printer = [{ ::print(p, *this); }];
   let parser = [{ return ::parse$cppClass(parser, result); }];
 

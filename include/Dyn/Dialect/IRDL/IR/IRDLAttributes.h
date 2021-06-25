@@ -30,6 +30,10 @@ class OperationOp;
 namespace mlir {
 namespace irdl {
 
+//===----------------------------------------------------------------------===//
+// Operation definition
+//===----------------------------------------------------------------------===//
+
 /// Definition of an argument. An argument is either an operand or a result.
 /// It is represented by a name an a type constraint.
 using ArgDef = std::pair<StringRef, Attribute>;
@@ -87,6 +91,37 @@ inline OpTypeDef opTypeDefAllocator(mlir::AttributeStorageAllocator &allocator,
   auto allocatedTraitDefs = allocator.copyInto(typeDef.traitDefs);
 
   return {allocatedOperandDefs, allocatedResultDefs, allocatedTraitDefs};
+}
+
+//===----------------------------------------------------------------------===//
+// Type definition
+//===----------------------------------------------------------------------===//
+
+/// Definition of a type.
+/// It contains a name and type parameters.
+class TypeDef {
+public:
+  /// The type name.
+  StringRef name;
+
+  /// Parameter definitions. Each parameter is defined by a type constraint.
+  ArgDefs paramDefs;
+
+  /// Get the parameter definitions.
+  /// Each parameter is defined by a type constraint.
+  ArgDefs getParamDefinitions() const { return paramDefs; }
+
+  bool operator==(const TypeDef &o) const { return o.paramDefs == paramDefs; }
+
+  friend llvm::hash_code hash_value(mlir::irdl::TypeDef typeDef);
+};
+
+inline TypeDef typeDefAllocator(mlir::AttributeStorageAllocator &allocator,
+                                TypeDef typeDef) {
+  auto allocatedName = allocator.copyInto(typeDef.name);
+  auto allocatedParamDefs = argDefAllocator(allocator, typeDef.paramDefs);
+
+  return {allocatedName, allocatedParamDefs};
 }
 
 } // namespace irdl
