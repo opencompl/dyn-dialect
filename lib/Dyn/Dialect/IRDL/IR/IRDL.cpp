@@ -240,7 +240,6 @@ void printTypedVar(OpAsmPrinter &p, const ArgDef *argDef) {
 }
 
 /// Parse an ArgDefs with format (argDef1, argDef2, ..., argDefN).
-/// The trailing comma is optional.
 ParseResult parseArgDefs(OpAsmParser &p, OwningArgDefs *argDefs) {
   if (p.parseLParen())
     return failure();
