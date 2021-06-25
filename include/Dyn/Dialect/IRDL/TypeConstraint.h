@@ -28,12 +28,8 @@ class OperationOp;
 class TypeConstraint {
 public:
   /// Check that a type is satisfying the type constraint.
-  /// The operation should be the operation having the type constraint.
-  /// isOperand is used for the error message, and indicate if the constraint
-  /// is on an operand or a resuls, and pos is the position of the
-  /// operand/result.
-  virtual LogicalResult verifyType(Operation *op, Type type, bool isOperand,
-                                   unsigned pos) = 0;
+  virtual LogicalResult verifyType(function_ref<InFlightDiagnostic()> emitError,
+                                   Type type) = 0;
 };
 
 //===----------------------------------------------------------------------===//
@@ -42,12 +38,12 @@ public:
 
 class EqTypeConstraint : public TypeConstraint {
 public:
-  EqTypeConstraint(Type type) : type(type) {}
+  EqTypeConstraint(Type expectedType) : expectedType(expectedType) {}
 
-  virtual LogicalResult verifyType(Operation *op, Type argType, bool isOperand,
-                                   unsigned pos) override;
+  virtual LogicalResult verifyType(function_ref<InFlightDiagnostic()> emitError,
+                                   Type type) override;
 
-  Type type;
+  Type expectedType;
 };
 
 //===----------------------------------------------------------------------===//
@@ -61,8 +57,8 @@ public:
   AnyOfTypeConstraint(llvm::ArrayRef<Type> types)
       : types(types.begin(), types.end()) {}
 
-  virtual LogicalResult verifyType(Operation *op, Type argType, bool isOperand,
-                                   unsigned pos) override;
+  virtual LogicalResult verifyType(function_ref<InFlightDiagnostic()> emitError,
+                                   Type type) override;
 
   llvm::SmallVector<Type, 4> types;
 };
@@ -77,8 +73,8 @@ class AnyTypeConstraint : public TypeConstraint {
 public:
   AnyTypeConstraint() {}
 
-  virtual LogicalResult verifyType(Operation *op, Type argType, bool isOperand,
-                                   unsigned pos) override {
+  virtual LogicalResult verifyType(function_ref<InFlightDiagnostic()> emitError,
+                                   Type type) override {
     return success();
   };
 };

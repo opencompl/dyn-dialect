@@ -70,11 +70,13 @@ LogicalResult verifyOpTypeConstraints(Operation *op,
                            " results expected, but got " +
                            std::to_string(numResults));
 
+  auto emitError = [op]() { return op->emitError(); };
+
   /// Check that all operands satisfy the constraints.
   for (unsigned i = 0; i < numOperands; ++i) {
     auto operandType = op->getOperand(i).getType();
     auto &constraint = operandConstrs[i].second;
-    if (failed(constraint->verifyType(op, operandType, true, i)))
+    if (failed(constraint->verifyType(emitError, operandType)))
       return failure();
   }
 
@@ -82,7 +84,7 @@ LogicalResult verifyOpTypeConstraints(Operation *op,
   for (unsigned i = 0; i < numResults; ++i) {
     auto resultType = op->getResult(i).getType();
     auto &constraint = resultConstrs[i].second;
-    if (failed(constraint->verifyType(op, resultType, true, i)))
+    if (failed(constraint->verifyType(emitError, resultType)))
       return failure();
   }
 
