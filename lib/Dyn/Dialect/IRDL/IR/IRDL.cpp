@@ -234,7 +234,7 @@ ParseResult parseArgDef(OpAsmParser &p, ArgDef *argDef) {
 }
 
 /// Print an ArgDef with format "name: typeConstraint".
-void printTypedVar(OpAsmPrinter &p, const ArgDef *argDef) {
+void printArgDef(OpAsmPrinter &p, const ArgDef *argDef) {
   p << argDef->first << ": ";
   printTypeConstraint(p, argDef->second);
 }
@@ -270,11 +270,11 @@ void printArgDefs(OpAsmPrinter &p, ArgDefs typedVars) {
   p << "(";
   for (size_t i = 0; i + 1 < typedVars.size(); i++) {
     const auto &typedVar = typedVars[i];
-    printTypedVar(p, &typedVar);
+    printArgDef(p, &typedVar);
     p << ", ";
   }
   if (typedVars.size() != 0)
-    printTypedVar(p, &typedVars[typedVars.size() - 1]);
+    printArgDef(p, &typedVars[typedVars.size() - 1]);
   p << ")";
 }
 
