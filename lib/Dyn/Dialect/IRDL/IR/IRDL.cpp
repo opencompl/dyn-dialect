@@ -186,6 +186,7 @@ ParseResult parseTypeConstraint(OpAsmParser &p, Attribute *typeConstraint) {
   auto typeParsed = p.parseOptionalType(type);
   if (!typeParsed.hasValue()) {
     p.emitError(p.getCurrentLocation(), "type constraint expected");
+    return failure();
   }
 
   if (failed(typeParsed.getValue()))
