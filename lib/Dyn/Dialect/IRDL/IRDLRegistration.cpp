@@ -73,11 +73,11 @@ namespace {
 /// Each operand and each result have a name, and a type constraint.
 using NamedTypeConstraint =
     std::pair<std::string, std::unique_ptr<TypeConstraint>>;
-using OpTypeConstraints = std::pair<std::vector<NamedTypeConstraint>,
-                                    std::vector<NamedTypeConstraint>>;
+using OpDefConstraints = std::pair<std::vector<NamedTypeConstraint>,
+                                   std::vector<NamedTypeConstraint>>;
 
-LogicalResult verifyOpTypeConstraints(Operation *op,
-                                      const OpTypeConstraints &typeConstrs) {
+LogicalResult verifyOpDefConstraints(Operation *op,
+                                     const OpDefConstraints &typeConstrs) {
   auto &operandConstrs = typeConstrs.first;
   auto &resultConstrs = typeConstrs.second;
 
@@ -123,11 +123,11 @@ namespace mlir {
 namespace irdl {
 /// Register an operation represented by a `irdl.operation` operation.
 void registerOperation(ExtensibleDialect *dialect, StringRef name,
-                       OpTypeDef opTypeDef) {
-  OpTypeConstraints constraints;
+                       OpDef opDef) {
+  OpDefConstraints constraints;
 
   // Add the operand constraints to the type constraints.
-  for (auto &def : opTypeDef.operandDef) {
+  for (auto &def : opDef.operandDef) {
     auto name = def.first;
     auto constraint =
         def.second.cast<TypeConstraintAttrInterface>().getTypeConstraint();
@@ -135,7 +135,7 @@ void registerOperation(ExtensibleDialect *dialect, StringRef name,
   }
 
   // Add the result constraints to the type constraints.
-  for (auto &def : opTypeDef.resultDef) {
+  for (auto &def : opDef.resultDef) {
     auto name = def.first;
     auto constraint =
         def.second.cast<TypeConstraintAttrInterface>().getTypeConstraint();
@@ -152,12 +152,12 @@ void registerOperation(ExtensibleDialect *dialect, StringRef name,
   };
 
   auto verifier = [constraints{std::move(constraints)}](Operation *op) {
-    return verifyOpTypeConstraints(op, constraints);
+    return verifyOpDefConstraints(op, constraints);
   };
 
   auto op = DynamicOpDefinition::get(name, dialect, std::move(verifier),
                                      std::move(parser), std::move(printer));
-  for (auto trait : opTypeDef.traitDefs) {
+  for (auto trait : opDef.traitDefs) {
     op->addTrait(trait.second);
   }
   dialect->addDynamicOp(std::move(op));

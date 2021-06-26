@@ -23,8 +23,8 @@
 // Forward declaration.
 namespace mlir {
 namespace irdl {
-class OpTypeDef;
-class OpTypeDefAttr;
+class OpDef;
+class OpDefAttr;
 class TypeDef;
 class TypeDefAttr;
 } // namespace irdl

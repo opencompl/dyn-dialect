@@ -282,7 +282,7 @@ static void print(OpAsmPrinter &p, TypeOp typeOp) {
 }
 
 //===----------------------------------------------------------------------===//
-// irdl::OpTypeDefAttr
+// irdl::OpDefAttr
 //===----------------------------------------------------------------------===//
 
 namespace {
@@ -391,10 +391,10 @@ void printTraitDefs(OpAsmPrinter &p, TraitDefs traitDefs) {
   p << traitDefs.back().first << "]";
 }
 
-/// Parse an OpTypeDefAttr.
+/// Parse an OpDefAttr.
 /// The format is "operandDef -> resultDef (traits (name)+)?" where operandDef
 /// and resultDef have the ArgDefs format.
-ParseResult parseOpTypeDefAttr(OpAsmParser &p, OpTypeDefAttr *opTypeDefAttr) {
+ParseResult parseOpDefAttr(OpAsmParser &p, OpDefAttr *opDefAttr) {
   OwningArgDefs operandDefs, resultDefs;
   auto *ctx = p.getBuilder().getContext();
   // Parse the operands.
@@ -413,13 +413,12 @@ ParseResult parseOpTypeDefAttr(OpAsmParser &p, OpTypeDefAttr *opTypeDefAttr) {
   if (parseTraitDefs(p, traitDefs))
     return failure();
 
-  *opTypeDefAttr =
-      OpTypeDefAttr::get(ctx, {operandDefs, resultDefs, traitDefs});
+  *opDefAttr = OpDefAttr::get(ctx, {operandDefs, resultDefs, traitDefs});
 
   return success();
 }
 
-void printOpTypeDef(OpAsmPrinter &p, OpTypeDef opDef) {
+void printOpDef(OpAsmPrinter &p, OpDef opDef) {
   printArgDefs(p, opDef.operandDef);
   p << " -> ";
   printArgDefs(p, opDef.resultDef);
@@ -445,10 +444,10 @@ static ParseResult parseOperationOp(OpAsmParser &p, OperationState &state) {
   state.addAttribute("name", builder.getStringAttr(name));
 
   // Parse the OpDefAttr.
-  OpTypeDefAttr opTypeDef;
-  if (parseOpTypeDefAttr(p, &opTypeDef))
+  OpDefAttr opDef;
+  if (parseOpDefAttr(p, &opDef))
     return failure();
-  state.addAttribute("op_def", opTypeDef);
+  state.addAttribute("op_def", opDef);
 
   // Get the currently parsed dialect
   auto *ctx = p.getBuilder().getContext();
@@ -459,7 +458,7 @@ static ParseResult parseOperationOp(OpAsmParser &p, OperationState &state) {
          "no 'irdl.dialect' currently being parsed.");
 
   // and register the operation in the dialect
-  registerOperation(dialect, name, opTypeDef.getOpDef());
+  registerOperation(dialect, name, opDef.getOpDef());
 
   return success();
 }
@@ -471,7 +470,7 @@ static void print(OpAsmPrinter &p, OperationOp operationOp) {
   p << operationOp.name();
 
   // Print the operation type constraints.
-  printOpTypeDef(p, operationOp.op_def().getOpDef());
+  printOpDef(p, operationOp.op_def().getOpDef());
 }
 
 //===----------------------------------------------------------------------===//
