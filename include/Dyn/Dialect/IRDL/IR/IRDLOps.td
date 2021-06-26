@@ -111,7 +111,7 @@ def IRDL_OperationOp : IRDL_Op<"operation", [HasParent<"DialectOp">]> {
     The above program defines an operation `mul` inside the dialect `cmath`.
   }];
 
-  let arguments = (ins StrAttr:$name, OpTypeDefAttr:$op_def);
+  let arguments = (ins StrAttr:$name, OpDefAttr:$op_def);
   let printer = [{ ::print(p, *this); }];
   let parser = [{ return ::parse$cppClass(parser, result); }];
 

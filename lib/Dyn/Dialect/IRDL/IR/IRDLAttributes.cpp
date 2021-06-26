@@ -23,9 +23,8 @@ using namespace irdl;
 namespace mlir {
 namespace irdl {
 
-llvm::hash_code hash_value(mlir::irdl::OpTypeDef typeDef) {
-  return llvm::hash_combine(typeDef.operandDef, typeDef.resultDef,
-                            typeDef.traitDefs);
+llvm::hash_code hash_value(mlir::irdl::OpDef opDef) {
+  return llvm::hash_combine(opDef.operandDef, opDef.resultDef, opDef.traitDefs);
 }
 
 llvm::hash_code hash_value(mlir::irdl::TypeDef typeDef) {

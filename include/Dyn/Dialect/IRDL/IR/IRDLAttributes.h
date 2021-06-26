@@ -45,7 +45,7 @@ using OwningTraitDefs =
 
 /// Definition of a dynamic operation type.
 /// It contains the definition of every operand and result.
-class OpTypeDef {
+class OpDef {
 public:
   ArgDefs operandDef, resultDef;
   TraitDefs traitDefs;
@@ -68,12 +68,12 @@ public:
   /// A trait is defined by its name.
   TraitDefs getTraitsDefinitions() const { return traitDefs; };
 
-  bool operator==(const OpTypeDef &o) const {
+  bool operator==(const OpDef &o) const {
     return o.operandDef == operandDef && o.resultDef == resultDef &&
            o.traitDefs == traitDefs;
   }
 
-  friend llvm::hash_code hash_value(mlir::irdl::OpTypeDef typeDef);
+  friend llvm::hash_code hash_value(mlir::irdl::OpDef typeDef);
 };
 
 inline ArgDefs argDefAllocator(mlir::AttributeStorageAllocator &allocator,
@@ -84,8 +84,8 @@ inline ArgDefs argDefAllocator(mlir::AttributeStorageAllocator &allocator,
   return allocator.copyInto(ArgDefs(ownArgDefs));
 }
 
-inline OpTypeDef opTypeDefAllocator(mlir::AttributeStorageAllocator &allocator,
-                                    OpTypeDef typeDef) {
+inline OpDef opDefAllocator(mlir::AttributeStorageAllocator &allocator,
+                            OpDef typeDef) {
   auto allocatedOperandDefs = argDefAllocator(allocator, typeDef.operandDef);
   auto allocatedResultDefs = argDefAllocator(allocator, typeDef.resultDef);
   auto allocatedTraitDefs = allocator.copyInto(typeDef.traitDefs);

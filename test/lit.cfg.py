@@ -56,7 +56,6 @@ tool_dirs = [config.dyn_tools_dir, config.llvm_tools_dir]
 tools = [
     'dyn-opt',
     'dyn-translate',
-    'mlir-dyn-capi-pass-test'
 ]
 
 llvm_config.add_tool_substitutions(tools, tool_dirs)
