@@ -58,19 +58,19 @@ def AnyOfTypeConstraintAttr : IRDL_AttrDef<"AnyOfTypeConstraintAttr", [TypeConst
   }];
 }
 
-class OpTypeDefParameter<string desc = ""> :
-    AttrOrTypeParameter<"mlir::irdl::OpTypeDef", desc> {
-  let allocator = [{$_dst = mlir::irdl::opTypeDefAllocator($_allocator, $_self);}];
+class OpDefParameter<string desc = ""> :
+    AttrOrTypeParameter<"mlir::irdl::OpDef", desc> {
+  let allocator = [{$_dst = mlir::irdl::opDefAllocator($_allocator, $_self);}];
 }
 
-def OpTypeDefAttr : IRDL_AttrDef<"OpTypeDefAttr"> {
+def OpDefAttr : IRDL_AttrDef<"OpDefAttr"> {
   let summary = "Declaration of a dynamic operation";
   let description = [{
     Attribute representing an operation definition.
     It contains the arguments/results constraints, as well as trait
     and interface implementation.
   }];
-  let parameters = (ins OpTypeDefParameter<>:$opDef);
+  let parameters = (ins OpDefParameter<>:$opDef);
 }
 
 class TypeDefParameter<string desc = ""> :

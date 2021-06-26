@@ -23,8 +23,7 @@ namespace irdl {
 void registerType(ExtensibleDialect *dialect, TypeDef typeDef);
 
 /// Register a new dynamic operation in a dynamic dialect.
-void registerOperation(ExtensibleDialect *dialect, StringRef name,
-                       OpTypeDef opTypeDef);
+void registerOperation(ExtensibleDialect *dialect, StringRef name, OpDef opDef);
 
 } // namespace irdl
 } // namespace mlir
