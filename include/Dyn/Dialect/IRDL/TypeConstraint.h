@@ -14,6 +14,7 @@
 #ifndef DYN_DIALECT_IRDL_IR_TYPECONSTRAINT_H_
 #define DYN_DIALECT_IRDL_IR_TYPECONSTRAINT_H_
 
+#include "mlir/IR/ExtensibleDialect.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/Hashing.h"
@@ -43,6 +44,7 @@ public:
   virtual LogicalResult verifyType(function_ref<InFlightDiagnostic()> emitError,
                                    Type type) override;
 
+private:
   Type expectedType;
 };
 
@@ -60,6 +62,7 @@ public:
   virtual LogicalResult verifyType(function_ref<InFlightDiagnostic()> emitError,
                                    Type type) override;
 
+private:
   llvm::SmallVector<Type, 4> types;
 };
 
@@ -77,6 +80,31 @@ public:
                                    Type type) override {
     return success();
   };
+};
+
+//===----------------------------------------------------------------------===//
+// Parameters type constraint
+//===----------------------------------------------------------------------===//
+
+/// Type constraint having constraints on dynamic type parameters.
+/// A type satisfies this constraint if it has the right expected type,
+/// and if each of its parameter satisfies their associated constraint.
+class DynTypeParamsConstraint : public TypeConstraint {
+public:
+  DynTypeParamsConstraint(
+      DynamicTypeDefinition *dynTypeDef,
+      llvm::SmallVector<std::unique_ptr<TypeConstraint>> &&paramConstraints)
+      : dynTypeDef(dynTypeDef), paramConstraints(std::move(paramConstraints)) {}
+
+  virtual LogicalResult verifyType(function_ref<InFlightDiagnostic()> emitError,
+                                   Type type) override;
+
+private:
+  /// TypeID of the parametric type that satisfies this constraint.
+  DynamicTypeDefinition *dynTypeDef;
+
+  /// Type constraints of the type parameters.
+  llvm::SmallVector<std::unique_ptr<TypeConstraint>> paramConstraints;
 };
 
 } // namespace irdl

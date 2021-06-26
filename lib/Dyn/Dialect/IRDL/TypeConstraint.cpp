@@ -35,3 +35,24 @@ AnyOfTypeConstraint::verifyType(function_ref<InFlightDiagnostic()> emitError,
 
   return emitError().append("invalid parameter type");
 }
+
+LogicalResult DynTypeParamsConstraint::verifyType(
+    function_ref<InFlightDiagnostic()> emitError, Type type) {
+  auto dynType = type.dyn_cast<DynamicType>();
+  if (!dynType || dynType.getTypeDef() != dynTypeDef)
+    return emitError().append("expected base type ", dynTypeDef->getName(),
+                              " but got type ", type);
+
+  // Since we do not have variadic parameters yet, we should have the
+  // exact number of constraints.
+  assert(dynType.getParams().size() == paramConstraints.size() &&
+         "unexpected number of parameters in parameter type constraint");
+  auto params = dynType.getParams();
+  for (size_t i = 0; i < params.size(); i++) {
+    auto paramType = params[i].cast<TypeAttr>().getValue();
+    if (failed(paramConstraints[i]->verifyType(emitError, paramType)))
+      return failure();
+  }
+
+  return success();
+}
