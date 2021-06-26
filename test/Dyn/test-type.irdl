@@ -1,0 +1,14 @@
+// RUN: dyn-opt %s | dyn-opt | FileCheck %s
+
+module {
+    // CHECK-LABEL: irdl.dialect testd {
+    irdl.dialect testd {
+        // CHECK: irdl.type singleton
+        irdl.type singleton
+
+        // CHECK: irdl.type parametrized<arg1: irdl.Any, arg2: irdl.AnyOf<i32, i64>>
+        irdl.type parametrized<arg1: irdl.Any, arg2: irdl.AnyOf<i32, i64>>
+
+        irdl.operation any() -> (res: irdl.Any)
+    }
+}

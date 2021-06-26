@@ -33,96 +33,10 @@ void IRDLDialect::initialize() {
 }
 
 //===----------------------------------------------------------------------===//
-// irdl::DialectOp
-//===----------------------------------------------------------------------===//
-
-static LogicalResult verify(DialectOp dialectOp) {
-  return success(Dialect::isValidNamespace(dialectOp.name()));
-}
-
-static ParseResult parseDialectOp(OpAsmParser &p, OperationState &state) {
-  Builder &builder = p.getBuilder();
-
-  // Parse the dialect name.
-  StringRef name;
-  if (failed(p.parseKeyword(&name)))
-    return failure();
-  state.addAttribute("name", builder.getStringAttr(name));
-
-  // Register the dialect in the dynamic context.
-  auto *ctx = state.getContext();
-  ctx->loadDynamicDialect(name);
-
-  auto *dialect =
-      llvm::dyn_cast<ExtensibleDialect>(ctx->getLoadedDialect(name));
-  assert(dialect && "extensible dialect should have been registered");
-
-  // Set the current dialect to the dialect that we are currently defining.
-  // Every IRDL operation that is parsed in the next region will be registered
-  // inside this dialect.
-  auto irdlDialect = ctx->getLoadedDialect<irdl::IRDLDialect>();
-  irdlDialect->currentlyParsedDialect = dialect;
-
-  // Parse the dialect body.
-  Region *region = state.addRegion();
-  if (failed(p.parseRegion(*region)))
-    return failure();
-
-  // We are not parsing the dialect anymore.
-  irdlDialect->currentlyParsedDialect = nullptr;
-
-  DialectOp::ensureTerminator(*region, builder, state.location);
-
-  return success();
-}
-
-static void print(OpAsmPrinter &p, DialectOp dialectOp) {
-  p << DialectOp::getOperationName() << " ";
-
-  // Print the dialect name.
-  p << dialectOp.name() << " ";
-
-  // Print the dialect body.
-  p.printRegion(dialectOp.body(), false, false);
-}
-
-//===----------------------------------------------------------------------===//
-// irdl::TypeOp
-//===----------------------------------------------------------------------===//
-
-static ParseResult parseTypeOp(OpAsmParser &p, OperationState &state) {
-  Builder &builder = p.getBuilder();
-
-  // Parse the type name.
-  StringRef name;
-  if (failed(p.parseKeyword(&name)))
-    return failure();
-  state.addAttribute("name", builder.getStringAttr(name));
-
-  // Get the currently parsed dialect, and register the type in it.
-  auto *ctx = state.getContext();
-  auto *irdlDialect = ctx->getOrLoadDialect<irdl::IRDLDialect>();
-  auto *dialect = irdlDialect->currentlyParsedDialect;
-  assert(dialect != nullptr && "Trying to parse an 'irdl.type' when there is "
-                               "no 'irdl.dialect' currently being parsed.");
-  registerType(dialect, name);
-
-  return success();
-}
-
-static void print(OpAsmPrinter &p, TypeOp typeOp) {
-  p << TypeOp::getOperationName() << " ";
-
-  // Print the type name.
-  p << typeOp.name();
-}
-
-//===----------------------------------------------------------------------===//
-// irdl::OpTypeDefAttr
+// Type constraints.
 //===----------------------------------------------------------------------===//
 
 namespace {
-
 /// Parse an Any constraint if there is one.
 /// It has the format 'irdl.Any'
 Optional<ParseResult>
@@ -186,6 +100,7 @@ ParseResult parseTypeConstraint(OpAsmParser &p, Attribute *typeConstraint) {
   auto typeParsed = p.parseOptionalType(type);
   if (!typeParsed.hasValue()) {
     p.emitError(p.getCurrentLocation(), "type constraint expected");
+    return failure();
   }
 
   if (failed(typeParsed.getValue()))
@@ -234,13 +149,146 @@ ParseResult parseArgDef(OpAsmParser &p, ArgDef *argDef) {
 }
 
 /// Print an ArgDef with format "name: typeConstraint".
-void printTypedVar(OpAsmPrinter &p, const ArgDef *argDef) {
+void printArgDef(OpAsmPrinter &p, const ArgDef *argDef) {
   p << argDef->first << ": ";
   printTypeConstraint(p, argDef->second);
 }
+} // namespace
+
+//===----------------------------------------------------------------------===//
+// irdl::DialectOp
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verify(DialectOp dialectOp) {
+  return success(Dialect::isValidNamespace(dialectOp.name()));
+}
+
+static ParseResult parseDialectOp(OpAsmParser &p, OperationState &state) {
+  Builder &builder = p.getBuilder();
+
+  // Parse the dialect name.
+  StringRef name;
+  if (failed(p.parseKeyword(&name)))
+    return failure();
+  state.addAttribute("name", builder.getStringAttr(name));
+
+  // Register the dialect in the dynamic context.
+  auto *ctx = state.getContext();
+  ctx->loadDynamicDialect(name);
+
+  auto *dialect =
+      llvm::dyn_cast<ExtensibleDialect>(ctx->getLoadedDialect(name));
+  assert(dialect && "extensible dialect should have been registered");
+
+  // Set the current dialect to the dialect that we are currently defining.
+  // Every IRDL operation that is parsed in the next region will be registered
+  // inside this dialect.
+  auto irdlDialect = ctx->getLoadedDialect<irdl::IRDLDialect>();
+  irdlDialect->currentlyParsedDialect = dialect;
+
+  // Parse the dialect body.
+  Region *region = state.addRegion();
+  if (failed(p.parseRegion(*region)))
+    return failure();
+
+  // We are not parsing the dialect anymore.
+  irdlDialect->currentlyParsedDialect = nullptr;
+
+  DialectOp::ensureTerminator(*region, builder, state.location);
+
+  return success();
+}
+
+static void print(OpAsmPrinter &p, DialectOp dialectOp) {
+  p << DialectOp::getOperationName() << " ";
+
+  // Print the dialect name.
+  p << dialectOp.name() << " ";
+
+  // Print the dialect body.
+  p.printRegion(dialectOp.body(), false, false);
+}
+
+//===----------------------------------------------------------------------===//
+// irdl::TypeOp
+//===----------------------------------------------------------------------===//
+
+/// Parse the type parameters with the format "(<argdef (, argdef)*>)?"
+ParseResult parseTypeParams(OpAsmParser &p, OwningArgDefs *argDefs) {
+  // No parameters
+  if (p.parseOptionalLess() || !p.parseOptionalRParen())
+    return success();
+
+  ArgDef argDef;
+  if (parseArgDef(p, &argDef))
+    return failure();
+  argDefs->push_back(argDef);
+
+  while (p.parseOptionalGreater()) {
+    if (p.parseComma())
+      return failure();
+
+    ArgDef argDef;
+    if (parseArgDef(p, &argDef))
+      return failure();
+    argDefs->push_back(argDef);
+  }
+
+  return success();
+}
+
+void printTypeParams(OpAsmPrinter &p, ArgDefs params) {
+  if (params.empty()) {
+    return;
+  }
+  p << "<";
+  for (size_t i = 0; i + 1 < params.size(); i++) {
+    const auto &typedVar = params[i];
+    printArgDef(p, &typedVar);
+    p << ", ";
+  }
+  printArgDef(p, &params.back());
+  p << ">";
+}
+
+static ParseResult parseTypeOp(OpAsmParser &p, OperationState &state) {
+  // Parse the type name.
+  StringRef name;
+  if (failed(p.parseKeyword(&name)))
+    return failure();
+
+  OwningArgDefs params;
+  if (failed(parseTypeParams(p, &params)))
+    return failure();
+
+  auto *ctx = state.getContext();
+  auto typeDef = TypeDefAttr::get(ctx, {name, params});
+  state.addAttribute("def", typeDef);
+
+  // Get the currently parsed dialect, and register the type in it.
+  auto *irdlDialect = ctx->getOrLoadDialect<irdl::IRDLDialect>();
+  auto *dialect = irdlDialect->currentlyParsedDialect;
+  assert(dialect != nullptr && "Trying to parse an 'irdl.type' when there is "
+                               "no 'irdl.dialect' currently being parsed.");
+  registerType(dialect, typeDef.getTypeDef());
+
+  return success();
+}
+
+static void print(OpAsmPrinter &p, TypeOp typeOp) {
+  auto typeDef = typeOp.def().getTypeDef();
+  p << TypeOp::getOperationName() << " " << typeDef.name;
+
+  printTypeParams(p, typeDef.paramDefs);
+}
+
+//===----------------------------------------------------------------------===//
+// irdl::OpTypeDefAttr
+//===----------------------------------------------------------------------===//
+
+namespace {
 
 /// Parse an ArgDefs with format (argDef1, argDef2, ..., argDefN).
-/// The trailing comma is optional.
 ParseResult parseArgDefs(OpAsmParser &p, OwningArgDefs *argDefs) {
   if (p.parseLParen())
     return failure();
@@ -271,11 +319,11 @@ void printArgDefs(OpAsmPrinter &p, ArgDefs typedVars) {
   p << "(";
   for (size_t i = 0; i + 1 < typedVars.size(); i++) {
     const auto &typedVar = typedVars[i];
-    printTypedVar(p, &typedVar);
+    printArgDef(p, &typedVar);
     p << ", ";
   }
   if (typedVars.size() != 0)
-    printTypedVar(p, &typedVars[typedVars.size() - 1]);
+    printArgDef(p, &typedVars[typedVars.size() - 1]);
   p << ")";
 }
 

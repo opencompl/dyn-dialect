@@ -28,6 +28,10 @@ llvm::hash_code hash_value(mlir::irdl::OpTypeDef typeDef) {
                             typeDef.traitDefs);
 }
 
+llvm::hash_code hash_value(mlir::irdl::TypeDef typeDef) {
+  return llvm::hash_combine(typeDef.name, typeDef.paramDefs);
+}
+
 void IRDLDialect::registerAttributes() {
 #define GET_ATTRDEF_LIST
   addAttributes<

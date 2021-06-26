@@ -17,31 +17,21 @@
 using namespace mlir;
 using namespace irdl;
 
-LogicalResult EqTypeConstraint::verifyType(Operation *op, Type argType,
-                                           bool isOperand, unsigned pos) {
-  if (type == argType)
+LogicalResult
+EqTypeConstraint::verifyType(function_ref<InFlightDiagnostic()> emitError,
+                             Type type) {
+  if (type == expectedType)
     return success();
 
-  auto argCategory = isOperand ? "operand" : "result";
-
-  return op->emitOpError("#").append(pos, " ", argCategory,
-                                     " must be of type '", type, "', but got ",
-                                     argType);
+  return emitError().append("must be of type '", expectedType,
+                            "' but is of type", type);
 }
 
-LogicalResult AnyOfTypeConstraint::verifyType(Operation *op, Type argType,
-                                              bool isOperand, unsigned pos) {
-  if (std::find(types.begin(), types.end(), argType) != types.end())
+LogicalResult
+AnyOfTypeConstraint::verifyType(function_ref<InFlightDiagnostic()> emitError,
+                                Type type) {
+  if (std::find(types.begin(), types.end(), type) != types.end())
     return success();
 
-  auto argCategory = isOperand ? "operand" : "result";
-
-  auto diagnostic = op->emitOpError("#").append(
-      pos, " ", argCategory, " is of type ", argType,
-      " but is expected to be one of the following types: [");
-
-  for (size_t i = 0; i + 1 < types.size(); i++) {
-    diagnostic.append(types[i], ", ");
-  }
-  return diagnostic.append(types.back(), "]");
+  return emitError().append("invalid parameter type");
 }
