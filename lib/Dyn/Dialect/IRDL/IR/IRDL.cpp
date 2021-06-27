@@ -14,6 +14,7 @@
 #include "mlir/IR/ExtensibleDialect.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/Support/LogicalResult.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Casting.h"
 
 using namespace mlir;
@@ -36,6 +37,9 @@ void IRDLDialect::initialize() {
 //===----------------------------------------------------------------------===//
 
 namespace {
+ParseResult parseTypeConstraint(OpAsmParser &p, Attribute *typeConstraint);
+void printTypeConstraint(OpAsmPrinter &p, Attribute typeConstraint);
+
 /// Parse an Any constraint if there is one.
 /// It has the format 'irdl.Any'
 Optional<ParseResult>
@@ -79,6 +83,107 @@ parseOptionalAnyOfTypeConstraint(OpAsmParser &p, Attribute *typeConstraint) {
   return {success()};
 }
 
+/// Print an AnyOf type constraint.
+/// It has the format 'irdl.AnyOf<type, (, type)*>'.
+void printAnyOfTypeConstraint(OpAsmPrinter &p,
+                              AnyOfTypeConstraintAttr anyOfConstr) {
+  auto types = anyOfConstr.getTypes();
+
+  p << "irdl.AnyOf<";
+  for (size_t i = 0; i + 1 < types.size(); i++) {
+    p << types[i] << ", ";
+  }
+  p << types.back() << ">";
+}
+
+/// Parse an AnyOf constraint if there is one.
+/// It has the format 'irdl.AnyOf<type (, type)*>'
+Optional<ParseResult>
+parseOptionalDynTypeParamsConstraint(OpAsmParser &p,
+                                     Attribute *typeConstraint) {
+  StringRef keyword;
+  if (p.parseOptionalKeyword(&keyword))
+    return {};
+
+  auto loc = p.getCurrentLocation();
+  auto ctx = p.getBuilder().getContext();
+  auto splittedNames = keyword.split('.');
+  auto dialectName = splittedNames.first;
+  auto typeName = splittedNames.second;
+
+  // Check that the type name is in the format dialectname.typename
+  if (typeName == "") {
+    p.emitError(loc, " expected type name prefixed with the dialect name");
+    return {failure()};
+  }
+
+  // Get the dialect by its name
+  auto dialect = ctx->getOrLoadDialect(dialectName);
+  if (!dialect) {
+    p.emitError(loc).append("dialect ", dialectName, " is not defined");
+    return {failure()};
+  }
+
+  // Check that the dialect is an extensible dialect
+  auto extensibleDialect = llvm::dyn_cast<ExtensibleDialect>(dialect);
+  if (!extensibleDialect) {
+    p.emitError(loc).append("dialect ", dialectName,
+                            " is not extensible, and thus cannot be used on a "
+                            "parameters constraint");
+    return {failure()};
+  }
+
+  // Get the dynamic type by its name in the dialect
+  auto typeDef = extensibleDialect->lookupTypeDefinition(typeName);
+  if (!typeDef) {
+    p.emitError(loc).append("dynamic type '", typeName,
+                            "' was not registered in ", dialectName);
+    return {failure()};
+  }
+
+  // Empty case, we can return an equality constraint instead of a parameters
+  // constraint
+  if (p.parseOptionalLess() || !p.parseOptionalGreater()) {
+    *typeConstraint = EqTypeConstraintAttr::get(p.getBuilder().getContext(),
+                                                DynamicType::get(typeDef));
+    return {success()};
+  }
+
+  SmallVector<Attribute> paramConstraints;
+
+  paramConstraints.push_back({});
+  if (parseTypeConstraint(p, &paramConstraints.back()))
+    return {failure()};
+
+  while (p.parseOptionalGreater()) {
+    if (p.parseComma())
+      return {failure()};
+
+    paramConstraints.push_back({});
+    if (parseTypeConstraint(p, &paramConstraints.back()))
+      return {failure()};
+  }
+
+  *typeConstraint =
+      DynTypeParamsConstraintAttr::get(ctx, typeDef, paramConstraints);
+  return {success()};
+}
+
+void printDynTypeParamsConstraint(OpAsmPrinter &p,
+                                  DynTypeParamsConstraintAttr constraint) {
+  auto *typeDef = constraint.getTypeDef();
+  p << typeDef->getDialect()->getNamespace() << "." << typeDef->getName();
+
+  auto paramConstraints = constraint.getParamConstraints();
+  if (paramConstraints.empty())
+    return;
+
+  p << "<";
+  llvm::interleaveComma(paramConstraints, p,
+                        [&p](Attribute a) { printTypeConstraint(p, a); });
+  p << ">";
+}
+
 /// Parse a type constraint.
 /// The verifier ensures that the format is respected.
 ParseResult parseTypeConstraint(OpAsmParser &p, Attribute *typeConstraint) {
@@ -87,12 +192,16 @@ ParseResult parseTypeConstraint(OpAsmParser &p, Attribute *typeConstraint) {
   // Parse an Any constraint
   auto anyRes = parseOptionalAnyTypeConstraint(p, typeConstraint);
   if (anyRes.hasValue())
-    return anyRes.getValue();
+    return *anyRes;
 
   // Parse an AnyOf constraint
   auto anyOfRes = parseOptionalAnyOfTypeConstraint(p, typeConstraint);
   if (anyOfRes.hasValue())
-    return anyOfRes.getValue();
+    return *anyOfRes;
+
+  auto paramRes = parseOptionalDynTypeParamsConstraint(p, typeConstraint);
+  if (paramRes.hasValue())
+    return *paramRes;
 
   // Type equality constraint.
   // It has the format 'type'.
@@ -110,19 +219,6 @@ ParseResult parseTypeConstraint(OpAsmParser &p, Attribute *typeConstraint) {
   return success();
 }
 
-/// Print an AnyOf type constraint.
-/// It has the format 'irdl.AnyOf<type, (, type)*>'.
-void printAnyOfTypeConstraint(OpAsmPrinter &p,
-                              AnyOfTypeConstraintAttr anyOfConstr) {
-  auto types = anyOfConstr.getTypes();
-
-  p << "irdl.AnyOf<";
-  for (size_t i = 0; i + 1 < types.size(); i++) {
-    p << types[i] << ", ";
-  }
-  p << types.back() << ">";
-}
-
 /// Print a type constraint.
 void printTypeConstraint(OpAsmPrinter &p, Attribute typeConstraint) {
   if (auto eqConstr = typeConstraint.dyn_cast<EqTypeConstraintAttr>()) {
@@ -133,6 +229,9 @@ void printTypeConstraint(OpAsmPrinter &p, Attribute typeConstraint) {
   } else if (auto anyOfConstr =
                  typeConstraint.dyn_cast<AnyOfTypeConstraintAttr>()) {
     printAnyOfTypeConstraint(p, anyOfConstr);
+  } else if (auto dynTypeParamsConstr =
+                 typeConstraint.dyn_cast<DynTypeParamsConstraintAttr>()) {
+    printDynTypeParamsConstraint(p, dynTypeParamsConstr);
   } else {
     assert(false && "Unknown type constraint.");
   }
