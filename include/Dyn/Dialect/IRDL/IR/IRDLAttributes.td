@@ -58,6 +58,21 @@ def AnyOfTypeConstraintAttr : IRDL_AttrDef<"AnyOfTypeConstraintAttr", [TypeConst
   }];
 }
 
+def DynTypeParamsConstraintAttr : IRDL_AttrDef<"DynTypeParamsConstraintAttr", [TypeConstraintAttrInterface]> {
+  let summary = "constraint on dynamic type parameters";
+  let description = [{
+    Attribute representing a constraint on dynamic type parameters.
+    The constraint is satisfied by types that are of a specifc base dynamic
+    type, and that have parameters satisfying the parameter constraints.
+  }];
+  let parameters = (ins "DynamicTypeDefinition*":$typeDef,
+      ArrayRefParameter<"mlir::Attribute", "list of param constraints">:$paramConstraints);
+
+  let extraClassDeclaration = [{
+    std::unique_ptr<TypeConstraint> getTypeConstraint();
+  }];
+}
+
 class OpDefParameter<string desc = ""> :
     AttrOrTypeParameter<"mlir::irdl::OpDef", desc> {
   let allocator = [{$_dst = mlir::irdl::opDefAllocator($_allocator, $_self);}];
