@@ -30,6 +30,6 @@ func @failedParametrizedVerifierWrongNumOfArgs() {
 // -----
 
 func @failedParametrizedVerifierWrongArgument() {
-     // expected-error@+1 {{invalid parameter type}}
+     // expected-error@+1 {{type 'i1' does not satisfy the constraint}}
      "testd.any"() : () -> !testd.parametrized<i32, i1>
 }
