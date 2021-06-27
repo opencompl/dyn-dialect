@@ -23,8 +23,8 @@ EqTypeConstraint::verifyType(function_ref<InFlightDiagnostic()> emitError,
   if (type == expectedType)
     return success();
 
-  return emitError().append("must be of type '", expectedType,
-                            "' but is of type", type);
+  return emitError().append("expected type ", expectedType, " but got type ",
+                            type);
 }
 
 LogicalResult
@@ -33,7 +33,7 @@ AnyOfTypeConstraint::verifyType(function_ref<InFlightDiagnostic()> emitError,
   if (std::find(types.begin(), types.end(), type) != types.end())
     return success();
 
-  return emitError().append("invalid parameter type");
+  return emitError().append("type ", type, " does not satisfy the constraint");
 }
 
 LogicalResult DynTypeParamsConstraint::verifyType(
