@@ -19,11 +19,11 @@
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/TypeSupport.h"
 
-namespace mlir {
-namespace irdl {
 // Forward declaration.
+namespace mlir {
+class DynamicTypeDefinition;
+namespace irdl {
 class OperationOp;
-
 } // namespace irdl
 } // namespace mlir
 
