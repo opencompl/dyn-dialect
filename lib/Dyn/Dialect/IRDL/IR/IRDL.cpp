@@ -215,7 +215,7 @@ static void print(OpAsmPrinter &p, DialectOp dialectOp) {
 /// Parse the type parameters with the format "(<argdef (, argdef)*>)?"
 ParseResult parseTypeParams(OpAsmParser &p, OwningArgDefs *argDefs) {
   // No parameters
-  if (p.parseOptionalLess() || !p.parseOptionalRParen())
+  if (p.parseOptionalLess() || !p.parseOptionalGreater())
     return success();
 
   ArgDef argDef;
