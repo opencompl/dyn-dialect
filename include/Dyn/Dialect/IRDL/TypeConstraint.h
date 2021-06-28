@@ -29,8 +29,14 @@ class OperationOp;
 class TypeConstraint {
 public:
   /// Check that a type is satisfying the type constraint.
-  virtual LogicalResult verifyType(function_ref<InFlightDiagnostic()> emitError,
-                                   Type type) = 0;
+  /// typeConstraintVars are the constraints associated to the variables. They
+  /// are accessed by their index.
+  /// varsValue contains the values of the constraint variables that are already
+  /// defined, or contains Type{} if the value is not set yet.
+  virtual LogicalResult
+  verifyType(function_ref<InFlightDiagnostic()> emitError, Type type,
+             ArrayRef<TypeConstraint *> typeConstraintVars,
+             MutableArrayRef<Type> varsValue) = 0;
 };
 
 //===----------------------------------------------------------------------===//
@@ -41,8 +47,10 @@ class EqTypeConstraint : public TypeConstraint {
 public:
   EqTypeConstraint(Type expectedType) : expectedType(expectedType) {}
 
-  virtual LogicalResult verifyType(function_ref<InFlightDiagnostic()> emitError,
-                                   Type type) override;
+  virtual LogicalResult
+  verifyType(function_ref<InFlightDiagnostic()> emitError, Type type,
+             ArrayRef<TypeConstraint *> typeConstraintVars,
+             MutableArrayRef<Type> varsValue) override;
 
 private:
   Type expectedType;
@@ -59,8 +67,10 @@ public:
   AnyOfTypeConstraint(llvm::ArrayRef<Type> types)
       : types(types.begin(), types.end()) {}
 
-  virtual LogicalResult verifyType(function_ref<InFlightDiagnostic()> emitError,
-                                   Type type) override;
+  virtual LogicalResult
+  verifyType(function_ref<InFlightDiagnostic()> emitError, Type type,
+             ArrayRef<TypeConstraint *> typeConstraintVars,
+             MutableArrayRef<Type> varsValue) override;
 
 private:
   llvm::SmallVector<Type, 4> types;
@@ -76,10 +86,32 @@ class AnyTypeConstraint : public TypeConstraint {
 public:
   AnyTypeConstraint() {}
 
-  virtual LogicalResult verifyType(function_ref<InFlightDiagnostic()> emitError,
-                                   Type type) override {
+  virtual LogicalResult
+  verifyType(function_ref<InFlightDiagnostic()> emitError, Type type,
+             ArrayRef<TypeConstraint *> typeConstraintVars,
+             MutableArrayRef<Type> varsValue) override {
     return success();
   };
+};
+
+//===----------------------------------------------------------------------===//
+// Variable type constraint
+//===----------------------------------------------------------------------===//
+
+/// Type constraint variable.
+/// All types matching the variable should be equal.The first type
+/// matching the variable is the one setting the value.
+class VarTypeConstraint : public TypeConstraint {
+public:
+  VarTypeConstraint(size_t varIndex) : varIndex{varIndex} {}
+
+  virtual LogicalResult
+  verifyType(function_ref<InFlightDiagnostic()> emitError, Type type,
+             ArrayRef<TypeConstraint *> typeConstraintVars,
+             MutableArrayRef<Type> varsValue) override;
+
+private:
+  size_t varIndex;
 };
 
 //===----------------------------------------------------------------------===//
@@ -96,8 +128,10 @@ public:
       llvm::SmallVector<std::unique_ptr<TypeConstraint>> &&paramConstraints)
       : dynTypeDef(dynTypeDef), paramConstraints(std::move(paramConstraints)) {}
 
-  virtual LogicalResult verifyType(function_ref<InFlightDiagnostic()> emitError,
-                                   Type type) override;
+  virtual LogicalResult
+  verifyType(function_ref<InFlightDiagnostic()> emitError, Type type,
+             ArrayRef<TypeConstraint *> typeConstraintVars,
+             MutableArrayRef<Type> varsValue) override;
 
 private:
   /// TypeID of the parametric type that satisfies this constraint.
