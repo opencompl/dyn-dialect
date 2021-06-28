@@ -40,7 +40,7 @@ irdlTypeVerifier(function_ref<InFlightDiagnostic()> emitError,
 
   for (size_t i = 0; i < params.size(); i++) {
     if (failed(paramConstraints[i]->verifyType(
-            emitError, params[i].cast<TypeAttr>().getValue())))
+            emitError, params[i].cast<TypeAttr>().getValue(), {}, {})))
       return failure();
   }
   return success();
@@ -103,7 +103,7 @@ LogicalResult verifyOpDefConstraints(Operation *op,
   for (unsigned i = 0; i < numOperands; ++i) {
     auto operandType = op->getOperand(i).getType();
     auto &constraint = operandConstrs[i].second;
-    if (failed(constraint->verifyType(emitError, operandType)))
+    if (failed(constraint->verifyType(emitError, operandType, {}, {})))
       return failure();
   }
 
@@ -111,7 +111,7 @@ LogicalResult verifyOpDefConstraints(Operation *op,
   for (unsigned i = 0; i < numResults; ++i) {
     auto resultType = op->getResult(i).getType();
     auto &constraint = resultConstrs[i].second;
-    if (failed(constraint->verifyType(emitError, resultType)))
+    if (failed(constraint->verifyType(emitError, resultType, {}, {})))
       return failure();
   }
 
