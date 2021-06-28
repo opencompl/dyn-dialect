@@ -19,7 +19,9 @@ using namespace irdl;
 
 LogicalResult
 EqTypeConstraint::verifyType(function_ref<InFlightDiagnostic()> emitError,
-                             Type type) {
+                             Type type,
+                             ArrayRef<TypeConstraint *> typeConstraintVars,
+                             MutableArrayRef<Type> varsValue) {
   if (type == expectedType)
     return success();
 
@@ -29,15 +31,53 @@ EqTypeConstraint::verifyType(function_ref<InFlightDiagnostic()> emitError,
 
 LogicalResult
 AnyOfTypeConstraint::verifyType(function_ref<InFlightDiagnostic()> emitError,
-                                Type type) {
+                                Type type,
+                                ArrayRef<TypeConstraint *> typeConstraintVars,
+                                MutableArrayRef<Type> varsValue) {
   if (std::find(types.begin(), types.end(), type) != types.end())
     return success();
 
   return emitError().append("type ", type, " does not satisfy the constraint");
 }
 
+LogicalResult
+VarTypeConstraint::verifyType(function_ref<InFlightDiagnostic()> emitError,
+                              Type type,
+                              ArrayRef<TypeConstraint *> typeConstraintVars,
+                              MutableArrayRef<Type> varsValue) {
+  assert(varIndex < typeConstraintVars.size() &&
+         "type constraint variable index out of bounds");
+  assert(typeConstraintVars.size() == varsValue.size() &&
+         "the number of constraints variables should be equal to the number of "
+         "constraint variable values");
+
+  // We first check if the variable was already assigned.
+  auto expectedType = varsValue[varIndex];
+  if (expectedType) {
+    // If it is assigned, we check that our type is equal. If it is, we already
+    // know we satisfy the underlying constraint.
+    if (type == expectedType) {
+      return success();
+    } else {
+      return emitError().append("expected ", expectedType, " but got ", type);
+    }
+  }
+
+  // We check that the type satisfies the type variable.
+  if (failed(typeConstraintVars[varIndex]->verifyType(
+          emitError, type, typeConstraintVars, varsValue)))
+    return failure();
+
+  // We assign the variable
+  varsValue[varIndex] = type;
+
+  return success();
+}
+
 LogicalResult DynTypeParamsConstraint::verifyType(
-    function_ref<InFlightDiagnostic()> emitError, Type type) {
+    function_ref<InFlightDiagnostic()> emitError, Type type,
+    ArrayRef<TypeConstraint *> typeConstraintVars,
+    MutableArrayRef<Type> varsValue) {
   auto dynType = type.dyn_cast<DynamicType>();
   if (!dynType || dynType.getTypeDef() != dynTypeDef)
     return emitError().append("expected base type ", dynTypeDef->getName(),
@@ -50,7 +90,8 @@ LogicalResult DynTypeParamsConstraint::verifyType(
   auto params = dynType.getParams();
   for (size_t i = 0; i < params.size(); i++) {
     auto paramType = params[i].cast<TypeAttr>().getValue();
-    if (failed(paramConstraints[i]->verifyType(emitError, paramType)))
+    if (failed(paramConstraints[i]->verifyType(emitError, paramType,
+                                               typeConstraintVars, varsValue)))
       return failure();
   }
 
