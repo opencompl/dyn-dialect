@@ -67,6 +67,14 @@ std::unique_ptr<TypeConstraint> AnyTypeConstraintAttr::getTypeConstraint() {
 }
 
 //===----------------------------------------------------------------------===//
+// Type constraint variable
+//===----------------------------------------------------------------------===//
+
+std::unique_ptr<TypeConstraint> VarTypeConstraintAttr::getTypeConstraint() {
+  return std::make_unique<VarTypeConstraint>(getIndex());
+}
+
+//===----------------------------------------------------------------------===//
 // Attribute for constraint on dynamic type parameters
 //===----------------------------------------------------------------------===//
 

@@ -12,6 +12,7 @@
 #include "Dyn/Dialect/IRDL/TypeConstraint.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/ExtensibleDialect.h"
+#include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/STLExtras.h"
@@ -37,13 +38,15 @@ void IRDLDialect::initialize() {
 //===----------------------------------------------------------------------===//
 
 namespace {
-ParseResult parseTypeConstraint(OpAsmParser &p, Attribute *typeConstraint);
-void printTypeConstraint(OpAsmPrinter &p, Attribute typeConstraint);
+ParseResult parseTypeConstraint(OpAsmParser &p, Attribute *typeConstraint,
+                                ArgDefs variables);
+void printTypeConstraint(OpAsmPrinter &p, Attribute typeConstraint,
+                         ArgDefs variables);
 
 /// Parse an Any constraint if there is one.
 /// It has the format 'irdl.Any'
-Optional<ParseResult>
-parseOptionalAnyTypeConstraint(OpAsmParser &p, Attribute *typeConstraint) {
+OptionalParseResult parseOptionalAnyTypeConstraint(OpAsmParser &p,
+                                                   Attribute *typeConstraint) {
   if (p.parseOptionalKeyword("irdl.Any"))
     return {};
 
@@ -53,7 +56,7 @@ parseOptionalAnyTypeConstraint(OpAsmParser &p, Attribute *typeConstraint) {
 
 /// Parse an AnyOf constraint if there is one.
 /// It has the format 'irdl.AnyOf<type (, type)*>'
-Optional<ParseResult>
+OptionalParseResult
 parseOptionalAnyOfTypeConstraint(OpAsmParser &p, Attribute *typeConstraint) {
   if (p.parseOptionalKeyword("irdl.AnyOf"))
     return {};
@@ -98,13 +101,10 @@ void printAnyOfTypeConstraint(OpAsmPrinter &p,
 
 /// Parse an AnyOf constraint if there is one.
 /// It has the format 'irdl.AnyOf<type (, type)*>'
-Optional<ParseResult>
-parseOptionalDynTypeParamsConstraint(OpAsmParser &p,
-                                     Attribute *typeConstraint) {
-  StringRef keyword;
-  if (p.parseOptionalKeyword(&keyword))
-    return {};
-
+OptionalParseResult
+parseOptionalDynTypeParamsConstraint(OpAsmParser &p, StringRef keyword,
+                                     Attribute *typeConstraint,
+                                     ArgDefs variables) {
   auto loc = p.getCurrentLocation();
   auto ctx = p.getBuilder().getContext();
   auto splittedNames = keyword.split('.');
@@ -152,7 +152,7 @@ parseOptionalDynTypeParamsConstraint(OpAsmParser &p,
   SmallVector<Attribute> paramConstraints;
 
   paramConstraints.push_back({});
-  if (parseTypeConstraint(p, &paramConstraints.back()))
+  if (parseTypeConstraint(p, &paramConstraints.back(), variables))
     return {failure()};
 
   while (p.parseOptionalGreater()) {
@@ -160,7 +160,7 @@ parseOptionalDynTypeParamsConstraint(OpAsmParser &p,
       return {failure()};
 
     paramConstraints.push_back({});
-    if (parseTypeConstraint(p, &paramConstraints.back()))
+    if (parseTypeConstraint(p, &paramConstraints.back(), variables))
       return {failure()};
   }
 
@@ -170,7 +170,8 @@ parseOptionalDynTypeParamsConstraint(OpAsmParser &p,
 }
 
 void printDynTypeParamsConstraint(OpAsmPrinter &p,
-                                  DynTypeParamsConstraintAttr constraint) {
+                                  DynTypeParamsConstraintAttr constraint,
+                                  ArgDefs variables) {
   auto *typeDef = constraint.getTypeDef();
   p << typeDef->getDialect()->getNamespace() << "." << typeDef->getName();
 
@@ -179,48 +180,65 @@ void printDynTypeParamsConstraint(OpAsmPrinter &p,
     return;
 
   p << "<";
-  llvm::interleaveComma(paramConstraints, p,
-                        [&p](Attribute a) { printTypeConstraint(p, a); });
+  llvm::interleaveComma(paramConstraints, p, [&p, variables](Attribute a) {
+    printTypeConstraint(p, a, variables);
+  });
   p << ">";
 }
 
 /// Parse a type constraint.
 /// The verifier ensures that the format is respected.
-ParseResult parseTypeConstraint(OpAsmParser &p, Attribute *typeConstraint) {
-  Type type;
+ParseResult parseTypeConstraint(OpAsmParser &p, Attribute *typeConstraint,
+                                ArgDefs variables) {
+  auto loc = p.getCurrentLocation();
 
-  // Parse an Any constraint
+  // Parse an Any constraint.
   auto anyRes = parseOptionalAnyTypeConstraint(p, typeConstraint);
   if (anyRes.hasValue())
     return *anyRes;
 
-  // Parse an AnyOf constraint
+  // Parse an AnyOf constraint.
   auto anyOfRes = parseOptionalAnyOfTypeConstraint(p, typeConstraint);
   if (anyOfRes.hasValue())
     return *anyOfRes;
 
-  auto paramRes = parseOptionalDynTypeParamsConstraint(p, typeConstraint);
-  if (paramRes.hasValue())
-    return *paramRes;
+  auto ctx = p.getBuilder().getContext();
 
   // Type equality constraint.
   // It has the format 'type'.
+  Type type;
   auto typeParsed = p.parseOptionalType(type);
-  if (!typeParsed.hasValue()) {
-    p.emitError(p.getCurrentLocation(), "type constraint expected");
-    return failure();
+  if (typeParsed.hasValue()) {
+    if (failed(typeParsed.getValue()))
+      return failure();
+
+    *typeConstraint = EqTypeConstraintAttr::get(ctx, type);
+    return success();
   }
 
-  if (failed(typeParsed.getValue()))
-    return failure();
+  StringRef keyword;
+  if (succeeded(p.parseOptionalKeyword(&keyword))) {
+    // Check if the constraint is a type constraint variable
+    for (size_t i = 0; i < variables.size(); i++)
+      if (variables[i].first == keyword) {
+        *typeConstraint = VarTypeConstraintAttr::get(ctx, i);
+        return success();
+      }
 
-  *typeConstraint =
-      EqTypeConstraintAttr::get(p.getBuilder().getContext(), type);
-  return success();
+    // Parse a dynamic type parameter constraint.
+    auto paramRes = parseOptionalDynTypeParamsConstraint(
+        p, keyword, typeConstraint, variables);
+    if (paramRes.hasValue())
+      return *paramRes;
+  }
+
+  p.emitError(loc, "type constraint expected");
+  return failure();
 }
 
 /// Print a type constraint.
-void printTypeConstraint(OpAsmPrinter &p, Attribute typeConstraint) {
+void printTypeConstraint(OpAsmPrinter &p, Attribute typeConstraint,
+                         ArgDefs variables) {
   if (auto eqConstr = typeConstraint.dyn_cast<EqTypeConstraintAttr>()) {
     p << eqConstr.getType();
   } else if (auto anyConstr =
@@ -231,25 +249,28 @@ void printTypeConstraint(OpAsmPrinter &p, Attribute typeConstraint) {
     printAnyOfTypeConstraint(p, anyOfConstr);
   } else if (auto dynTypeParamsConstr =
                  typeConstraint.dyn_cast<DynTypeParamsConstraintAttr>()) {
-    printDynTypeParamsConstraint(p, dynTypeParamsConstr);
+    printDynTypeParamsConstraint(p, dynTypeParamsConstr, variables);
+  } else if (auto typeConstraintParam =
+                 typeConstraint.dyn_cast<VarTypeConstraintAttr>()) {
+    p << variables[typeConstraintParam.getIndex()].first;
   } else {
     assert(false && "Unknown type constraint.");
   }
 }
 
 /// Parse an ArgDef with format "name: typeConstraint".
-ParseResult parseArgDef(OpAsmParser &p, ArgDef *argDef) {
+ParseResult parseArgDef(OpAsmParser &p, ArgDef *argDef, ArgDefs variables) {
   if (p.parseKeyword(&argDef->first) || p.parseColon() ||
-      parseTypeConstraint(p, &argDef->second))
+      parseTypeConstraint(p, &argDef->second, variables))
     return failure();
 
   return success();
 }
 
 /// Print an ArgDef with format "name: typeConstraint".
-void printArgDef(OpAsmPrinter &p, const ArgDef *argDef) {
-  p << argDef->first << ": ";
-  printTypeConstraint(p, argDef->second);
+void printArgDef(OpAsmPrinter &p, ArgDef argDef, ArgDefs variables) {
+  p << argDef.first << ": ";
+  printTypeConstraint(p, argDef.second, variables);
 }
 } // namespace
 
@@ -318,7 +339,7 @@ ParseResult parseTypeParams(OpAsmParser &p, OwningArgDefs *argDefs) {
     return success();
 
   ArgDef argDef;
-  if (parseArgDef(p, &argDef))
+  if (parseArgDef(p, &argDef, {}))
     return failure();
   argDefs->push_back(argDef);
 
@@ -327,7 +348,7 @@ ParseResult parseTypeParams(OpAsmParser &p, OwningArgDefs *argDefs) {
       return failure();
 
     ArgDef argDef;
-    if (parseArgDef(p, &argDef))
+    if (parseArgDef(p, &argDef, {}))
       return failure();
     argDefs->push_back(argDef);
   }
@@ -342,10 +363,10 @@ void printTypeParams(OpAsmPrinter &p, ArgDefs params) {
   p << "<";
   for (size_t i = 0; i + 1 < params.size(); i++) {
     const auto &typedVar = params[i];
-    printArgDef(p, &typedVar);
+    printArgDef(p, typedVar, {});
     p << ", ";
   }
-  printArgDef(p, &params.back());
+  printArgDef(p, params.back(), {});
   p << ">";
 }
 
@@ -386,8 +407,48 @@ static void print(OpAsmPrinter &p, TypeOp typeOp) {
 
 namespace {
 
+ParseResult parseTypeConstraintVars(OpAsmParser &p,
+                                    OwningArgDefs *typeConstrVars) {
+  // No parameters
+  if (p.parseOptionalLess() || !p.parseOptionalGreater())
+    return success();
+
+  ArgDef argDef;
+  if (parseArgDef(p, &argDef, *typeConstrVars))
+    return failure();
+  typeConstrVars->push_back(argDef);
+
+  while (p.parseOptionalGreater()) {
+    if (p.parseComma())
+      return failure();
+
+    ArgDef argDef;
+    if (parseArgDef(p, &argDef, *typeConstrVars))
+      return failure();
+    typeConstrVars->push_back(argDef);
+  }
+
+  return success();
+}
+
+void printTypeConstraintVars(OpAsmPrinter &p, ArgDefs typeConstrVars) {
+  if (typeConstrVars.empty()) {
+    return;
+  }
+
+  p << "<";
+  for (size_t i = 0; i + 1 < typeConstrVars.size(); i++) {
+    const auto &typedVar = typeConstrVars[i];
+    printArgDef(p, typedVar, typeConstrVars);
+    p << ", ";
+  }
+  printArgDef(p, typeConstrVars.back(), typeConstrVars);
+  p << ">";
+}
+
 /// Parse an ArgDefs with format (argDef1, argDef2, ..., argDefN).
-ParseResult parseArgDefs(OpAsmParser &p, OwningArgDefs *argDefs) {
+ParseResult parseArgDefs(OpAsmParser &p, OwningArgDefs *argDefs,
+                         ArgDefs typeConstrVars) {
   if (p.parseLParen())
     return failure();
 
@@ -396,7 +457,7 @@ ParseResult parseArgDefs(OpAsmParser &p, OwningArgDefs *argDefs) {
     return success();
 
   ArgDef argDef;
-  if (parseArgDef(p, &argDef))
+  if (parseArgDef(p, &argDef, typeConstrVars))
     return failure();
   argDefs->push_back(argDef);
 
@@ -405,7 +466,7 @@ ParseResult parseArgDefs(OpAsmParser &p, OwningArgDefs *argDefs) {
       return failure();
 
     ArgDef argDef;
-    if (parseArgDef(p, &argDef))
+    if (parseArgDef(p, &argDef, typeConstrVars))
       return failure();
     argDefs->push_back(argDef);
   }
@@ -413,15 +474,15 @@ ParseResult parseArgDefs(OpAsmParser &p, OwningArgDefs *argDefs) {
   return success();
 }
 
-void printArgDefs(OpAsmPrinter &p, ArgDefs typedVars) {
+void printArgDefs(OpAsmPrinter &p, ArgDefs typedVars, ArgDefs variables) {
   p << "(";
   for (size_t i = 0; i + 1 < typedVars.size(); i++) {
     const auto &typedVar = typedVars[i];
-    printArgDef(p, &typedVar);
+    printArgDef(p, typedVar, variables);
     p << ", ";
   }
   if (typedVars.size() != 0)
-    printArgDef(p, &typedVars[typedVars.size() - 1]);
+    printArgDef(p, typedVars[typedVars.size() - 1], variables);
   p << ")";
 }
 
@@ -494,17 +555,21 @@ void printTraitDefs(OpAsmPrinter &p, TraitDefs traitDefs) {
 /// The format is "operandDef -> resultDef (traits (name)+)?" where operandDef
 /// and resultDef have the ArgDefs format.
 ParseResult parseOpDefAttr(OpAsmParser &p, OpDefAttr *opDefAttr) {
-  OwningArgDefs operandDefs, resultDefs;
+  OwningArgDefs typeConstrVars, operandDefs, resultDefs;
   auto *ctx = p.getBuilder().getContext();
+  // Parse the type constraint variables
+  if (parseTypeConstraintVars(p, &typeConstrVars))
+    return failure();
+
   // Parse the operands.
-  if (parseArgDefs(p, &operandDefs))
+  if (parseArgDefs(p, &operandDefs, typeConstrVars))
     return failure();
 
   if (p.parseArrow())
     return failure();
 
   // Parse the results.
-  if (parseArgDefs(p, &resultDefs))
+  if (parseArgDefs(p, &resultDefs, typeConstrVars))
     return failure();
 
   // Parse the associated traits.
@@ -512,15 +577,17 @@ ParseResult parseOpDefAttr(OpAsmParser &p, OpDefAttr *opDefAttr) {
   if (parseTraitDefs(p, traitDefs))
     return failure();
 
-  *opDefAttr = OpDefAttr::get(ctx, {operandDefs, resultDefs, traitDefs});
+  *opDefAttr =
+      OpDefAttr::get(ctx, {typeConstrVars, operandDefs, resultDefs, traitDefs});
 
   return success();
 }
 
 void printOpDef(OpAsmPrinter &p, OpDef opDef) {
-  printArgDefs(p, opDef.operandDef);
+  printTypeConstraintVars(p, opDef.typeConstraintVars);
+  printArgDefs(p, opDef.operandDef, opDef.typeConstraintVars);
   p << " -> ";
-  printArgDefs(p, opDef.resultDef);
+  printArgDefs(p, opDef.resultDef, opDef.typeConstraintVars);
   if (!opDef.traitDefs.empty()) {
     p << " ";
     printTraitDefs(p, opDef.traitDefs);

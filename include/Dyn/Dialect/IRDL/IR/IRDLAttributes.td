@@ -58,6 +58,20 @@ def AnyOfTypeConstraintAttr : IRDL_AttrDef<"AnyOfTypeConstraintAttr", [TypeConst
   }];
 }
 
+def VarTypeConstraintAttr : IRDL_AttrDef<"VarTypeConstraintAttr", [TypeConstraintAttrInterface]> {
+  let summary = "Type constraint variable";
+  let description = [{
+    Attribute representing a type constraint variable.
+    All types matching the variable should be equal.
+    The first type matching the variable is the one setting the value.
+  }];
+  let parameters = (ins "size_t":$index);
+
+  let extraClassDeclaration = [{
+    std::unique_ptr<TypeConstraint> getTypeConstraint();
+  }];
+}
+
 def DynTypeParamsConstraintAttr : IRDL_AttrDef<"DynTypeParamsConstraintAttr", [TypeConstraintAttrInterface]> {
   let summary = "constraint on dynamic type parameters";
   let description = [{
