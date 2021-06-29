@@ -17,11 +17,10 @@
 using namespace mlir;
 using namespace irdl;
 
-LogicalResult
-EqTypeConstraint::verifyType(function_ref<InFlightDiagnostic()> emitError,
-                             Type type,
-                             ArrayRef<TypeConstraint *> typeConstraintVars,
-                             MutableArrayRef<Type> varsValue) {
+LogicalResult EqTypeConstraint::verifyType(
+    function_ref<InFlightDiagnostic()> emitError, Type type,
+    ArrayRef<std::unique_ptr<TypeConstraint>> typeConstraintVars,
+    MutableArrayRef<Type> varsValue) {
   if (type == expectedType)
     return success();
 
@@ -29,22 +28,20 @@ EqTypeConstraint::verifyType(function_ref<InFlightDiagnostic()> emitError,
                             type);
 }
 
-LogicalResult
-AnyOfTypeConstraint::verifyType(function_ref<InFlightDiagnostic()> emitError,
-                                Type type,
-                                ArrayRef<TypeConstraint *> typeConstraintVars,
-                                MutableArrayRef<Type> varsValue) {
+LogicalResult AnyOfTypeConstraint::verifyType(
+    function_ref<InFlightDiagnostic()> emitError, Type type,
+    ArrayRef<std::unique_ptr<TypeConstraint>> typeConstraintVars,
+    MutableArrayRef<Type> varsValue) {
   if (std::find(types.begin(), types.end(), type) != types.end())
     return success();
 
   return emitError().append("type ", type, " does not satisfy the constraint");
 }
 
-LogicalResult
-VarTypeConstraint::verifyType(function_ref<InFlightDiagnostic()> emitError,
-                              Type type,
-                              ArrayRef<TypeConstraint *> typeConstraintVars,
-                              MutableArrayRef<Type> varsValue) {
+LogicalResult VarTypeConstraint::verifyType(
+    function_ref<InFlightDiagnostic()> emitError, Type type,
+    ArrayRef<std::unique_ptr<TypeConstraint>> typeConstraintVars,
+    MutableArrayRef<Type> varsValue) {
   assert(varIndex < typeConstraintVars.size() &&
          "type constraint variable index out of bounds");
   assert(typeConstraintVars.size() == varsValue.size() &&
@@ -76,7 +73,7 @@ VarTypeConstraint::verifyType(function_ref<InFlightDiagnostic()> emitError,
 
 LogicalResult DynTypeParamsConstraint::verifyType(
     function_ref<InFlightDiagnostic()> emitError, Type type,
-    ArrayRef<TypeConstraint *> typeConstraintVars,
+    ArrayRef<std::unique_ptr<TypeConstraint>> typeConstraintVars,
     MutableArrayRef<Type> varsValue) {
   auto dynType = type.dyn_cast<DynamicType>();
   if (!dynType || dynType.getTypeDef() != dynTypeDef)
