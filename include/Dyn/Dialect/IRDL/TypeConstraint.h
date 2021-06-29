@@ -35,7 +35,7 @@ public:
   /// defined, or contains Type{} if the value is not set yet.
   virtual LogicalResult
   verifyType(function_ref<InFlightDiagnostic()> emitError, Type type,
-             ArrayRef<TypeConstraint *> typeConstraintVars,
+             ArrayRef<std::unique_ptr<TypeConstraint>> typeConstraintVars,
              MutableArrayRef<Type> varsValue) = 0;
 };
 
@@ -49,7 +49,7 @@ public:
 
   virtual LogicalResult
   verifyType(function_ref<InFlightDiagnostic()> emitError, Type type,
-             ArrayRef<TypeConstraint *> typeConstraintVars,
+             ArrayRef<std::unique_ptr<TypeConstraint>> typeConstraintVars,
              MutableArrayRef<Type> varsValue) override;
 
 private:
@@ -69,7 +69,7 @@ public:
 
   virtual LogicalResult
   verifyType(function_ref<InFlightDiagnostic()> emitError, Type type,
-             ArrayRef<TypeConstraint *> typeConstraintVars,
+             ArrayRef<std::unique_ptr<TypeConstraint>> typeConstraintVars,
              MutableArrayRef<Type> varsValue) override;
 
 private:
@@ -88,7 +88,7 @@ public:
 
   virtual LogicalResult
   verifyType(function_ref<InFlightDiagnostic()> emitError, Type type,
-             ArrayRef<TypeConstraint *> typeConstraintVars,
+             ArrayRef<std::unique_ptr<TypeConstraint>> typeConstraintVars,
              MutableArrayRef<Type> varsValue) override {
     return success();
   };
@@ -107,7 +107,7 @@ public:
 
   virtual LogicalResult
   verifyType(function_ref<InFlightDiagnostic()> emitError, Type type,
-             ArrayRef<TypeConstraint *> typeConstraintVars,
+             ArrayRef<std::unique_ptr<TypeConstraint>> typeConstraintVars,
              MutableArrayRef<Type> varsValue) override;
 
 private:
@@ -130,7 +130,7 @@ public:
 
   virtual LogicalResult
   verifyType(function_ref<InFlightDiagnostic()> emitError, Type type,
-             ArrayRef<TypeConstraint *> typeConstraintVars,
+             ArrayRef<std::unique_ptr<TypeConstraint>> typeConstraintVars,
              MutableArrayRef<Type> varsValue) override;
 
 private:

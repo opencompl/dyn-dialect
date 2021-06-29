@@ -47,8 +47,10 @@ using OwningTraitDefs =
 /// It contains the definition of every operand and result.
 class OpDef {
 public:
-  ArgDefs operandDef, resultDef;
+  ArgDefs typeConstraintVars, operandDef, resultDef;
   TraitDefs traitDefs;
+
+  ArgDefs getTypeConstraintVars() const { return typeConstraintVars; }
 
   /// Get the number of operands.
   std::size_t getNumOperands() const { return operandDef.size(); }
@@ -70,7 +72,8 @@ public:
 
   bool operator==(const OpDef &o) const {
     return o.operandDef == operandDef && o.resultDef == resultDef &&
-           o.traitDefs == traitDefs;
+           o.traitDefs == traitDefs &&
+           o.typeConstraintVars == typeConstraintVars;
   }
 
   friend llvm::hash_code hash_value(mlir::irdl::OpDef typeDef);
@@ -86,11 +89,14 @@ inline ArgDefs argDefAllocator(mlir::AttributeStorageAllocator &allocator,
 
 inline OpDef opDefAllocator(mlir::AttributeStorageAllocator &allocator,
                             OpDef typeDef) {
+  auto allocatedTypeConstrVars =
+      argDefAllocator(allocator, typeDef.typeConstraintVars);
   auto allocatedOperandDefs = argDefAllocator(allocator, typeDef.operandDef);
   auto allocatedResultDefs = argDefAllocator(allocator, typeDef.resultDef);
   auto allocatedTraitDefs = allocator.copyInto(typeDef.traitDefs);
 
-  return {allocatedOperandDefs, allocatedResultDefs, allocatedTraitDefs};
+  return {allocatedTypeConstrVars, allocatedOperandDefs, allocatedResultDefs,
+          allocatedTraitDefs};
 }
 
 //===----------------------------------------------------------------------===//
