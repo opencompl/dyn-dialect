@@ -25,17 +25,44 @@ using namespace irdl;
 
 namespace mlir {
 namespace irdl {
-void registerType(ExtensibleDialect *dialect, StringRef name) {
-  auto type = DynamicTypeDefinition::get(
-      name, dialect,
-      [name = std::string(name)](function_ref<InFlightDiagnostic()> emitError,
-                                 ArrayRef<Attribute> params) {
-        if (params.empty()) {
-          return success();
-        }
-        return LogicalResult(
-            emitError().append("Type ", name, " does not have parameters"));
-      });
+
+namespace {
+// Verifier used for dynamic types.
+LogicalResult
+irdlTypeVerifier(function_ref<InFlightDiagnostic()> emitError,
+                 ArrayRef<Attribute> params,
+                 ArrayRef<std::unique_ptr<TypeConstraint>> paramConstraints) {
+  if (params.size() != paramConstraints.size()) {
+    emitError().append("expected ", paramConstraints.size(),
+                       " type arguments, but had ", params.size());
+    return failure();
+  }
+
+  for (size_t i = 0; i < params.size(); i++) {
+    if (failed(paramConstraints[i]->verifyType(
+            emitError, params[i].cast<TypeAttr>().getValue())))
+      return failure();
+  }
+  return success();
+}
+} // namespace
+
+void registerType(ExtensibleDialect *dialect, TypeDef typeDef) {
+  SmallVector<std::unique_ptr<TypeConstraint>> paramConstraints;
+  for (auto param : typeDef.paramDefs) {
+    paramConstraints.push_back(
+        param.second.cast<TypeConstraintAttrInterface>().getTypeConstraint());
+  }
+
+  auto verifier = [paramConstraints{std::move(paramConstraints)}](
+                      function_ref<InFlightDiagnostic()> emitError,
+                      ArrayRef<Attribute> params) {
+    return irdlTypeVerifier(emitError, params, paramConstraints);
+  };
+
+  auto type =
+      DynamicTypeDefinition::get(typeDef.name, dialect, std::move(verifier));
+
   dialect->addDynamicType(std::move(type));
 }
 } // namespace irdl
@@ -70,11 +97,13 @@ LogicalResult verifyOpTypeConstraints(Operation *op,
                            " results expected, but got " +
                            std::to_string(numResults));
 
+  auto emitError = [op]() { return op->emitError(); };
+
   /// Check that all operands satisfy the constraints.
   for (unsigned i = 0; i < numOperands; ++i) {
     auto operandType = op->getOperand(i).getType();
     auto &constraint = operandConstrs[i].second;
-    if (failed(constraint->verifyType(op, operandType, true, i)))
+    if (failed(constraint->verifyType(emitError, operandType)))
       return failure();
   }
 
@@ -82,7 +111,7 @@ LogicalResult verifyOpTypeConstraints(Operation *op,
   for (unsigned i = 0; i < numResults; ++i) {
     auto resultType = op->getResult(i).getType();
     auto &constraint = resultConstrs[i].second;
-    if (failed(constraint->verifyType(op, resultType, true, i)))
+    if (failed(constraint->verifyType(emitError, resultType)))
       return failure();
   }
 

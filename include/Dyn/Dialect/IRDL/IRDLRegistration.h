@@ -20,7 +20,7 @@ namespace mlir {
 namespace irdl {
 
 /// Register a new dynamic type in a dynamic dialect.
-void registerType(ExtensibleDialect *dialect, StringRef name);
+void registerType(ExtensibleDialect *dialect, TypeDef typeDef);
 
 /// Register a new dynamic operation in a dynamic dialect.
 void registerOperation(ExtensibleDialect *dialect, StringRef name,

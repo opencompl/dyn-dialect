@@ -73,5 +73,19 @@ def OpTypeDefAttr : IRDL_AttrDef<"OpTypeDefAttr"> {
   let parameters = (ins OpTypeDefParameter<>:$opDef);
 }
 
+class TypeDefParameter<string desc = ""> :
+    AttrOrTypeParameter<"mlir::irdl::TypeDef", desc> {
+  let allocator = [{$_dst = mlir::irdl::typeDefAllocator($_allocator, $_self);}];
+}
+
+def TypeDefAttr : IRDL_AttrDef<"TypeDefAttr"> {
+  let summary = "Declaration of a dynamic operation";
+  let description = [{
+    Attribute representing an type definition.
+    It contains the parameter type constraints.
+  }];
+  let parameters = (ins TypeDefParameter<>:$typeDef);
+}
+
 
 #endif // DYN_DIALECT_IRDL_IR_IRDLATTRIBUTES
