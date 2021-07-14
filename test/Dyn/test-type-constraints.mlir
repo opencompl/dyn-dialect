@@ -17,6 +17,9 @@ irdl.dialect testd {
     // CHECK: irdl.operation dynparams() -> (res: testd.parametric<irdl.AnyOf<i32, i64>>)
     irdl.operation dynparams() -> (res: testd.parametric<irdl.AnyOf<i32, i64>>)
 
+    // CHECK: irdl.operation params() -> (res: std.complex<irdl.AnyOf<i32, i64>>)
+    irdl.operation params() -> (res: std.complex<irdl.AnyOf<i32, i64>>)
+
     // CHECK: irdl.operation typeConstrVars<a: irdl.AnyOf<i32, i64>>() -> (res1: a, res2: a)
     irdl.operation typeConstrVars<a: irdl.AnyOf<i32, i64>>() -> (res1: a, res2: a)
 }
@@ -80,6 +83,36 @@ func @succeededAnyConstraint() {
 // -----
 
 //===----------------------------------------------------------------------===//
+// Non-dynamic parameters constraint
+//===----------------------------------------------------------------------===//
+
+func @succeededParamsConstraint() {
+    // CHECK: "testd.params"() : () -> complex<i32>
+    "testd.params"() : () -> complex<i32>
+    // CHECK: "testd.params"() : () -> complex<i64>
+    "testd.params"() : () -> complex<i64>
+    return
+}
+
+// -----
+
+func @failedDynParamsConstraintBase() {
+    // expected-error@+1 {{expected base type 'std.complex' but got type 'i32'}}
+    "testd.params"() : () -> i32
+    return
+}
+
+// -----
+
+func @failedDynParamsConstraintParam() {
+    // expected-error@+1 {{type 'i1' does not satisfy the constraint}}
+    "testd.params"() : () -> complex<i1>
+    return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // Dynamic parameters constraint
 //===----------------------------------------------------------------------===//
 
@@ -93,7 +126,15 @@ func @succeededDynParamsConstraint() {
 
 // -----
 
-func @failedDynParamsConstraint() {
+func @failedDynParamsConstraintBase() {
+    // expected-error@+1 {{expected base type 'testd.parametric' but got type 'i32'}}
+    "testd.dynparams"() : () -> i32
+    return
+}
+
+// -----
+
+func @failedDynParamsConstraintParam() {
     // expected-error@+1 {{type 'i1' does not satisfy the constraint}}
     "testd.dynparams"() : () -> !testd.parametric<i1>
     return

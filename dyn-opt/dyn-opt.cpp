@@ -8,6 +8,7 @@
 
 #include "Dyn/Dialect/IRDL/IR/IRDL.h"
 #include "MlirOptMain.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/MLIRContext.h"
@@ -29,12 +30,20 @@
 using namespace mlir;
 using namespace irdl;
 
+class ComplexTypeWrapper : public ConcreteTypeWrapper<ComplexType> {
+  StringRef getName() override { return "std.complex"; }
+
+  SmallVector<Attribute> getParameters(ComplexType type) override {
+    return {TypeAttr::get(type.getElementType())};
+  }
+};
+
 int main(int argc, char **argv) {
   mlir::registerAllPasses();
   // TODO: Register passes here.
 
   MLIRContext ctx;
-  ctx.getOrLoadDialect<irdl::IRDLDialect>();
+  auto irdl = ctx.getOrLoadDialect<irdl::IRDLDialect>();
 
   auto trait = DynamicOpTrait::get(&ctx, [](Operation *op) {
     if (op->getNumOperands() == 0) {
@@ -46,6 +55,8 @@ int main(int argc, char **argv) {
                      [type](auto operandType) { return operandType == type; }));
   });
   ctx.registerDynamicTrait("SameTypeOperands", std::move(trait));
+
+  irdl->addTypeWrapper<ComplexTypeWrapper>();
 
   // Register the standard dialect and the IRDL dialect in the MLIR context
   DialectRegistry registry;

@@ -106,3 +106,18 @@ DynTypeParamsConstraintAttr::getTypeConstraint() {
   return std::make_unique<DynTypeParamsConstraint>(getTypeDef(),
                                                    std::move(paramConstraints));
 }
+
+//===----------------------------------------------------------------------===//
+// Attribute for constraint on non-dynamic type parameters
+//===----------------------------------------------------------------------===//
+
+std::unique_ptr<TypeConstraint> TypeParamsConstraintAttr::getTypeConstraint() {
+  SmallVector<std::unique_ptr<TypeConstraint>> paramConstraints;
+  for (auto paramConstraintAttr : getParamConstraints())
+    paramConstraints.push_back(
+        paramConstraintAttr.cast<TypeConstraintAttrInterface>()
+            .getTypeConstraint());
+
+  return std::make_unique<TypeParamsConstraint>(getTypeDef(),
+                                                std::move(paramConstraints));
+}

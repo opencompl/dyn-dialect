@@ -33,6 +33,19 @@ void IRDLDialect::initialize() {
   registerAttributes();
 }
 
+void IRDLDialect::addTypeWrapper(std::unique_ptr<TypeWrapper> wrapper) {
+  auto emplaced =
+      typeWrappers.try_emplace(wrapper->getName(), std::move(wrapper)).second;
+  assert(emplaced && "a type wrapper with the same name already exists");
+}
+
+TypeWrapper *IRDLDialect::getTypeWrapper(StringRef typeName) {
+  auto it = typeWrappers.find(typeName);
+  if (it == typeWrappers.end())
+    return nullptr;
+  return it->second.get();
+}
+
 //===----------------------------------------------------------------------===//
 // Type constraints.
 //===----------------------------------------------------------------------===//
@@ -99,8 +112,58 @@ void printAnyOfTypeConstraint(OpAsmPrinter &p,
   p << types.back() << ">";
 }
 
-/// Parse an AnyOf constraint if there is one.
-/// It has the format 'irdl.AnyOf<type (, type)*>'
+/// Parse a type parameters constraint.
+/// It has the format 'dialectname.typename<(typeConstraint ,)*>'
+ParseResult parseTypeParamsConstraint(OpAsmParser &p, TypeWrapper *wrapper,
+                                      Attribute *typeConstraint,
+                                      ArgDefs variables) {
+  auto ctx = p.getBuilder().getContext();
+
+  // Empty case
+  if (p.parseOptionalLess() || !p.parseOptionalGreater()) {
+    *typeConstraint = TypeParamsConstraintAttr::get(ctx, wrapper, {});
+    return success();
+  }
+
+  SmallVector<Attribute> paramConstraints;
+
+  paramConstraints.push_back({});
+  if (parseTypeConstraint(p, &paramConstraints.back(), variables))
+    return {failure()};
+
+  while (p.parseOptionalGreater()) {
+    if (p.parseComma())
+      return {failure()};
+
+    paramConstraints.push_back({});
+    if (parseTypeConstraint(p, &paramConstraints.back(), variables))
+      return {failure()};
+  }
+
+  *typeConstraint =
+      TypeParamsConstraintAttr::get(ctx, wrapper, paramConstraints);
+  return {success()};
+}
+
+void printTypeParamsConstraint(OpAsmPrinter &p,
+                               TypeParamsConstraintAttr constraint,
+                               ArgDefs variables) {
+  auto *typeDef = constraint.getTypeDef();
+  p << typeDef->getName();
+
+  auto paramConstraints = constraint.getParamConstraints();
+  if (paramConstraints.empty())
+    return;
+
+  p << "<";
+  llvm::interleaveComma(paramConstraints, p, [&p, variables](Attribute a) {
+    printTypeConstraint(p, a, variables);
+  });
+  p << ">";
+}
+
+/// Parse a dynamic type parameters constraint.
+/// It has the format 'dialectname.typename<(typeConstraint ,)*>'
 OptionalParseResult
 parseOptionalDynTypeParamsConstraint(OpAsmParser &p, StringRef keyword,
                                      Attribute *typeConstraint,
@@ -225,6 +288,13 @@ ParseResult parseTypeConstraint(OpAsmParser &p, Attribute *typeConstraint,
         return success();
       }
 
+    // Parse a non-dynamic type parameter constraint.
+    auto irdl = ctx->getOrLoadDialect<IRDLDialect>();
+    auto typeWrapper = irdl->getTypeWrapper(keyword);
+    if (typeWrapper)
+      return parseTypeParamsConstraint(p, typeWrapper, typeConstraint,
+                                       variables);
+
     // Parse a dynamic type parameter constraint.
     auto paramRes = parseOptionalDynTypeParamsConstraint(
         p, keyword, typeConstraint, variables);
@@ -247,6 +317,9 @@ void printTypeConstraint(OpAsmPrinter &p, Attribute typeConstraint,
   } else if (auto anyOfConstr =
                  typeConstraint.dyn_cast<AnyOfTypeConstraintAttr>()) {
     printAnyOfTypeConstraint(p, anyOfConstr);
+  } else if (auto typeParamsConstr =
+                 typeConstraint.dyn_cast<TypeParamsConstraintAttr>()) {
+    printTypeParamsConstraint(p, typeParamsConstr, variables);
   } else if (auto dynTypeParamsConstr =
                  typeConstraint.dyn_cast<DynTypeParamsConstraintAttr>()) {
     printDynTypeParamsConstraint(p, dynTypeParamsConstr, variables);

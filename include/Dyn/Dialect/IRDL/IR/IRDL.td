@@ -57,11 +57,26 @@ def IRDL_Dialect : Dialect {
     /// to the dialect that is currently being parsed by MLIR.
     ExtensibleDialect *currentlyParsedDialect = nullptr;
 
+    /// Add a concrete type wrapper in IRDL.
+    template <typename T>
+    void addTypeWrapper() {
+         addTypeWrapper(std::make_unique<T>(new T()));
+    }
+
+    /// Get a type wrapper with the given name.
+    /// Returns nullptr if no type wrapper with that name is found.
+    TypeWrapper* getTypeWrapper(StringRef typeName);
+
   private:
+    /// Add a type wrapper to IRDL.
+    void addTypeWrapper(std::unique_ptr<mlir::irdl::TypeWrapper> wrapper);
+
     /// Register the attributes used by default by IRDL.
     void registerAttributes();
     /// Register the attributes used by standard interfaces wrappers in IRDL.
     void registerStandardInterfaceAttributes();
+    /// Wrapper around types that can be used in IRDL.
+    llvm::StringMap<std::unique_ptr<mlir::irdl::TypeWrapper>> typeWrappers;
   }];
 
   let name = "irdl";

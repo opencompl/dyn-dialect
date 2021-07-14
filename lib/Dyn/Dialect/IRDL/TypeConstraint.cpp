@@ -77,14 +77,38 @@ LogicalResult DynTypeParamsConstraint::verifyType(
     MutableArrayRef<Type> varsValue) {
   auto dynType = type.dyn_cast<DynamicType>();
   if (!dynType || dynType.getTypeDef() != dynTypeDef)
-    return emitError().append("expected base type ", dynTypeDef->getName(),
-                              " but got type ", type);
+    return emitError().append("expected base type '",
+                              dynTypeDef->getDialect()->getNamespace(), ".",
+                              dynTypeDef->getName(), "' but got type ", type);
 
   // Since we do not have variadic parameters yet, we should have the
   // exact number of constraints.
   assert(dynType.getParams().size() == paramConstraints.size() &&
          "unexpected number of parameters in parameter type constraint");
   auto params = dynType.getParams();
+  for (size_t i = 0; i < params.size(); i++) {
+    auto paramType = params[i].cast<TypeAttr>().getValue();
+    if (failed(paramConstraints[i]->verifyType(emitError, paramType,
+                                               typeConstraintVars, varsValue)))
+      return failure();
+  }
+
+  return success();
+}
+
+LogicalResult TypeParamsConstraint::verifyType(
+    function_ref<InFlightDiagnostic()> emitError, Type type,
+    ArrayRef<std::unique_ptr<TypeConstraint>> typeConstraintVars,
+    MutableArrayRef<Type> varsValue) {
+  if (!typeDef->isCorrectType(type))
+    return emitError().append("expected base type '", typeDef->getName(),
+                              "' but got type ", type);
+
+  auto params = typeDef->getParameters(type);
+  // Since we do not have variadic parameters yet, we should have the
+  // exact number of constraints.
+  assert(params.size() == paramConstraints.size() &&
+         "unexpected number of parameters in parameter type constraint");
   for (size_t i = 0; i < params.size(); i++) {
     auto paramType = params[i].cast<TypeAttr>().getValue();
     if (failed(paramConstraints[i]->verifyType(emitError, paramType,

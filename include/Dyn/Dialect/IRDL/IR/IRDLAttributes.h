@@ -16,14 +16,15 @@
 #include "Dyn/Dialect/IRDL/IR/IRDLInterfaces.h"
 #include "mlir/IR/AttributeSupport.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/ExtensibleDialect.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/TypeSupport.h"
 
 // Forward declaration.
 namespace mlir {
-class DynamicTypeDefinition;
 namespace irdl {
 class OperationOp;
+class TypeWrapper;
 } // namespace irdl
 } // namespace mlir
 

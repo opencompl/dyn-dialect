@@ -87,6 +87,22 @@ def DynTypeParamsConstraintAttr : IRDL_AttrDef<"DynTypeParamsConstraintAttr", [T
   }];
 }
 
+def TypeParamsConstraintAttr : IRDL_AttrDef<"TypeParamsConstraintAttr", [TypeConstraintAttrInterface]> {
+  let summary = "constraint on C++ type parameters";
+  let description = [{
+    Attribute representing a constraint on C++ type parameters.
+    The constraint is satisfied by types that are of a specifc base
+    type, and that have parameters satisfying the parameter constraints.
+  }];
+  let parameters = (ins "mlir::irdl::TypeWrapper*":$typeDef,
+      ArrayRefParameter<"mlir::Attribute", "list of param constraints">:$paramConstraints);
+
+  let extraClassDeclaration = [{
+    std::unique_ptr<TypeConstraint> getTypeConstraint();
+  }];
+}
+
+
 class OpDefParameter<string desc = ""> :
     AttrOrTypeParameter<"mlir::irdl::OpDef", desc> {
   let allocator = [{$_dst = mlir::irdl::opDefAllocator($_allocator, $_self);}];
