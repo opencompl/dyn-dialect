@@ -60,7 +60,7 @@ def IRDL_Dialect : Dialect {
     /// Add a concrete type wrapper in IRDL.
     template <typename T>
     void addTypeWrapper() {
-         addTypeWrapper(std::make_unique<T>(new T()));
+         addTypeWrapper(std::unique_ptr<T>(new T()));
     }
 
     /// Get a type wrapper with the given name.
