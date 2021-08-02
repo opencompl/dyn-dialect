@@ -24,6 +24,8 @@ struct JSON {
   virtual void print(raw_ostream &os) = 0;
 
   virtual ~JSON(){};
+
+  template <typename T> static std::unique_ptr<JSON> get(T value);
 };
 
 struct JSONDict : JSON {
@@ -44,7 +46,11 @@ struct JSONDict : JSON {
     return std::make_unique<JSONDict>();
   }
 
-  void insert(StringRef key, std::unique_ptr<JSON> &&val) {
+  template <typename T> void insert(StringRef key, T val) {
+    value.insert({key, JSON::get(val)});
+  }
+
+  void insertJson(StringRef key, std::unique_ptr<JSON> &&val) {
     value.insert({key, std::move(val)});
   }
 };
@@ -56,13 +62,11 @@ struct JSONList : JSON {
 
   void print(raw_ostream &os) override {
     os << "[";
-    llvm::interleaveComma(value, os, [&os](auto &item) {
-      item->print(os);
-    });
+    llvm::interleaveComma(value, os, [&os](auto &item) { item->print(os); });
     os << "]";
   }
 
-  void insert(std::unique_ptr<JSON>&& item) {
+  void insert(std::unique_ptr<JSON> &&item) {
     value.push_back(std::move(item));
   }
 
@@ -109,12 +113,55 @@ struct JSONStr : JSON {
   JSONStr(StringRef value) : value(value.str()) {}
   ~JSONStr() override{};
 
-  void print(raw_ostream &os) override { os << '"' << value << '"'; }
+  void print(raw_ostream &os) override {
+    os << '"';
+    for (auto v : value) {
+      switch (v) {
+      case '\n': {
+        os << " ";
+        break;
+      }
+      default: {
+        os << v;
+      }
+      }
+    }
+    os << '"';
+  }
 
   static std::unique_ptr<JSONStr> get(StringRef value) {
     return std::make_unique<JSONStr>(value);
   }
 };
+
+template <typename T> std::unique_ptr<JSON> JSON::get(T value) {
+  static_assert(std::is_same<T, void>(), "JSON::get failed");
+  return JSONInt::get(0);
+}
+
+template <> inline std::unique_ptr<JSON> JSON::get(bool value) {
+  return JSONBool::get(value);
+}
+
+template <> inline std::unique_ptr<JSON> JSON::get(int value) {
+  return JSONInt::get(value);
+}
+
+template <> inline std::unique_ptr<JSON> JSON::get(unsigned int value) {
+  return JSONInt::get((int)value);
+}
+
+template <> inline std::unique_ptr<JSON> JSON::get(std::string value) {
+  return JSONStr::get(value);
+}
+
+template <> inline std::unique_ptr<JSON> JSON::get(StringRef value) {
+  return JSONStr::get(value);
+}
+
+template <> inline std::unique_ptr<JSON> JSON::get(const char* value) {
+  return JSONStr::get(value);
+}
 
 } // namespace mlir
 
