@@ -121,6 +121,10 @@ struct JSONStr : JSON {
         os << " ";
         break;
       }
+      case '\"': {
+        os << "\\\"";
+        break;
+      }
       default: {
         os << v;
       }

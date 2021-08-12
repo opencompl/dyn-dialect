@@ -112,6 +112,26 @@ std::unique_ptr<JSON> getJSON(const NamedTypeConstraint &constraint) {
   return json;
 }
 
+std::unique_ptr<JSON> getJSON(const Trait& trait) {
+  auto json = JSONDict::get();
+  if (isa<NativeTrait>(trait)) {
+    auto nativeTrait = cast<NativeTrait>(trait);
+    json->insert("kind", "native");
+    json->insert("name", nativeTrait.getFullyQualifiedTraitName());
+  } else if (isa<PredTrait>(trait)) {
+    auto predTrait = cast<PredTrait>(trait);
+    json->insert("kind", "pred");
+    json->insert("pred", predTrait.getPredTemplate());
+  } else if (isa<InternalTrait>(trait)) {
+    auto internalTrait = cast<InternalTrait>(trait);
+    json->insert("kind", "internal");
+    json->insert("name", internalTrait.getFullyQualifiedTraitName());
+  } else {
+    assert(false);
+  }
+  return json;
+}
+
 std::unique_ptr<JSON> getJSON(const Operator &op) {
   auto dict = JSONDict::get();
   dict->insert("name", op.getOperationName());
@@ -134,6 +154,17 @@ std::unique_ptr<JSON> getJSON(const Operator &op) {
   for (int i = 0; i < op.getNumResults(); i++)
     results->insert(getJSON(op.getResult(i)));
   dict->insertJson("results", std::move(results));
+
+  auto attributes = JSONDict::get();
+  for (auto attribute : op.getAttributes())
+    attributes->insertJson(attribute.name, getJSON(attribute.attr));
+  dict->insertJson("attributes", std::move(attributes));
+
+  auto traits = JSONList::get();
+  for (auto trait: op.getTraits())
+    if (!isa<InterfaceTrait>(trait))
+      traits->insert(getJSON(trait));
+  dict->insertJson("traits", std::move(traits));
 
   return dict;
 }
@@ -181,6 +212,14 @@ std::unique_ptr<JSON> getTypesJSON(ArrayRef<Record *> defs) {
   return list;
 }
 
+std::unique_ptr<JSON> getAttrsJSON(ArrayRef<Record *> defs) {
+  auto list = JSONList::get();
+  for (auto &def : defs) {
+    list->insert(getJSON(AttrDef(def)));
+  }
+  return list;
+}
+
 bool MlirTableGenStatsMain(raw_ostream &os, RecordKeeper &records) {
   std::vector<Record *> opDefs = getOpDefinitions(records);
   std::vector<Record *> typeDefs = getTypeDefinitions(records);
@@ -189,6 +228,7 @@ bool MlirTableGenStatsMain(raw_ostream &os, RecordKeeper &records) {
   auto res = JSONDict::get();
   res->insertJson("ops", getOpsJSON(opDefs));
   res->insertJson("types", getTypesJSON(typeDefs));
+  res->insertJson("attrs", getAttrsJSON(attrDefs));
   res->print(os);
 
   return false;
