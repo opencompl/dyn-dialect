@@ -111,7 +111,7 @@ class TraitStats:
             return InternalTraitStats.from_json(json)
         assert False
 
-    def is_declarative(self, in_tablegen: bool) -> bool:
+    def is_declarative(self) -> bool:
         raise NotImplemented
 
 
@@ -119,14 +119,65 @@ class TraitStats:
 class NativeTraitStats(TraitStats):
     name: str
 
+    def is_declarative(self) -> bool:
+        # Do not have verifiers. Note, we may need to add dependencies between traits
+        if self.name == "::mlir::OpTrait::IsCommutative":
+            return True
+        if self.name == "::mlir::OpTrait::Scalarizable":
+            return True
+        if self.name == "::mlir::OpTrait::Vectorizable":
+            return True
+        if self.name == "::mlir::OpTrait::Tensorizable":
+            return True
+        if self.name == "::mlir::OpTrait::spirv::UsableInSpecConstantOp":
+            return True
+        if self.name == "::mlir::OpTrait::spirv::UnsignedOp":
+            return True
+        if self.name == "::mlir::OpTrait::spirv::SignedOp":
+            return True
+
+        # Have verifiers, but should be builtins
+        if self.name == "::mlir::OpTrait::IsTerminator":
+            return True
+        m = re.compile(r"::mlir::OpTrait::HasParent<(.*)>::Impl").match(self.name)
+        if m is not None:
+            return True
+
+        # Are replaced by IRDL way of doing things
+        if self.name == "::mlir::OpTrait::SameOperandsAndResultType":
+            return True
+        if self.name == "::mlir::OpTrait::SameTypeOperands":
+            return True
+        if self.name == "::mlir::OpTrait::Elementwise":
+            return True
+        m = re.compile(r"::mlir::OpTrait::SingleBlockImplicitTerminator<(.*)>::Impl").match(self.name)
+        if m is not None:
+            return True
+
+        # Cannot be replaced by IRDL for now
+        if self.name == "::mlir::OpTrait::SameOperandsAndResultShape":
+            return False
+        return False
+
 
 @from_json
 class PredTraitStats(TraitStats):
     pred: str
 
+    def is_declarative(self) -> bool:
+        return False
+
 
 @from_json
 class InternalTraitStats(TraitStats):
+    name: str
+
+    def is_declarative(self) -> bool:
+        return False
+
+
+@from_json
+class InterfaceStats:
     name: str
 
 
@@ -402,11 +453,16 @@ class OpStats:
     results: List[NamedConstraintStats]
     attributes: Dict[str, ConstraintStats]
     traits: List[TraitStats]
+    interfaces: List[InterfaceStats]
 
-    def is_declarative(self, in_tablegen: bool) -> bool:
+    def is_declarative(self, in_tablegen: bool, check_traits: bool = True, check_interfaces: bool = True) -> bool:
         if self.hasVerifier:
             return False
-        if len(self.traits) > 0:
+        if not in_tablegen and check_traits:
+            for trait in self.traits:
+                if not trait.is_declarative():
+                    return False
+        if not in_tablegen and check_interfaces and len(self.interfaces) > 0:
             return False
         for operand in self.operands:
             if not operand.is_declarative(in_tablegen):
@@ -532,6 +588,7 @@ def get_stat_from_file(file) -> Optional[Stats]:
     res = subprocess.run(["../build/bin/tblgen-stats", os.path.join(root, file), "--I=../llvm-project/mlir/include",
                           f"--I={root}"], capture_output=True)
     if res.returncode != 0:
+        print(res.stderr)
         return None
     print("../build/bin/tblgen-stats", os.path.join(root, file), "--I=../llvm-project/mlir/include",
           f"--I={root}")
@@ -619,6 +676,20 @@ def get_dialect_values(stats: Stats, f: Callable[[DialectStats], T]) -> Dict[str
 def __main__():
     stats = get_stat_from_files()
 
+    trait_values = dict()
+    for op in stats.ops:
+        for trait in op.traits:
+            if isinstance(trait, NativeTraitStats):
+                if not trait.is_declarative():
+                    trait_values[trait.name] = 0
+    for op in stats.ops:
+        for trait in op.traits:
+            if isinstance(trait, NativeTraitStats):
+                if not trait.is_declarative():
+                    trait_values[trait.name] += 1
+    print({k: v for k, v in sorted(trait_values.items(), key=lambda item: -item[1])})
+
+
     print("Number of operations defined in TableGen, and in total")
     print(get_dialect_values(stats, lambda x: (len(x.ops), x.numOperations)))
     print("total:", (len(stats.ops), sum([dialect.numOperations for dialect in stats.dialects.values()]), ))
@@ -649,7 +720,13 @@ def __main__():
     print(get_global_op_distribution(stats, lambda x: 1 if x.is_declarative(True) else 0)[0])
 
     print("Fully declarative in IRDL")
-    print(get_global_op_distribution(stats, lambda x: 1 if x.is_declarative(False) else 0)[0])
+    print(get_global_op_distribution(stats, lambda x: 1 if x.is_declarative(in_tablegen=False, check_traits=True, check_interfaces=True) else 0))
+
+    print("Fully declarative in IRDL without interfaces")
+    print(get_global_op_distribution(stats, lambda x: 1 if x.is_declarative(in_tablegen=False, check_traits=True, check_interfaces=False) else 0))
+
+    print("Fully declarative in IRDL without traits or interfaces")
+    print(get_global_op_distribution(stats, lambda x: 1 if x.is_declarative(in_tablegen=False, check_traits=False, check_interfaces=False) else 0))
 
     print("Type parameters")
     print(get_global_type_distribution(stats, lambda x: x.numParameters)[0])

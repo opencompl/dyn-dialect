@@ -2,6 +2,7 @@
 #include "mlir/TableGen/AttrOrTypeDef.h"
 #include "mlir/TableGen/GenInfo.h"
 #include "mlir/TableGen/GenNameParser.h"
+#include "mlir/TableGen/Interfaces.h"
 #include "mlir/TableGen/Operator.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/InitLLVM.h"
@@ -112,7 +113,7 @@ std::unique_ptr<JSON> getJSON(const NamedTypeConstraint &constraint) {
   return json;
 }
 
-std::unique_ptr<JSON> getJSON(const Trait& trait) {
+std::unique_ptr<JSON> getJSON(const Trait &trait) {
   auto json = JSONDict::get();
   if (isa<NativeTrait>(trait)) {
     auto nativeTrait = cast<NativeTrait>(trait);
@@ -129,6 +130,12 @@ std::unique_ptr<JSON> getJSON(const Trait& trait) {
   } else {
     assert(false);
   }
+  return json;
+}
+
+std::unique_ptr<JSON> getJSON(const Interface &interface) {
+  auto json = JSONDict::get();
+  json->insert("name", interface.getName());
   return json;
 }
 
@@ -161,11 +168,16 @@ std::unique_ptr<JSON> getJSON(const Operator &op) {
   dict->insertJson("attributes", std::move(attributes));
 
   auto traits = JSONList::get();
-  for (auto trait: op.getTraits())
+  auto interfaces = JSONList::get();
+  for (auto trait : op.getTraits()) {
     if (!isa<InterfaceTrait>(trait))
       traits->insert(getJSON(trait));
-  dict->insertJson("traits", std::move(traits));
+    else
+      interfaces->insert(getJSON(cast<InterfaceTrait>(trait).getInterface()));
+  }
 
+  dict->insertJson("traits", std::move(traits));
+  dict->insertJson("interfaces", std::move(interfaces));
   return dict;
 }
 
