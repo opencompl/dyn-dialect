@@ -100,7 +100,7 @@ std::unique_ptr<JSON> getJSON(const Constraint &constraint) {
   auto superJson = JSONList::get();
   auto superclasses = constraint.def->getSuperClasses();
   for (auto cls : superclasses)
-    superJson->insert(JSON::get(cls.first->getName()));
+    superJson->insert(cls.first->getName());
   json->insertJson("superclass", std::move(superJson));
 
   return json;
@@ -133,12 +133,6 @@ std::unique_ptr<JSON> getJSON(const Trait &trait) {
   return json;
 }
 
-std::unique_ptr<JSON> getJSON(const Interface &interface) {
-  auto json = JSONDict::get();
-  json->insert("name", interface.getName());
-  return json;
-}
-
 std::unique_ptr<JSON> getJSON(const Operator &op) {
   auto dict = JSONDict::get();
   dict->insert("name", op.getOperationName());
@@ -154,12 +148,12 @@ std::unique_ptr<JSON> getJSON(const Operator &op) {
 
   auto operands = JSONList::get();
   for (int i = 0; i < op.getNumOperands(); i++)
-    operands->insert(getJSON(op.getOperand(i)));
+    operands->insertJson(getJSON(op.getOperand(i)));
   dict->insertJson("operands", std::move(operands));
 
   auto results = JSONList::get();
   for (int i = 0; i < op.getNumResults(); i++)
-    results->insert(getJSON(op.getResult(i)));
+    results->insertJson(getJSON(op.getResult(i)));
   dict->insertJson("results", std::move(results));
 
   auto attributes = JSONDict::get();
@@ -171,9 +165,9 @@ std::unique_ptr<JSON> getJSON(const Operator &op) {
   auto interfaces = JSONList::get();
   for (auto trait : op.getTraits()) {
     if (!isa<InterfaceTrait>(trait))
-      traits->insert(getJSON(trait));
+      traits->insertJson(getJSON(trait));
     else
-      interfaces->insert(getJSON(cast<InterfaceTrait>(trait).getInterface()));
+      interfaces->insert(cast<InterfaceTrait>(trait).getFullyQualifiedTraitName());
   }
 
   dict->insertJson("traits", std::move(traits));
@@ -191,7 +185,7 @@ std::unique_ptr<JSON> getJSON(const AttrOrTypeParameter &def) {
 std::unique_ptr<JSON> getJSON(ArrayRef<AttrOrTypeParameter> defs) {
   auto list = JSONList::get();
   for (auto &def : defs) {
-    list->insert(getJSON(def));
+    list->insertJson(getJSON(def));
   }
   return list;
 }
@@ -201,17 +195,32 @@ std::unique_ptr<JSONDict> getJSON(const AttrOrTypeDef &def) {
   dict->insert("name", def.getName());
   dict->insert("numParameters", def.getNumParameters());
   dict->insert("dialect", def.getDialect().getName());
+  dict->insert("hasVerifier", def.genVerifyDecl());
 
   SmallVector<AttrOrTypeParameter> parameters;
   def.getParameters(parameters);
   dict->insertJson("parameters", getJSON(parameters));
+
+  auto traits = JSONList::get();
+  auto interfaces = JSONList::get();
+  for (auto trait : def.getTraits()) {
+    if (!isa<InterfaceTrait>(trait))
+      traits->insertJson(getJSON(trait));
+    else
+      interfaces->insert(
+          cast<InterfaceTrait>(trait).getFullyQualifiedTraitName());
+  }
+
+  dict->insertJson("traits", std::move(traits));
+  dict->insertJson("interfaces", std::move(interfaces));
+
   return dict;
 }
 
 std::unique_ptr<JSON> getOpsJSON(ArrayRef<Record *> defs) {
   auto list = JSONList::get();
   for (auto &def : defs) {
-    list->insert(getJSON(Operator(def)));
+    list->insertJson(getJSON(Operator(def)));
   }
   return list;
 }
@@ -219,7 +228,7 @@ std::unique_ptr<JSON> getOpsJSON(ArrayRef<Record *> defs) {
 std::unique_ptr<JSON> getTypesJSON(ArrayRef<Record *> defs) {
   auto list = JSONList::get();
   for (auto &def : defs) {
-    list->insert(getJSON(TypeDef(def)));
+    list->insertJson(getJSON(TypeDef(def)));
   }
   return list;
 }
@@ -227,7 +236,7 @@ std::unique_ptr<JSON> getTypesJSON(ArrayRef<Record *> defs) {
 std::unique_ptr<JSON> getAttrsJSON(ArrayRef<Record *> defs) {
   auto list = JSONList::get();
   for (auto &def : defs) {
-    list->insert(getJSON(AttrDef(def)));
+    list->insertJson(getJSON(AttrDef(def)));
   }
   return list;
 }

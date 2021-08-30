@@ -66,8 +66,13 @@ struct JSONList : JSON {
     os << "]";
   }
 
-  void insert(std::unique_ptr<JSON> &&item) {
+  void insertJson(std::unique_ptr<JSON> &&item) {
     value.push_back(std::move(item));
+  }
+
+  template <typename T>
+  void insert(T item) {
+    value.push_back(JSON::get(item));
   }
 
   static std::unique_ptr<JSONList> get() {

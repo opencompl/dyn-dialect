@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from typing import *
 import re
 
+verifiers_allow_len_equality = False
 
 def check_balanced_parentheses(val: str) -> bool:
     paren_level = 0
@@ -49,6 +50,7 @@ def separate_on_operator(val: str, operator: str) -> Optional[Tuple[str, str]]:
                 return val[0:idx], val[idx+len(operator):]
     return None
 
+
 # OPENMP and OPENACC are not included since they rely on generated tablegen
 # files
 # DLTI is removed because it contains no operations
@@ -83,7 +85,7 @@ def _from_json(json, typ: Type):
 
 
 def from_json(cls):
-    @dataclass
+    @dataclass(eq=True, unsafe_hash=True)
     class FromJsonWrapper(dataclass(cls)):
         def __repr__(self):
             return cls.__name__[:-5] + "(" + ", ".join([f"{key}={self.__dict__[key]}" for key in
@@ -135,12 +137,18 @@ class NativeTraitStats(TraitStats):
             return True
         if self.name == "::mlir::OpTrait::spirv::SignedOp":
             return True
+        if self.name == "::mlir::OpTrait::HasRecursiveSideEffects":
+            return True
+        if self.name == "::mlir::OpTrait::MemRefsNormalizable":
+            return True
 
         # Have verifiers, but should be builtins
         if self.name == "::mlir::OpTrait::IsTerminator":
             return True
         m = re.compile(r"::mlir::OpTrait::HasParent<(.*)>::Impl").match(self.name)
         if m is not None:
+            return True
+        if self.name == "::mlir::OpTrait::IsIsolatedFromAbove":
             return True
 
         # Are replaced by IRDL way of doing things
@@ -153,10 +161,13 @@ class NativeTraitStats(TraitStats):
         m = re.compile(r"::mlir::OpTrait::SingleBlockImplicitTerminator<(.*)>::Impl").match(self.name)
         if m is not None:
             return True
+        if self.name == "::mlir::OpTrait::AttrSizedOperandSegments":
+            return True
 
         # Cannot be replaced by IRDL for now
         if self.name == "::mlir::OpTrait::SameOperandsAndResultShape":
             return False
+
         return False
 
 
@@ -165,6 +176,10 @@ class PredTraitStats(TraitStats):
     pred: str
 
     def is_declarative(self) -> bool:
+        if re.compile("\(getElementTypeOrSelf\(\$_op.getResult\((.*)\)\) == getElementTypeOrSelf\(\$_op.getOperand\((.*)\)\)\)").match(self.pred) is not None:
+            return True
+        if self.pred == "(std::equal_to<>()($tensor.getType().cast<ShapedType>().getElementType(), $result.getType()))":
+            return True
         return False
 
 
@@ -176,12 +191,7 @@ class InternalTraitStats(TraitStats):
         return False
 
 
-@from_json
-class InterfaceStats:
-    name: str
-
-
-@dataclass
+@dataclass(eq=True, unsafe_hash=True)
 class ConstraintStats:
     kind: str
 
@@ -192,7 +202,13 @@ class ConstraintStats:
         # Check if this is a IsaCPPConstraint
         m = re.compile(r"\$_self.isa<(.*)>\(\)").match(predicate)
         if m is not None:
-            return IsaCppTypeConstraintStats(m.group(0))
+            return IsaCppTypeConstraintStats(predicate[11:-3])
+
+        m = re.compile(r"!\((.*)\)").match(predicate)
+        if m is not None:
+            constraint = ConstraintStats.from_predicate(m.group(0)[2:-1])
+            if constraint is not None:
+                return NotConstraintStats(constraint)
 
         and_operands = separate_on_operator(predicate, "&&")
         if and_operands is not None:
@@ -273,6 +289,19 @@ class IsaCppTypeConstraintStats(ConstraintStats):
         self.kind = "isaCppType"
         self.name = name
 
+@dataclass(eq=False)
+class NotConstraintStats(ConstraintStats):
+    constraint: ConstraintStats
+
+    def __init__(self, constraint):
+        self.constraint = constraint
+        self.kind = "not"
+
+    def is_declarative(self, in_tablegen: bool) -> bool:
+        if in_tablegen:
+            return False
+        return self.constraint.is_declarative(in_tablegen)
+
 
 @dataclass(eq=False)
 class AndConstraintStats(ConstraintStats):
@@ -333,6 +362,13 @@ class PredicateConstraintStats(ConstraintStats):
             return True
 
         m = re.compile(r"\$_self.isF(.*)\(\)").match(self.predicate)
+        if m is not None:
+            return True
+
+        if re.compile(r"\$_self.cast<::mlir::FloatAttr>\(\).getType\(\).isF(.*)\(\)").match(self.predicate) is not None:
+            return True
+
+        m = re.compile(r"\$_self.cast<(.*)>\(\).getType\(\).getElementType\(\).is(.*)Integer\((.*)\)").match(self.predicate)
         if m is not None:
             return True
 
@@ -411,20 +447,120 @@ class PredicateConstraintStats(ConstraintStats):
         if self.predicate == "$_self.cast<::mlir::ShapedType>().hasRank()":
             return True
 
-        # Harder cases:
-        return False
-        m = re.compile(r"\$_self.cast<(.*)>\(\).getNumElements\(\)                            == (.*)").match(self.predicate)
+        m = re.compile(r"::mlir::LLVM::isCompatibleFloatingPointType\(\$_self.cast<::mlir::LLVM::LLVMPointerType>\(\).getElementType\(\)\)").match(self.predicate)
         if m is not None:
             return True
+
+        m = re.compile(r"::mlir::LLVM::isCompatibleType\(\$_self.cast<::mlir::LLVM::LLVMPointerType>\(\).getElementType\(\)\)").match(self.predicate)
+        if m is not None:
+            return True
+        
+        if self.predicate == "!$_self.cast<::mlir::LLVM::LLVMPointerType>().getElementType().isa<::mlir::LLVM::LLVMVoidType, ::mlir::LLVM::LLVMFunctionType>()":
+            return True
+
+        if re.compile(r"\$_self.cast<::mlir::IntegerAttr>\(\).getType\(\).is(.*)Integer\((.*)\)").match(self.predicate) is not None:
+            return True
+
+        if self.predicate == "::llvm::all_of($_self.cast<::mlir::ArrayAttr>(), [&](::mlir::Attribute attr) { return ((attr.isa<::mlir::ArrayAttr>())) && (::llvm::all_of(attr.cast<::mlir::ArrayAttr>(), [&](::mlir::Attribute attr) { return ((attr.isa<::mlir::IntegerAttr>())) && ((attr.cast<::mlir::IntegerAttr>().getType().isSignlessInteger(64))); })); })":
+            return True
+
+        if self.predicate == "::llvm::all_of($_self.cast<::mlir::ArrayAttr>(), [&](::mlir::Attribute attr) { return ((attr.isa<::mlir::IntegerAttr>())) && ((attr.cast<::mlir::IntegerAttr>().getType().isSignlessInteger(64))); })":
+            return True
+
+        if re.compile(r"\$_self.cast<(::mlir::)?StringAttr>\(\).getValue\(\) == \"(.*)\"").match(self.predicate) is not None:
+            return True
+
+        if self.predicate == "$_self.cast<::mlir::IntegerAttr>().getType().isa<::mlir::IndexType>()":
+            return True
+
+        if self.predicate == "::llvm::all_of($_self.cast<::mlir::ArrayAttr>(), [&](::mlir::Attribute attr) { return (attr.isa<::mlir::AtomicRMWKindAttr>()); })":
+            return True
+
+        if self.predicate == "::llvm::all_of($_self.cast<::mlir::ArrayAttr>(), [&](::mlir::Attribute attr) { return ((attr.isa<::mlir::IntegerAttr>())) && ((attr.cast<::mlir::IntegerAttr>().getType().isSignlessInteger(32))); })":
+            return True
+
+        if self.predicate == "::llvm::all_of($_self.cast<::mlir::ArrayAttr>(), [&](::mlir::Attribute attr) { return ((attr.isa<::mlir::FloatAttr>())) && ((attr.cast<::mlir::FloatAttr>().getType().isF32())); })":
+            return True
+
+        if self.predicate == "::llvm::all_of($_self.cast<::mlir::ArrayAttr>(), [&](::mlir::Attribute attr) { return (attr.isa<::mlir::SymbolRefAttr>()); })":
+            return True
+
+        if self.predicate == "::llvm::all_of($_self.cast<::mlir::ArrayAttr>(), [&](::mlir::Attribute attr) { return (attr.isa<::mlir::StringAttr>()); })":
+            return True
+
+        if self.predicate == "::llvm::all_of($_self.cast<::mlir::ArrayAttr>(), [&](::mlir::Attribute attr) { return ((attr.isa<::mlir::TypeAttr>())) && ((attr.cast<::mlir::TypeAttr>().getValue().isa<::mlir::Type>())); })":
+            return True
+
+        if self.predicate == "::llvm::all_of($_self.cast<::mlir::TupleType>().getTypes(), [](Type t) { return ((t.isa<::mlir::VectorType>())) && ((true)); })":
+            return True
+
+        if self.predicate == "::llvm::all_of($_self.cast<::mlir::ArrayAttr>(), [&](::mlir::Attribute attr) { return (attr.isa<::mlir::AffineMapAttr>()); })":
+            return True
+
+        if self.predicate == "::llvm::all_of($_self.cast<::mlir::ArrayAttr>(), [&](::mlir::Attribute attr) { return (attr.isa<::mlir::BoolAttr>()); })":
+            return True
+
+        if self.predicate == "::llvm::all_of($_self.cast<::mlir::ArrayAttr>(), [&](::mlir::Attribute attr) { return ((attr.isa<::mlir::ArrayAttr>())) && (::llvm::all_of(attr.cast<::mlir::ArrayAttr>(), [&](::mlir::Attribute attr) { return ((attr.isa<::mlir::TypeAttr>())) && ((attr.cast<::mlir::TypeAttr>().getValue().isa<::mlir::Type>())); })); })":
+            return True
+
+        if self.predicate == "$_self.cast<::mlir::DenseIntElementsAttr>()                                       .getType()                                       .getElementType()                                       .isIndex()":
+            return True
+
+        if self.predicate == "$_self.cast<::mlir::TypeAttr>().getValue().isa<::mlir::Type>()":
+            return True
+
+        if re.compile(r"\$_self.cast<::mlir::ArrayAttr>\(\).size\(\) == (.*)").match(self.predicate) is not None:
+            return True
+
+        if re.compile(r"\$_self.cast<::mlir::LLVM::LLVMStructType>\(\).getBody\(\)\[0\].isa<(.*)>\(\)").match(self.predicate) is not None:
+            return True
+
+        if re.compile(r"\$_self.cast<::mlir::LLVM::LLVMStructType>\(\).getBody\(\)\[1\].isSignlessInteger\((.*)\)").match(self.predicate) is not None:
+            return True
+
+        if re.compile("::mlir::spirv::symbolize(.*)").match(self.predicate):
+            return True
+
+        # Harder cases:
+        if self.predicate == "$_self.cast<::mlir::ArrayAttr>().size() <= 4":
+            return False
+
+        if self.predicate == "$_self.cast<::mlir::IntegerAttr>().getInt() >= 0":
+            return False
+
+        if self.predicate == "$_self.cast<::mlir::IntegerAttr>().getInt() <= 3":
+            return False
+
+        if self.predicate == "$_self.cast<IntegerAttr>().getValue().isStrictlyPositive()":
+            return False
+
+        if self.predicate == "!$_self.cast<::mlir::IntegerAttr>().getValue().isNegative()":
+            return False
+
+        m = re.compile(r"\$_self.cast<(.*)>\(\).getNumElements\(\)                            == (.*)").match(self.predicate)
+        if m is not None:
+            return False
 
         m = re.compile(r"\$_self.cast<(.*)>\(\).getNumElements\(\) == (.*)").match(self.predicate)
         if m is not None:
-            return True
+            return False
 
         m = re.compile(r"\$_self.cast<(.*)>\(\).hasStaticShape\(\)").match(self.predicate)
         if m is not None:
-            return True
+            return False
 
+        if self.predicate == "isStrided($_self.cast<::mlir::MemRefType>())":
+            return False
+
+        m = re.compile(r"\$_self.cast<::mlir::LLVM::LLVMStructType>\(\).getBody\(\).size\(\) == (.*)").match(self.predicate)
+        if m is not None:
+            return False
+
+        m = re.compile(r"(.*).cast<::mlir::LLVM::LLVMStructType>\(\).isOpaque\(\)").match(self.predicate)
+        if m is not None:
+            return False
+
+        print(self.predicate)
         assert False
 
 
@@ -453,23 +589,38 @@ class OpStats:
     results: List[NamedConstraintStats]
     attributes: Dict[str, ConstraintStats]
     traits: List[TraitStats]
-    interfaces: List[InterfaceStats]
+    interfaces: List[str]
 
-    def is_declarative(self, in_tablegen: bool, check_traits: bool = True, check_interfaces: bool = True) -> bool:
-        if self.hasVerifier:
-            return False
-        if not in_tablegen and check_traits:
-            for trait in self.traits:
-                if not trait.is_declarative():
-                    return False
-        if not in_tablegen and check_interfaces and len(self.interfaces) > 0:
-            return False
+    def is_operands_results_attrs_declarative(self, in_tablegen: bool) -> bool:
         for operand in self.operands:
             if not operand.is_declarative(in_tablegen):
                 return False
         for result in self.results:
             if not result.is_declarative(in_tablegen):
                 return False
+        for name, attr in self.attributes.items():
+            if not attr.is_declarative(in_tablegen):
+                return False
+        return True
+
+    def is_traits_declarative(self) -> bool:
+        for trait in self.traits:
+            if not trait.is_declarative():
+                return False
+        return True
+
+    def is_interface_declarative(self) -> bool:
+        return not len(self.interfaces) > 0
+
+    def is_declarative(self, in_tablegen: bool, check_traits: bool = True, check_interfaces: bool = True) -> bool:
+        if self.hasVerifier:
+            return False
+        if not self.is_operands_results_attrs_declarative(in_tablegen):
+            return False
+        if not in_tablegen and check_traits and not self.is_traits_declarative():
+            return False
+        if not in_tablegen and check_interfaces and not self.is_interface_declarative():
+            return False
         return True
 
 
@@ -478,21 +629,152 @@ class AttrOrTypeParameterStats:
     name: str
     cppType: str
 
+    def get_group(self):
+        base_names = ["Type", "::mlir::Type", "Attribute", "ShapedType", "DenseElementsAttr",
+                      "DenseIntElementsAttr", "StringAttr", "VerCapExtAttr", "DictionaryAttr"]
+        if self.cppType in base_names:
+            return "type/attr"
+
+        base_array_names = ["::llvm::ArrayRef<Attribute>", "::llvm::ArrayRef<NamedAttribute>", "ArrayRef<Type>",
+                            "::llvm::ArrayRef<FlatSymbolRefAttr>"]
+        if self.cppType in base_array_names:
+            return "attr/type array"
+
+        integer_names = ["unsigned", "uintptr_t", "int64_t", "uint32_t", "int", "APInt", "bool"]
+        if self.cppType in integer_names:
+            return "integer"
+
+        int_array_names = ["::llvm::ArrayRef<int64_t>", "ArrayRef<int64_t>"]
+        if self.cppType in int_array_names:
+            return "integer array"
+
+        float_names = ["double", "::llvm::APFloat"]
+        if self.cppType in float_names:
+            return "float"
+
+        float_array_names = ["ArrayRef<double>"]
+        if self.cppType in float_array_names:
+            return "float array"
+
+        string_names = ["Identifier", "::llvm::StringRef"]
+        if self.cppType in string_names:
+            return "string"
+
+        string_array_names = ["ArrayRef<char>", "ArrayRef<StringRef>"]
+        if self.cppType in string_array_names:
+            return "string array"
+
+        enum_names = ["Scope", "Dim", "ImageDepthInfo", "ImageArrayedInfo", "ImageSamplingInfo", "ImageSamplerUseInfo",
+                 "ImageFormat", "StorageClass", "Optional<StorageClass>",
+                 "Version", "Capability", "Extension", "Vendor",
+                 "DeviceType", "CombiningKind", "SignednessSemantics", "FastmathFlags"]
+        if self.cppType in enum_names:
+            return "enum"
+
+        enum_array_names = ["ArrayRef<OffsetInfo>", "::llvm::ArrayRef<std::pair<LoopOptionCase, int64_t>>",
+                            "ArrayRef<MemberDecorationInfo>", "::llvm::ArrayRef<SparseTensorEncodingAttr::DimLevelType>",
+                            "ArrayRef<Capability>", "ArrayRef<Extension>"]
+        if self.cppType in enum_array_names:
+            return "enum array"
+
+        other_names = ["TypeID", "Location", "::llvm::ArrayRef<Location>", "AffineMap", "::llvm::ArrayRef<AffineMap>",
+                       "IntegerSet", "TODO"]
+        if self.cppType in other_names:
+            return "other"
+
+        assert False
+
+    def is_declarative(self, builtins=True, enums=True):
+        assert (not enums or builtins)
+        base_names = ["Type", "::mlir::Type", "Attribute", "ShapedType", "DenseElementsAttr",
+        "DenseIntElementsAttr", "StringAttr", "VerCapExtAttr", "DictionaryAttr"]
+        if self.cppType in base_names:
+            return True
+
+        # integers and floats
+        builtin_names = ["unsigned", "uintptr_t", "int64_t", "uint32_t", "int", "APInt", "::llvm::APFloat",
+                         "bool", "double", "Identifier", "::llvm::StringRef"]
+        if self.cppType in builtin_names:
+            return builtins
+
+        # arrays
+        arrays = ["::llvm::ArrayRef<int64_t>", "::llvm::ArrayRef<Attribute>", "::llvm::ArrayRef<NamedAttribute>",
+            "ArrayRef<Type>", "ArrayRef<char>",
+            "ArrayRef<StringRef>", "::llvm::ArrayRef<FlatSymbolRefAttr>", "ArrayRef<double>", "ArrayRef<int64_t>"]
+        if self.cppType in arrays:
+            return builtins
+
+        # Enums
+        enum_names = ["Scope", "Dim", "ImageDepthInfo", "ImageArrayedInfo", "ImageSamplingInfo", "ImageSamplerUseInfo",
+                 "ImageFormat", "StorageClass", "Optional<StorageClass>", "ArrayRef<OffsetInfo>",
+                 "::llvm::ArrayRef<std::pair<LoopOptionCase, int64_t>>", "ArrayRef<MemberDecorationInfo>",
+                 "::llvm::ArrayRef<SparseTensorEncodingAttr::DimLevelType>",
+                 "Version", "Capability", "ArrayRef<Capability>", "Extension", "ArrayRef<Extension>", "Vendor",
+                 "DeviceType", "CombiningKind", "SignednessSemantics", "FastmathFlags"]
+        if self.cppType in enum_names:
+            return enums
+
+        if self.cppType == "TypeID":
+            return False
+        if self.cppType == "Location":
+            return False
+        if self.cppType == "::llvm::ArrayRef<Location>":
+            return False
+        if self.cppType == "AffineMap":
+            return False
+        if self.cppType == "::llvm::ArrayRef<AffineMap>":
+            return False
+        if self.cppType == "IntegerSet":
+            return False
+        if self.cppType == "LLVMStruct":
+            return False
+
+        print(self.cppType)
+        assert False
+
 
 @from_json
 class TypeStats:
     name: str
     dialect: str
-    numParameters: int
+    hasVerifier: bool
     parameters: List[AttrOrTypeParameterStats]
+    traits: List[TraitStats]
+    interfaces: List[str]
+
+    def is_declarative(self, builtins=True, enums=True):
+        for param in self.parameters:
+            if not param.is_declarative(builtins=builtins, enums=enums):
+                return False
+        assert len(self.traits) == 0
+        for interface in self.interfaces:
+            if interface == "::mlir::SubElementTypeInterface::Trait":
+                continue
+            if interface == "DataLayoutTypeInterface::Trait":
+                return False
+            print(interface)
+            assert False
+        return True
 
 
 @from_json
 class AttrStats:
     name: str
     dialect: str
-    numParameters: int
+    hasVerifier: bool
     parameters: List[AttrOrTypeParameterStats]
+    traits: List[TraitStats]
+    interfaces: List[str]
+
+    def is_declarative(self, builtins=True, enums=True):
+        for param in self.parameters:
+            if not param.is_declarative(builtins=builtins, enums=enums):
+                return False
+        for interface in self.interfaces:
+            if interface == "::mlir::SubElementAttrInterface::Trait":
+                continue
+            return False
+        return True
 
 
 @dataclass
@@ -503,6 +785,7 @@ class DialectStats:
     attrs: Dict[str, AttrStats] = field(default_factory=dict)
     numOperations: int = field(default=0)
     numTypes: int = field(default=0)
+    numAttributes: int = field(default=0)
 
     def add_op(self, op: OpStats):
         if op.name in self.ops.keys():
@@ -588,13 +871,168 @@ def get_stat_from_file(file) -> Optional[Stats]:
     res = subprocess.run(["../build/bin/tblgen-stats", os.path.join(root, file), "--I=../llvm-project/mlir/include",
                           f"--I={root}"], capture_output=True)
     if res.returncode != 0:
-        print(res.stderr)
         return None
     print("../build/bin/tblgen-stats", os.path.join(root, file), "--I=../llvm-project/mlir/include",
           f"--I={root}")
     ops = json.loads(res.stdout)
     return Stats.from_json(ops)
 
+
+def add_cpp_types(stats: Stats):
+    # linalg
+    stats.add_type(TypeStats("range", "linalg", False, [], [], []))
+
+    # gpu
+    stats.add_type(TypeStats("async.token", "gpu", False, [], [], []))
+    # verifyCompatibleShape
+    stats.add_type(TypeStats("mma_matrix", "gpu", True, [AttrOrTypeParameterStats("shape_x", "int64_t"),
+                                                   AttrOrTypeParameterStats("shape_y", "int64_t"),
+                                                   AttrOrTypeParameterStats("elementType", "Type"),
+                                                   AttrOrTypeParameterStats("operand", "StringAttr")], [], []))
+    # spv
+    stats.add_type(TypeStats("array", "spv", False, [AttrOrTypeParameterStats("elementType", "Type"),
+                                              AttrOrTypeParameterStats("elementCount", "unsigned"),
+                                              AttrOrTypeParameterStats("stride", "unsigned")], [], []))
+    stats.add_type(TypeStats("coopmatrix", "spv", False, [AttrOrTypeParameterStats("elementType", "Type"),
+                                                   AttrOrTypeParameterStats("rows", "unsigned"),
+                                                   AttrOrTypeParameterStats("columns", "unsigned"),
+                                                   AttrOrTypeParameterStats("scope", "Scope")], [], []))
+    stats.add_type(TypeStats("image", "spv", False, [AttrOrTypeParameterStats("elementType", "Type"),
+                                              AttrOrTypeParameterStats("dim", "Dim"),
+                                              AttrOrTypeParameterStats("depthInfo", "ImageDepthInfo"),
+                                              AttrOrTypeParameterStats("arrayedInfo", "ImageArrayedInfo"),
+                                              AttrOrTypeParameterStats("samplingInfo", "ImageSamplingInfo"),
+                                              AttrOrTypeParameterStats("samplerUseInfo", "ImageSamplerUseInfo"),
+                                              AttrOrTypeParameterStats("format", "ImageFormat")], [], []))
+    stats.add_type(TypeStats("ptr", "spv", False, [AttrOrTypeParameterStats("pointeeType", "Type"),
+                                            AttrOrTypeParameterStats("storageClass", "StorageClass")], [], []))
+    stats.add_type(TypeStats("rtarray", "spv", False, [AttrOrTypeParameterStats("elementType", "Type"),
+                                                AttrOrTypeParameterStats("stride", "int")], [], []))
+    stats.add_type(TypeStats("sampled_image", "spv", False, [AttrOrTypeParameterStats("imageType", "Type")], [], []))
+    stats.add_type(TypeStats("struct", "spv", False, [AttrOrTypeParameterStats("memberTypes", "ArrayRef<Type>"),
+                                               AttrOrTypeParameterStats("offsetInfo", "ArrayRef<OffsetInfo>"),
+                                               AttrOrTypeParameterStats("memberDecorations", "ArrayRef<MemberDecorationInfo>")], [], []))
+    stats.add_type(TypeStats("matrix", "spv", False, [AttrOrTypeParameterStats("columnType", "Type"),
+                                               AttrOrTypeParameterStats("columnCount", "uint32_t")], [], []))
+
+    # llvm
+    stats.add_type(TypeStats("void", "llvm", False, [], [], []))
+    stats.add_type(TypeStats("ppc_fp128", "llvm", False, [], [], []))
+    stats.add_type(TypeStats("x86mmx", "llvm", False, [], [], []))
+    stats.add_type(TypeStats("token", "llvm", False, [], [], []))
+    stats.add_type(TypeStats("label", "llvm", False, [], [], []))
+    stats.add_type(TypeStats("metadata", "llvm", False, [], [], []))
+    stats.add_type(TypeStats("func", "llvm", False, [AttrOrTypeParameterStats("result", "Type"),
+                                              AttrOrTypeParameterStats("arguments", "ArrayRef<Type>"),
+                                              AttrOrTypeParameterStats("isVarArg", "bool")], [], []))
+    stats.add_type(TypeStats("ptr", "llvm", False, [AttrOrTypeParameterStats("pointee", "Type"),
+                                             AttrOrTypeParameterStats("addressSpace", "unsigned")], [],
+                             ["DataLayoutTypeInterface::Trait"]))
+    # Check that a value is strictly positive
+    stats.add_type(TypeStats("fixed_vec", "llvm", True, [AttrOrTypeParameterStats("elementType", "Type"),
+                                                   AttrOrTypeParameterStats("numElements", "unsigned")], [], []))
+    # Check that a value is strictly positive
+    stats.add_type(TypeStats("scalable_vec", "llvm", True, [AttrOrTypeParameterStats("elementType", "Type"),
+                                                      AttrOrTypeParameterStats("numElements", "unsigned")], [], []))
+    stats.add_type(TypeStats("array", "llvm", False, [AttrOrTypeParameterStats("elementType", "Type"),
+                                               AttrOrTypeParameterStats("numElements", "unsigned")], [], []))
+    # Complex underlying type that requires non-trivial verifier
+    stats.add_type(TypeStats("struct", "llvm", True, [AttrOrTypeParameterStats("arg", "LLVMStruct")], [], []))
+
+    # shape
+    stats.add_type(TypeStats("shape", "shape", False, [], [], []))
+    stats.add_type(TypeStats("size", "shape", False, [], [], []))
+    stats.add_type(TypeStats("value_shape", "shape", False, [], [], []))
+    stats.add_type(TypeStats("witness", "shape", False, [], [], []))
+
+    # quant
+    # Complex verifier
+    stats.add_type(TypeStats("any", "quant", False, [AttrOrTypeParameterStats("flags", "unsigned"),
+                                              AttrOrTypeParameterStats("storageType", "Type"),
+                                              AttrOrTypeParameterStats("expressedType", "Type"),
+                                              AttrOrTypeParameterStats("storageTypeMin", "int64_t"),
+                                              AttrOrTypeParameterStats("storageTypeMax", "int64_t")], [], []))
+    # Complex verifier
+    stats.add_type(TypeStats("uniform", "quant", False, [AttrOrTypeParameterStats("flags", "unsigned"),
+                                                  AttrOrTypeParameterStats("storageType", "Type"),
+                                                  AttrOrTypeParameterStats("expressedType", "Type"),
+                                                  AttrOrTypeParameterStats("scale", "double"),
+                                                  AttrOrTypeParameterStats("zeroPoint", "int64_t"),
+                                                  AttrOrTypeParameterStats("storageTypeMin", "int64_t"),
+                                                  AttrOrTypeParameterStats("storageTypeMax", "int64_t")], [], []))
+    # Complex verifier
+    stats.add_type(TypeStats("uniform_per_axis", "quant", False, [AttrOrTypeParameterStats("flags", "unsigned"),
+                                                           AttrOrTypeParameterStats("storageType", "Type"),
+                                                           AttrOrTypeParameterStats("expressedType", "Type"),
+                                                           AttrOrTypeParameterStats("scales", "ArrayRef<double>"),
+                                                           AttrOrTypeParameterStats("zeroPoints", "ArrayRef<int64_t>"),
+                                                           AttrOrTypeParameterStats("quantizedDimension", "int64_t"),
+                                                           AttrOrTypeParameterStats("storageTypeMin", "int64_t"),
+                                                           AttrOrTypeParameterStats("storageTypeMax", "int64_t")], [], []))
+    # Less or equal comparison
+    stats.add_type(TypeStats("calibrated", "quant", False, [AttrOrTypeParameterStats("expressedType", "Type"),
+                                                     AttrOrTypeParameterStats("min", "double"),
+                                                     AttrOrTypeParameterStats("max", "double")], [], []))
+
+
+def add_cpp_attributes(stats: Stats):
+    # spv
+    stats.add_attr(AttrStats("interface_var_abi", "spv", False, [AttrOrTypeParameterStats("descriptorSet", "uint32_t"),
+                                                          AttrOrTypeParameterStats("binding", "uint32_t"),
+                                                          AttrOrTypeParameterStats("storageClass", "Optional<StorageClass>")], [], []))
+    stats.add_attr(AttrStats("ver_cap_ext", "spv", False, [AttrOrTypeParameterStats("version", "Version"),
+                                                    AttrOrTypeParameterStats("capabilities", "ArrayRef<Capability>"),
+                                                    AttrOrTypeParameterStats("extensions", "ArrayRef<Extension>")], [], []))
+    stats.add_attr(AttrStats("target_env", "spv", False, [AttrOrTypeParameterStats("triple", "VerCapExtAttr"),
+                                                   AttrOrTypeParameterStats("vendorID", "Vendor"),
+                                                   AttrOrTypeParameterStats("deviceType", "DeviceType"),
+                                                   AttrOrTypeParameterStats("deviceId", "uint32_t"),
+                                                   AttrOrTypeParameterStats("limits", "DictionaryAttr")], [], []))
+
+    # vector
+    stats.add_attr(AttrStats("combining_kind", "vector", False, [AttrOrTypeParameterStats("kind", "CombiningKind")], [], []))
+
+
+def remove_unnecessary_verifiers(stats: Stats):
+    # Types:
+    stats.dialects[""].types["Builtin_Complex"].hasVerifier = False
+    stats.dialects[""].types["Builtin_UnrankedMemRef"].hasVerifier = False
+    stats.dialects[""].types["Builtin_UnrankedTensor"].hasVerifier = False
+
+    # Attributes
+
+    # Linalg has no unnecessary verifiers
+    # gpu
+    stats.dialects["gpu"].ops["gpu.block_dim"].hasVerifier = False
+    stats.dialects["gpu"].ops["gpu.block_id"].hasVerifier = False
+    stats.dialects["gpu"].ops["gpu.grid_dim"].hasVerifier = False
+    stats.dialects["gpu"].ops["gpu.thread_id"].hasVerifier = False
+    stats.dialects["gpu"].ops["gpu.shuffle"].hasVerifier = False
+    # amx
+    # x86vector
+    # tensor
+    if verifiers_allow_len_equality:
+        stats.dialects["tensor"].ops["tensor.extract"].hasVerifier = False
+        stats.dialects["tensor"].ops["tensor.insert"].hasVerifier = False
+    # affine
+    # emitc
+    stats.dialects["emitc"].ops["emitc.apply"].hasVerifier = False
+
+
+    # for op in stats.dialects["quant"].ops.values():
+    #     if op.is_operands_results_attrs_declarative(in_tablegen=False) and op.is_traits_declarative() and op.hasVerifier:
+    #         print(op.name)
+
+    # for dialect_name, dialect in stats.dialects.items():
+    #     total_ops = len(dialect.ops)
+    #     before_ops = 0
+    #     after_ops = 0
+    #     for op in dialect.ops.values():
+    #         if op.is_operands_results_attrs_declarative(in_tablegen=False) and op.is_traits_declarative():
+    #             after_ops += 1
+    #             if not op.hasVerifier:
+    #                 before_ops += 1
+    #     print(f"{dialect_name}: before {before_ops} after {after_ops} total {total_ops}")
 
 def get_stat_from_files():
     stats = Stats()
@@ -603,14 +1041,19 @@ def get_stat_from_files():
         if file_stats is not None:
             stats.add_stats(file_stats)
 
+    add_cpp_types(stats)
+    add_cpp_attributes(stats)
+    remove_unnecessary_verifiers(stats)
+
     res = subprocess.run(["../build/bin/dialect-stats"], capture_output=True)
     if res.returncode != 0:
         return None
-    data = json.loads(res.stdout)
+    data = json.loads(res.stderr)
     for json_dialect in data:
-        dialect_stats = stats.dialects[json_dialect["dialect"]]
+        dialect_stats = stats.dialects[json_dialect["name"]]
         dialect_stats.numOperations = json_dialect["numOperations"]
         dialect_stats.numTypes = json_dialect["numTypes"]
+        dialect_stats.numAttributes = json_dialect["numAttributes"]
 
     return stats
 
@@ -623,7 +1066,7 @@ def get_op_list_distribution(ops: List[OpStats], f: Callable[[OpStats], int], ma
     return [res.count(i) for i in range(maxi + 1)]
 
 
-def get_global_op_distribution(stats: Stats, f: Callable[[OpStats], int]) -> Tuple[List[float], Dict[str, List[float]]]:
+def get_global_op_distribution(stats: Stats, f: Callable[[OpStats], int]):
     global_res = get_op_list_distribution(stats.ops, f)
     maxi = len(global_res) - 1
     per_dialect_res = dict()
@@ -640,7 +1083,7 @@ def get_attr_list_distribution(attrs: List[AttrStats], f: Callable[[AttrStats], 
     return [res.count(i) for i in range(maxi + 1)]
 
 
-def get_global_attr_distribution(stats: Stats, f: Callable[[AttrStats], int]) -> Tuple[List[float], Dict[str, List[float]]]:
+def get_global_attr_distribution(stats: Stats, f: Callable[[AttrStats], int]):
     global_res = get_attr_list_distribution(stats.attrs, f)
     maxi = len(global_res) - 1
     per_dialect_res = dict()
@@ -657,7 +1100,7 @@ def get_type_list_distribution(types: List[TypeStats], f: Callable[[TypeStats], 
     return [res.count(i) for i in range(maxi + 1)]
 
 
-def get_global_type_distribution(stats: Stats, f: Callable[[TypeStats], int]) -> Tuple[List[float], Dict[str, List[float]]]:
+def get_global_type_distribution(stats: Stats, f: Callable[[TypeStats], int]):
     global_res = get_type_list_distribution(stats.types, f)
     maxi = len(global_res) - 1
     per_dialect_res = dict()
@@ -673,22 +1116,211 @@ def get_dialect_values(stats: Stats, f: Callable[[DialectStats], T]) -> Dict[str
     return {key: f(value) for key, value in stats.dialects.items()}
 
 
+def add_non_declarative_constraint(constraint: ConstraintStats, d: Dict[ConstraintStats, int]):
+    if isinstance(constraint, OrConstraintStats):
+        add_non_declarative_constraint(constraint.operand1, d)
+        add_non_declarative_constraint(constraint.operand2, d)
+    elif isinstance(constraint, AndConstraintStats):
+        add_non_declarative_constraint(constraint.operand1, d)
+        add_non_declarative_constraint(constraint.operand2, d)
+    elif isinstance(constraint, NotConstraintStats):
+        add_non_declarative_constraint(constraint.constraint, d)
+    elif isinstance(constraint, IntegerConstraintStats):
+        pass
+    elif isinstance(constraint, IsaCppTypeConstraintStats):
+        pass
+    elif isinstance(constraint, OptionalConstraintStats):
+        add_non_declarative_constraint(constraint.baseType, d)
+    elif isinstance(constraint, TypeDefConstraintStats):
+        pass
+    elif isinstance(constraint, VariadicConstraintStats):
+        add_non_declarative_constraint(constraint.baseType, d)
+    elif isinstance(constraint, PredicateConstraintStats):
+        if not constraint.is_declarative(in_tablegen=False):
+            if constraint in d:
+                d[constraint] += 1
+            else:
+                d[constraint] = 1
+    else:
+        assert False
+
+
+def get_constraints_culprits(stats: Stats) -> Dict[ConstraintStats, int]:
+    culprits = dict()
+    for op in stats.ops:
+        for operand in op.operands:
+            constraint = operand.constraint
+            add_non_declarative_constraint(constraint, culprits)
+        for result in op.results:
+            constraint = result.constraint
+            add_non_declarative_constraint(constraint, culprits)
+        for attr in op.attributes.values():
+            add_non_declarative_constraint(attr, culprits)
+    return culprits
+
+
+def get_traits_culprits(stats: Stats) -> Dict[TraitStats, int]:
+    culprits = dict()
+    for op in stats.ops:
+        for trait in op.traits:
+            if not trait.is_declarative():
+                culprits.setdefault(trait, 0)
+                culprits[trait] += 1
+    return culprits
+
+
+def get_interfaces_culprits(stats: Stats) -> Dict[str, int]:
+    culprits = dict()
+    for op in stats.ops:
+        for interface in op.interfaces:
+            culprits.setdefault(interface, 0)
+            culprits[interface] += 1
+    return culprits
+
+
+def get_type_param_culprits(stats: Stats) -> Dict[str, int]:
+    culprits = dict()
+    for typ in stats.types:
+        for param in typ.parameters:
+            if not param.is_declarative():
+                culprits.setdefault(param.cppType, 0)
+                culprits[param.cppType] += 1
+    return culprits
+
+
+def get_attr_param_culprits(stats: Stats) -> Dict[AttrOrTypeParameterStats, int]:
+    culprits = dict()
+    for attr in stats.attrs:
+        for param in attr.parameters:
+            if not param.is_declarative():
+                culprits.setdefault(param.cppType, 0)
+                culprits[param.cppType] += 1
+    return culprits
+
+
+def create_type_attr_evolution_per_dialect_decl_plot(stats: Stats):
+    default_attr = get_global_attr_distribution(stats, lambda x: int(x.is_declarative(builtins=False, enums=False)))[1]
+    builtins_attr = get_global_attr_distribution(stats, lambda x: int(x.is_declarative(builtins=True, enums=False)))[1]
+    enums_attr = get_global_attr_distribution(stats, lambda x: int(x.is_declarative(builtins=True, enums=True)))[1]
+
+    default_type = get_global_type_distribution(stats, lambda x: int(x.is_declarative(builtins=False, enums=False)))[1]
+    builtins_type = get_global_type_distribution(stats, lambda x: int(x.is_declarative(builtins=True, enums=False)))[1]
+    enums_type = get_global_type_distribution(stats, lambda x: int(x.is_declarative(builtins=True, enums=True)))[1]
+
+    attributes = dict()
+    types = dict()
+    for key in default_attr:
+        attr_sum = default_attr[key][1] + default_attr[key][0]
+        if attr_sum != 0:
+            res = (default_attr[key][1], builtins_attr[key][1] - default_attr[key][1], enums_attr[key][1] - builtins_attr[key][1], attr_sum - enums_attr[key][1])
+            attributes[key] = (res[0] / attr_sum * 100, res[1] / attr_sum * 100, res[2] / attr_sum * 100, res[3] / attr_sum * 100)
+        type_sum = default_type[key][1] + default_type[key][0]
+        if type_sum != 0:
+            res = (default_type[key][1], builtins_type[key][1] - default_type[key][1], enums_type[key][1] - builtins_type[key][1], type_sum - enums_type[key][1])
+            types[key] = (res[0] / type_sum * 100, res[1] / type_sum * 100, res[2] / type_sum * 100, res[3] / type_sum * 100)
+
+    print(attributes)
+    print(types)
+
+
+def create_type_attr_evolution_decl_plot(stats: Stats):
+    default_attr = get_global_attr_distribution(stats, lambda x: int(x.is_declarative(builtins=False, enums=False)))[0]
+    builtins_attr = get_global_attr_distribution(stats, lambda x: int(x.is_declarative(builtins=True, enums=False)))[0]
+    enums_attr = get_global_attr_distribution(stats, lambda x: int(x.is_declarative(builtins=True, enums=True)))[0]
+
+    default_type = get_global_type_distribution(stats, lambda x: int(x.is_declarative(builtins=False, enums=False)))[0]
+    builtins_type = get_global_type_distribution(stats, lambda x: int(x.is_declarative(builtins=True, enums=False)))[0]
+    enums_type = get_global_type_distribution(stats, lambda x: int(x.is_declarative(builtins=True, enums=True)))[0]
+
+    def mp(v):
+        return (v[1] / (v[0]+v[1])) * 100
+
+    attrs = (mp(default_attr), mp(builtins_attr), mp(enums_attr))
+    types = (mp(default_type), mp(builtins_type), mp(enums_type))
+    print(attrs)
+    print(types)
+
+    
+def create_dialects_decl_plot(stats: Stats):
+    types = get_global_type_distribution(stats, lambda x: int(x.is_declarative(builtins=True, enums=True)))[1]
+    types = {key: value[1] / sum(value) * 100 for key, value in types.items() if sum(value) != 0}
+    attrs = get_global_attr_distribution(stats, lambda x: int(x.is_declarative(builtins=True, enums=True)))[1]
+    attrs = {key: value[1] / sum(value) * 100 for key, value in attrs.items() if sum(value) != 0}
+
+    op_operands = get_global_op_distribution(stats, lambda x: 1 if x.is_operands_results_attrs_declarative(in_tablegen=False) else 0)[1]
+    op_operands = {key: value[1] / sum(value) * 100 for key, value in op_operands.items() if sum(value) != 0}
+    op_full = get_global_op_distribution(stats, lambda x: 1 if x.is_declarative(in_tablegen=False, check_traits=True, check_interfaces=False) else 0)[1]
+    op_full = {key: value[1] / sum(value) * 100 for key, value in op_full.items() if sum(value) != 0}
+
+    print(types)
+    print(attrs)
+    print(op_operands)
+    print(op_full)
+
+
+def create_dialects_decl_plot2(stats: Stats):
+    types = get_global_type_distribution(stats, lambda x: int(x.is_declarative(builtins=True, enums=True)))[1]
+    types = {key: value[1] / sum(value) * 100 for key, value in types.items() if sum(value) != 0}
+    attrs = get_global_attr_distribution(stats, lambda x: int(x.is_declarative(builtins=True, enums=True)))[1]
+    attrs = {key: value[1] / sum(value) * 100 for key, value in attrs.items() if sum(value) != 0}
+
+    op_operands = get_global_op_distribution(stats, lambda x: 1 if x.is_operands_results_attrs_declarative(in_tablegen=False) else 0)[1]
+    op_full = get_global_op_distribution(stats, lambda x: 1 if x.is_declarative(in_tablegen=False, check_traits=True, check_interfaces=False) else 0)[1]
+    ops = {key: (op_full[key][1], value[1] - op_full[key][1], sum(value) - value[1]) for key, value in op_operands.items() if sum(value) != 0}
+
+    print(types)
+    print(attrs)
+    print(ops)
+
+
+def create_type_parameters_type_plot(stats: Stats):
+    distr = dict()
+    for typ in stats.types:
+        for param in typ.parameters:
+            distr.setdefault(param.get_group(), 0)
+            distr[param.get_group()] += 1
+    for attr in stats.attrs:
+        for param in attr.parameters:
+            distr.setdefault(param.get_group(), 0)
+            distr[param.get_group()] += 1
+    print(distr)
+
+
 def __main__():
     stats = get_stat_from_files()
 
-    trait_values = dict()
-    for op in stats.ops:
-        for trait in op.traits:
-            if isinstance(trait, NativeTraitStats):
-                if not trait.is_declarative():
-                    trait_values[trait.name] = 0
-    for op in stats.ops:
-        for trait in op.traits:
-            if isinstance(trait, NativeTraitStats):
-                if not trait.is_declarative():
-                    trait_values[trait.name] += 1
-    print({k: v for k, v in sorted(trait_values.items(), key=lambda item: -item[1])})
+    print("-" * 80)
+    print("Culprits:")
+    print("-" * 80)
 
+    print("Constraints:")
+    constraints_culprits = list(get_constraints_culprits(stats).items())
+    list.sort(constraints_culprits, key=lambda x: x[1], reverse=True)
+    print(constraints_culprits)
+
+    print("Traits:")
+    traits_culprits = list(get_traits_culprits(stats).items())
+    list.sort(traits_culprits, key=lambda x: x[1], reverse=True)
+    print(traits_culprits)
+
+    print("Interfaces:")
+    traits_culprits = list(get_interfaces_culprits(stats).items())
+    list.sort(traits_culprits, key=lambda x: x[1], reverse=True)
+    print(traits_culprits)
+
+    print("Type params:")
+    type_culprits = list(get_type_param_culprits(stats).items())
+    list.sort(type_culprits, key=lambda x: x[1], reverse=True)
+    print(type_culprits)
+
+    print("Attr params:")
+    attr_culprits = list(get_attr_param_culprits(stats).items())
+    list.sort(attr_culprits, key=lambda x: x[1], reverse=True)
+    print(attr_culprits)
+
+    print("-" * 80)
+    print("Some general stats:")
+    print("-" * 80)
 
     print("Number of operations defined in TableGen, and in total")
     print(get_dialect_values(stats, lambda x: (len(x.ops), x.numOperations)))
@@ -698,26 +1330,79 @@ def __main__():
     print(get_dialect_values(stats, lambda x: (len(x.types), x.numTypes)))
     print("total:", (len(stats.types), sum([dialect.numTypes for dialect in stats.dialects.values()]), ))
 
+    print("Number of attributes defined in TableGen, and in total")
+    print(get_dialect_values(stats, lambda x: (len(x.attrs), x.numAttributes)))
+    print("total:", (len(stats.attrs), sum([dialect.numAttributes for dialect in stats.dialects.values()]), ))
+
     print("Number of regions")
-    print(get_global_op_distribution(stats, lambda x: x.numRegions)[0])
+    print(get_global_op_distribution(stats, lambda x: x.numRegions))
 
     print("Number of operands")
-    print(get_global_op_distribution(stats, lambda x: x.numOperands)[0])
+    print(get_global_op_distribution(stats, lambda x: x.numOperands))
 
     print("Number of results")
-    print(get_global_op_distribution(stats, lambda x: x.numResults)[0])
+    print(get_global_op_distribution(stats, lambda x: x.numResults))
 
     print("Number of attributes")
-    print(get_global_op_distribution(stats, lambda x: len(x.attributes))[0])
+    print(get_global_op_distribution(stats, lambda x: len(x.attributes)))
+
+    print("Has custom assembly format")
+    print(get_global_op_distribution(stats, lambda x: 1 if x.hasAssemblyFormat else 0))
 
     print("Has a verifier")
     print(get_global_op_distribution(stats, lambda x: 1 if x.hasVerifier else 0))
 
+    print("Has traits")
+    print(get_global_op_distribution(stats, lambda x: int(len(x.traits)>0)))
+
+    print("Has interfaces")
+    print(get_global_op_distribution(stats, lambda x: int(len(x.interfaces)>0)))
+
+    print("Type parameters")
+    print(get_global_type_distribution(stats, lambda x: len(x.parameters)))
+
+    print("Attr parameters")
+    print(get_global_attr_distribution(stats, lambda x: len(x.parameters)))
+
+    print("-" * 80)
+    print("Declarativeness:")
+    print("-" * 80)
+
+    print("Number of declarative types")
+    print(get_global_type_distribution(stats, lambda x: int(not x.hasVerifier)))
+
+    print("Number of declarative attributes")
+    print(get_global_attr_distribution(stats, lambda x: int(not x.hasVerifier)))
+
+
+    print("Number of declarative attributes")
+
     print("Has custom assembly format")
-    print(get_global_op_distribution(stats, lambda x: 1 if x.hasAssemblyFormat else 0)[0])
+    print(get_global_op_distribution(stats, lambda x: 1 if x.hasAssemblyFormat else 0))
+
+    print("Has a verifier")
+    print(get_global_op_distribution(stats, lambda x: 1 if x.hasVerifier else 0))
+
+    print("Is operands/results declarative in IRDL")
+    print(get_global_op_distribution(stats, lambda x: 1 if x.is_operands_results_attrs_declarative(in_tablegen=False) else 0))
+
+    print("Is operands/results declarative in TableGen")
+    print(get_global_op_distribution(stats, lambda x: 1 if x.is_operands_results_attrs_declarative(in_tablegen=True) else 0))
+
+    print("Are traits declarative in IRDL")
+    print(get_global_op_distribution(stats, lambda x: 1 if x.is_traits_declarative() else 0))
+
+    print("Is operands/results declarative in IRDL with verifiers")
+    print(get_global_op_distribution(stats, lambda x: 1 if x.is_operands_results_attrs_declarative(in_tablegen=False) and not x.hasVerifier else 0))
+
+    print("Is operands/results declarative in TableGen with verifiers")
+    print(get_global_op_distribution(stats, lambda x: 1 if x.is_operands_results_attrs_declarative(in_tablegen=True) and not x.hasVerifier else 0))
+
+    print("Has non-declarative traits")
+    print(get_global_op_distribution(stats, lambda x: int(len([trait for trait in x.traits if not trait.is_declarative()])>0)))
 
     print("Fully declarative in tablegen")
-    print(get_global_op_distribution(stats, lambda x: 1 if x.is_declarative(True) else 0)[0])
+    print(get_global_op_distribution(stats, lambda x: 1 if x.is_declarative(True) else 0))
 
     print("Fully declarative in IRDL")
     print(get_global_op_distribution(stats, lambda x: 1 if x.is_declarative(in_tablegen=False, check_traits=True, check_interfaces=True) else 0))
@@ -725,14 +1410,14 @@ def __main__():
     print("Fully declarative in IRDL without interfaces")
     print(get_global_op_distribution(stats, lambda x: 1 if x.is_declarative(in_tablegen=False, check_traits=True, check_interfaces=False) else 0))
 
-    print("Fully declarative in IRDL without traits or interfaces")
+    print("Fully declarative in IRDL without interfaces and traits")
     print(get_global_op_distribution(stats, lambda x: 1 if x.is_declarative(in_tablegen=False, check_traits=False, check_interfaces=False) else 0))
 
-    print("Type parameters")
-    print(get_global_type_distribution(stats, lambda x: x.numParameters)[0])
+    # create_type_attr_evolution_per_dialect_decl_plot(stats)
+    # create_type_attr_evolution_decl_plot(stats)
+    # create_dialects_decl_plot2(stats)
+    # create_type_parameters_type_plot(stats)
 
-    print("Attr parameters")
-    print(get_global_attr_distribution(stats, lambda x: x.numParameters)[0])
 
 if __name__ == "__main__":
     __main__()
