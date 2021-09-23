@@ -1,6 +1,8 @@
+from __future__ import annotations
 import json
 import os
 import subprocess
+from abc import abstractmethod, ABC
 from dataclasses import dataclass, field
 from typing import *
 import re
@@ -94,8 +96,8 @@ def from_json(cls):
         @staticmethod
         def from_json(json):
             arg_dict = dict()
-            for name, typ in cls.__dataclass_fields__.items():
-                arg_dict[name] = _from_json(json[name], typ.type)
+            for name, typ in get_type_hints(cls).items():
+                arg_dict[name] = _from_json(json[name], typ)
             return FromJsonWrapper(**arg_dict)
 
     return FromJsonWrapper
@@ -192,17 +194,14 @@ class InternalTraitStats(TraitStats):
 
 
 @dataclass(eq=True, unsafe_hash=True)
-class ConstraintStats:
-    kind: str
-
+class ConstraintStats(ABC):
     @staticmethod
     def from_predicate(predicate: str) -> 'ConstraintStats':
         predicate = remove_outer_parentheses(predicate)
 
-        # Check if this is a IsaCPPConstraint
         m = re.compile(r"\$_self.isa<(.*)>\(\)").match(predicate)
         if m is not None:
-            return IsaCppTypeConstraintStats(predicate[11:-3])
+            return BaseConstraintStats(predicate[11:-3])
 
         m = re.compile(r"!\((.*)\)").match(predicate)
         if m is not None:
@@ -224,8 +223,94 @@ class ConstraintStats:
             if operand1 is not None and operand2 is not None:
                 return OrConstraintStats(operand1, operand2)
 
-        return PredicateConstraintStats.from_predicate(predicate)
+        if predicate == "true":
+            return AnyConstraintStats()
 
+        m = re.match(r"\$_self.isInteger\((.*)\)", predicate)
+        if m is not None:
+            return ParametricTypeConstraintStats("Builtin_Integer", [IntEqParamConstraintStats(int(m.group(1))),
+                                                                     AnyParamConstraintStats()])
+
+        m = re.match(r"\$_self.isSignlessInteger\((.*)\)", predicate)
+        if m is not None:
+            val = m.group(1)
+            if val == "":
+                return ParametricTypeConstraintStats("Builtin_Integer", [AnyParamConstraintStats(), CppValueParamConstraintStats("Signless", True)])
+            return ParametricTypeConstraintStats("Builtin_Integer", [IntEqParamConstraintStats(int(val)), CppValueParamConstraintStats("Signless", True)])
+
+        m = re.match(r"\$_self.isUnsignedInteger\((.*)\)", predicate)
+        if m is not None:
+            val = m.group(1)
+            if val == "":
+                return ParametricTypeConstraintStats("Builtin_Integer", [AnyParamConstraintStats(), CppValueParamConstraintStats("Unsigned", True)])
+            return ParametricTypeConstraintStats("Builtin_Integer", [IntEqParamConstraintStats(int(val)), CppValueParamConstraintStats("Unsigned", True)])
+
+        m = re.match(r"\$_self.isSignedInteger\((.*)\)", predicate)
+        if m is not None:
+            val = m.group(1)
+            if val == "":
+                return ParametricTypeConstraintStats("Builtin_Integer", [AnyParamConstraintStats(), CppValueParamConstraintStats("Signed", True)])
+            return ParametricTypeConstraintStats("Builtin_Integer", [IntEqParamConstraintStats(int(val)), CppValueParamConstraintStats("Signed", True)])
+
+        if predicate == "$_self.isBF16()":
+            return ParametricTypeConstraintStats("Builtin_BFloat16", [])
+
+        m = re.match(r"\$_self.isF(.*)\(\)", predicate)
+        if m is not None:
+            return ParametricTypeConstraintStats("Builtin_Float" + m.group(1), [])
+
+        m = re.match(r"\$_self.cast<::mlir::FloatAttr>\(\).getType\(\)(.*)", predicate)
+        if m is not None:
+            type_predicate = ConstraintStats.from_predicate("$_self" + m.group(1))
+            return ParametricTypeConstraintStats("Builtin_FloatAttr", [type_predicate, AnyParamConstraintStats()])
+
+        m = re.match(r"\$_self.cast<::mlir::ShapedType>\(\).getElementType\(\)(.*)", predicate)
+        if m is not None:
+            element_type_constraint = ConstraintStats.from_predicate("$_self" + m.group(1))
+            return ShapedTypeConstraintStats(element_type_constraint)
+
+        m = re.match(r"::mlir::LLVM::getVectorElementType\(\$_self\)(.*)", predicate)
+        if m is not None:
+            element_type_constraint = ConstraintStats.from_predicate("$_self" + m.group(1))
+            return LLVMVectorOfConstraintStats(element_type_constraint)
+
+        m = re.match(r"\$_self.cast<::mlir::DenseIntElementsAttr>\(\).getType\(\).getElementType\(\)(.*)", predicate)
+        if m is not None:
+            sub_constraint = ConstraintStats.from_predicate("$_self" + m.group(1))
+            # TODO find DenseIntElementsAttr
+            return ParametricTypeConstraintStats("DenseIntElementsAttr", [sub_constraint])
+
+        m = re.match(r"\$_self.cast<::mlir::arm_sve::ScalableVectorType>\(\).getElementType\(\)(.*)", predicate)
+        if m is not None:
+            sub_constraint = ConstraintStats.from_predicate("$_self" + m.group(1))
+            return ParametricTypeConstraintStats("ScalableVectorType", [AnyParamConstraintStats(), sub_constraint])
+
+        m = re.match(r"\$_self.cast<::mlir::LLVM::LLVMPointerType>\(\).getElementType\(\)(.*)", predicate)
+        if m is not None:
+            sub_constraint = ConstraintStats.from_predicate("$_self" + m.group(1))
+            return ParametricTypeConstraintStats("ptr", [sub_constraint, AnyParamConstraintStats()])
+        
+        m = re.match(r"\$_self.cast<::mlir::spirv::CooperativeMatrixNVType>\(\).getElementType\(\)(.*)", predicate)
+        if m is not None:
+            sub_constraint = ConstraintStats.from_predicate("$_self" + m.group(1))
+            return ParametricTypeConstraintStats("coopmatrix", [sub_constraint, AnyParamConstraintStats(), AnyParamConstraintStats(), AnyParamConstraintStats()])
+
+        m = re.match(r"\$_self.cast<::mlir::pdl::RangeType>\(\).getElementType\(\)(.*)", predicate)
+        if m is not None:
+            sub_constraint = ConstraintStats.from_predicate("$_self" + m.group(1))
+            return ParametricTypeConstraintStats("PDL_Range", [sub_constraint])
+
+        m = re.match(r"\$_self.cast<::mlir::gpu::MMAMatrixType>\(\).getElementType\(\)(.*)", predicate)
+        if m is not None:
+            sub_constraint = ConstraintStats.from_predicate("$_self" + m.group(1))
+            return ParametricTypeConstraintStats("PDL_Range", [AnyParamConstraintStats(), AnyParamConstraintStats(), sub_constraint, AnyParamConstraintStats()])
+
+        m = re.match(r"\$_self.cast<::mlir::ComplexType>\(\).getElementType\(\)(.*)", predicate)
+        if m is not None:
+            sub_constraint = ConstraintStats.from_predicate("$_self" + m.group(1))
+            return ParametricTypeConstraintStats("PDL_Range", [sub_constraint])
+
+        return PredicateConstraintStats.from_predicate(predicate)
 
     @staticmethod
     def from_json(json):
@@ -240,25 +325,35 @@ class ConstraintStats:
         assert json["kind"] == "predicate"
         return ConstraintStats.from_predicate(json["predicate"])
 
+    @abstractmethod
+    def is_declarative(self) -> bool:
+        ...
 
-    def is_declarative(self, in_tablegen: bool) -> bool:
-        raise NotImplemented
+    @abstractmethod
+    def get_sub_constraints(self) -> List[ConstraintStats]:
+        ...
 
 
 @from_json
 class VariadicConstraintStats(ConstraintStats):
     baseType: ConstraintStats
 
-    def is_declarative(self, in_tablegen: bool) -> bool:
-        return self.baseType.is_declarative(in_tablegen)
+    def is_declarative(self) -> bool:
+        return self.baseType.is_declarative()
+
+    def get_sub_constraints(self) -> List[ConstraintStats]:
+        return [self.baseType]
 
 
 @from_json
 class OptionalConstraintStats(ConstraintStats):
     baseType: ConstraintStats
 
-    def is_declarative(self, in_tablegen: bool) -> bool:
-        return self.baseType.is_declarative(in_tablegen)
+    def is_declarative(self) -> bool:
+        return self.baseType.is_declarative()
+
+    def get_sub_constraints(self) -> List[ConstraintStats]:
+        return [self.baseType]
 
 
 @from_json
@@ -266,41 +361,65 @@ class TypeDefConstraintStats(ConstraintStats):
     dialect: str
     name: str
 
-    def is_declarative(self, in_tablegen: bool) -> bool:
+    def is_declarative(self) -> bool:
         return True
+
+    def get_sub_constraints(self) -> List[ConstraintStats]:
+        return []
 
 
 @from_json
 class IntegerConstraintStats(ConstraintStats):
     bitwidth: int
 
-    def is_declarative(self, in_tablegen: bool) -> bool:
+    def is_declarative(self) -> bool:
         return True
+
+    def get_sub_constraints(self) -> List[ConstraintStats]:
+        return []
 
 
 @dataclass(eq=False)
-class IsaCppTypeConstraintStats(ConstraintStats):
+class AnyConstraintStats(ConstraintStats):
+    def is_declarative(self) -> bool:
+        return True
+
+    def get_sub_constraints(self) -> List[ConstraintStats]:
+        return []
+
+
+@dataclass(eq=False)
+class BaseConstraintStats(ConstraintStats):
     name: str
 
-    def is_declarative(self, in_tablegen: bool) -> bool:
-        return not in_tablegen
+    def is_declarative(self) -> bool:
+        return True
 
-    def __init__(self, name: str):
-        self.kind = "isaCppType"
-        self.name = name
+    def get_sub_constraints(self) -> List[ConstraintStats]:
+        return []
+
+
+@dataclass(eq=False)
+class ParametricTypeConstraintStats(ConstraintStats):
+    base: str
+    params: List[Union[ParamConstraintStats, ConstraintStats]]
+
+    def is_declarative(self) -> bool:
+        return all(param.is_declarative() for param in self.params)
+
+    def get_sub_constraints(self) -> List[ConstraintStats]:
+        return [param for param in self.params if isinstance(param, ConstraintStats)]
+
 
 @dataclass(eq=False)
 class NotConstraintStats(ConstraintStats):
     constraint: ConstraintStats
 
-    def __init__(self, constraint):
-        self.constraint = constraint
-        self.kind = "not"
+    def is_declarative(self) -> bool:
+        return self.constraint.is_declarative()
 
-    def is_declarative(self, in_tablegen: bool) -> bool:
-        if in_tablegen:
-            return False
-        return self.constraint.is_declarative(in_tablegen)
+    def get_sub_constraints(self) -> List[ConstraintStats]:
+        return [self.constraint]
 
 
 @dataclass(eq=False)
@@ -308,15 +427,11 @@ class AndConstraintStats(ConstraintStats):
     operand1: ConstraintStats
     operand2: ConstraintStats
 
-    def __init__(self, operand1: ConstraintStats, operand2: ConstraintStats):
-        self.operand1 = operand1
-        self.operand2 = operand2
-        self.kind = "and"
+    def is_declarative(self) -> bool:
+        return self.operand1.is_declarative() and self.operand2.is_declarative()
 
-    def is_declarative(self, in_tablegen: bool) -> bool:
-        if in_tablegen:
-            return False
-        return self.operand1.is_declarative(in_tablegen) and self.operand2.is_declarative(in_tablegen)
+    def get_sub_constraints(self) -> List[ConstraintStats]:
+        return [self.operand1, self.operand2]
 
 
 @dataclass(eq=False)
@@ -324,15 +439,33 @@ class OrConstraintStats(ConstraintStats):
     operand1: ConstraintStats
     operand2: ConstraintStats
 
-    def __init__(self, operand1: ConstraintStats, operand2: ConstraintStats):
-        self.operand1 = operand1
-        self.operand2 = operand2
-        self.kind = "or"
+    def is_declarative(self) -> bool:
+        return self.operand1.is_declarative() and self.operand2.is_declarative()
 
-    def is_declarative(self, in_tablegen: bool) -> bool:
-        if in_tablegen:
-            return False
-        return self.operand1.is_declarative(in_tablegen) and self.operand2.is_declarative(in_tablegen)
+    def get_sub_constraints(self) -> List[ConstraintStats]:
+        return [self.operand1, self.operand2]
+
+
+@dataclass(eq=False)
+class ShapedTypeConstraintStats(ConstraintStats):
+    elemTypeConstraint: ConstraintStats
+
+    def is_declarative(self) -> bool:
+        return self.elemTypeConstraint.is_declarative()
+
+    def get_sub_constraints(self) -> List[ConstraintStats]:
+        return [self.elemTypeConstraint]
+
+
+@dataclass(eq=False)
+class LLVMVectorOfConstraintStats(ConstraintStats):
+    constraint: ConstraintStats
+
+    def is_declarative(self) -> bool:
+        return self.constraint.is_declarative()
+
+    def get_sub_constraints(self) -> List[ConstraintStats]:
+        return [self.constraint]
 
 
 @from_json
@@ -341,75 +474,10 @@ class PredicateConstraintStats(ConstraintStats):
 
     @staticmethod
     def from_predicate(predicate: str) -> 'PredicateConstraintStats':
-        return PredicateConstraintStats(kind="predicate", predicate=predicate)
+        return PredicateConstraintStats(predicate)
 
-    def is_declarative(self, in_tablegen: bool) -> bool:
-        if in_tablegen:
-            return False
-
+    def is_declarative(self) -> bool:
         if remove_outer_parentheses(self.predicate) == "::mlir::LLVM::isCompatibleType($_self)":
-            return True
-
-        if self.predicate == "true":
-            return True
-
-        m = re.compile(r"\$_self.isInteger\((.*)\)").match(self.predicate)
-        if m is not None:
-            return True
-
-        m = re.compile(r"\$_self.isSignlessInteger\((.*)\)").match(self.predicate)
-        if m is not None:
-            return True
-
-        m = re.compile(r"\$_self.isF(.*)\(\)").match(self.predicate)
-        if m is not None:
-            return True
-
-        if re.compile(r"\$_self.cast<::mlir::FloatAttr>\(\).getType\(\).isF(.*)\(\)").match(self.predicate) is not None:
-            return True
-
-        m = re.compile(r"\$_self.cast<(.*)>\(\).getType\(\).getElementType\(\).is(.*)Integer\((.*)\)").match(self.predicate)
-        if m is not None:
-            return True
-
-        m = re.compile(r"\$_self.cast<(.*)>\(\).getElementType\(\).is(.*)Integer\((.*)\)").match(self.predicate)
-        if m is not None:
-            return True
-
-        m = re.compile(r"\$_self.cast<(.*)>\(\).getElementType\(\).isa<(.*)>\(\)").match(self.predicate)
-        if m is not None:
-            return True
-
-        m = re.compile(r"::mlir::LLVM::getVectorElementType\(\$_self\).isa<(.*)>\(\)").match(self.predicate)
-        if m is not None:
-            return True
-
-        m = re.compile(r"::mlir::LLVM::getVectorElementType\(\$_self\).isSignlessInteger\((.*)\)").match(self.predicate)
-        if m is not None:
-            return True
-
-        m = re.compile(r"::mlir::LLVM::getVectorElementType\(\$_self\).isSignedInteger\((.*)\)").match(self.predicate)
-        if m is not None:
-            return True
-
-        m = re.compile(r"::mlir::LLVM::getVectorElementType\(\$_self\).isUnsignedInteger\((.*)\)").match(self.predicate)
-        if m is not None:
-            return True
-
-        m = re.compile(r"\$_self.cast<(.*)>\(\).getElementType\(\).isF(.*)\(\)").match(self.predicate)
-        if m is not None:
-            return True
-
-        m = re.compile(r"\$_self.cast<(.*)>\(\).getElementType\(\).isBF(.*)\(\)").match(self.predicate)
-        if m is not None:
-            return True
-
-        m = re.compile(r"\$_self.isUnsignedInteger\((.*)\)").match(self.predicate)
-        if m is not None:
-            return True
-
-        m = re.compile(r"\$_self.isSignedInteger\((.*)\)").match(self.predicate)
-        if m is not None:
             return True
 
         if self.predicate == "::mlir::LLVM::isCompatibleFloatingPointType($_self)":
@@ -434,10 +502,6 @@ class PredicateConstraintStats(ConstraintStats):
             return True
 
         m = re.compile(r"\$_self.cast<(.*)>\(\).getRank\(\)                            == (.*)").match(self.predicate)
-        if m is not None:
-            return True
-
-        m = re.compile(r"\$_self.cast<(.*)>\(\).getElementType\(\).cast<(.*)>\(\).getStorageTypeIntegralWidth\(\) == (.*)").match(self.predicate)
         if m is not None:
             return True
 
@@ -521,6 +585,9 @@ class PredicateConstraintStats(ConstraintStats):
         if re.compile("::mlir::spirv::symbolize(.*)").match(self.predicate):
             return True
 
+        if re.compile("\$_self.cast<mlir::quant::QuantizedType>\(\).getStorageTypeIntegralWidth\(\) == (.*)").match(self.predicate) is not None:
+            return True
+
         # Harder cases:
         if self.predicate == "$_self.cast<::mlir::ArrayAttr>().size() <= 4":
             return False
@@ -563,14 +630,47 @@ class PredicateConstraintStats(ConstraintStats):
         print(self.predicate)
         assert False
 
+    def get_sub_constraints(self) -> List[ConstraintStats]:
+        return []
+
+
+@dataclass(eq=False)
+class ParamConstraintStats(ABC):
+    @abstractmethod
+    def is_declarative(self) -> bool:
+        ...
+
+
+@dataclass(eq=False)
+class AnyParamConstraintStats(ParamConstraintStats):
+    def is_declarative(self) -> bool:
+        return True
+
+
+@dataclass(eq=False)
+class CppValueParamConstraintStats(ParamConstraintStats):
+    value: str
+    is_decl: bool
+
+    def is_declarative(self) -> bool:
+        return self.is_decl
+
+
+@dataclass(eq=False)
+class IntEqParamConstraintStats(ParamConstraintStats):
+    value: int
+
+    def is_declarative(self) -> bool:
+        return True
+
 
 @from_json
 class NamedConstraintStats:
     name: str
     constraint: ConstraintStats
 
-    def is_declarative(self, in_tablegen: bool) -> bool:
-        return self.constraint.is_declarative(in_tablegen)
+    def is_declarative(self) -> bool:
+        return self.constraint.is_declarative()
 
 
 @from_json
@@ -591,15 +691,15 @@ class OpStats:
     traits: List[TraitStats]
     interfaces: List[str]
 
-    def is_operands_results_attrs_declarative(self, in_tablegen: bool) -> bool:
+    def is_operands_results_attrs_declarative(self) -> bool:
         for operand in self.operands:
-            if not operand.is_declarative(in_tablegen):
+            if not operand.is_declarative():
                 return False
         for result in self.results:
-            if not result.is_declarative(in_tablegen):
+            if not result.is_declarative():
                 return False
         for name, attr in self.attributes.items():
-            if not attr.is_declarative(in_tablegen):
+            if not attr.is_declarative():
                 return False
         return True
 
@@ -612,14 +712,14 @@ class OpStats:
     def is_interface_declarative(self) -> bool:
         return not len(self.interfaces) > 0
 
-    def is_declarative(self, in_tablegen: bool, check_traits: bool = True, check_interfaces: bool = True) -> bool:
+    def is_declarative(self, check_traits: bool = True, check_interfaces: bool = True) -> bool:
         if self.hasVerifier:
             return False
-        if not self.is_operands_results_attrs_declarative(in_tablegen):
+        if not self.is_operands_results_attrs_declarative():
             return False
-        if not in_tablegen and check_traits and not self.is_traits_declarative():
+        if check_traits and not self.is_traits_declarative():
             return False
-        if not in_tablegen and check_interfaces and not self.is_interface_declarative():
+        if check_interfaces and not self.is_interface_declarative():
             return False
         return True
 
@@ -1020,7 +1120,7 @@ def remove_unnecessary_verifiers(stats: Stats):
 
 
     # for op in stats.dialects["quant"].ops.values():
-    #     if op.is_operands_results_attrs_declarative(in_tablegen=False) and op.is_traits_declarative() and op.hasVerifier:
+    #     if op.is_operands_results_attrs_declarative() and op.is_traits_declarative() and op.hasVerifier:
     #         print(op.name)
 
     # for dialect_name, dialect in stats.dialects.items():
@@ -1028,7 +1128,7 @@ def remove_unnecessary_verifiers(stats: Stats):
     #     before_ops = 0
     #     after_ops = 0
     #     for op in dialect.ops.values():
-    #         if op.is_operands_results_attrs_declarative(in_tablegen=False) and op.is_traits_declarative():
+    #         if op.is_operands_results_attrs_declarative() and op.is_traits_declarative():
     #             after_ops += 1
     #             if not op.hasVerifier:
     #                 before_ops += 1
@@ -1117,32 +1217,14 @@ def get_dialect_values(stats: Stats, f: Callable[[DialectStats], T]) -> Dict[str
 
 
 def add_non_declarative_constraint(constraint: ConstraintStats, d: Dict[ConstraintStats, int]):
-    if isinstance(constraint, OrConstraintStats):
-        add_non_declarative_constraint(constraint.operand1, d)
-        add_non_declarative_constraint(constraint.operand2, d)
-    elif isinstance(constraint, AndConstraintStats):
-        add_non_declarative_constraint(constraint.operand1, d)
-        add_non_declarative_constraint(constraint.operand2, d)
-    elif isinstance(constraint, NotConstraintStats):
-        add_non_declarative_constraint(constraint.constraint, d)
-    elif isinstance(constraint, IntegerConstraintStats):
-        pass
-    elif isinstance(constraint, IsaCppTypeConstraintStats):
-        pass
-    elif isinstance(constraint, OptionalConstraintStats):
-        add_non_declarative_constraint(constraint.baseType, d)
-    elif isinstance(constraint, TypeDefConstraintStats):
-        pass
-    elif isinstance(constraint, VariadicConstraintStats):
-        add_non_declarative_constraint(constraint.baseType, d)
-    elif isinstance(constraint, PredicateConstraintStats):
-        if not constraint.is_declarative(in_tablegen=False):
+    if isinstance(constraint, PredicateConstraintStats):
+        if not constraint.is_declarative():
             if constraint in d:
                 d[constraint] += 1
             else:
                 d[constraint] = 1
-    else:
-        assert False
+    for sub_constraint in constraint.get_sub_constraints():
+        add_non_declarative_constraint(sub_constraint, d)
 
 
 def get_constraints_culprits(stats: Stats) -> Dict[ConstraintStats, int]:
@@ -1247,9 +1329,9 @@ def create_dialects_decl_plot(stats: Stats):
     attrs = get_global_attr_distribution(stats, lambda x: int(x.is_declarative(builtins=True, enums=True)))[1]
     attrs = {key: value[1] / sum(value) * 100 for key, value in attrs.items() if sum(value) != 0}
 
-    op_operands = get_global_op_distribution(stats, lambda x: 1 if x.is_operands_results_attrs_declarative(in_tablegen=False) else 0)[1]
+    op_operands = get_global_op_distribution(stats, lambda x: 1 if x.is_operands_results_attrs_declarative() else 0)[1]
     op_operands = {key: value[1] / sum(value) * 100 for key, value in op_operands.items() if sum(value) != 0}
-    op_full = get_global_op_distribution(stats, lambda x: 1 if x.is_declarative(in_tablegen=False, check_traits=True, check_interfaces=False) else 0)[1]
+    op_full = get_global_op_distribution(stats, lambda x: 1 if x.is_declarative(check_traits=True, check_interfaces=False) else 0)[1]
     op_full = {key: value[1] / sum(value) * 100 for key, value in op_full.items() if sum(value) != 0}
 
     print(types)
@@ -1264,8 +1346,8 @@ def create_dialects_decl_plot2(stats: Stats):
     attrs = get_global_attr_distribution(stats, lambda x: int(x.is_declarative(builtins=True, enums=True)))[1]
     attrs = {key: value[1] / sum(value) * 100 for key, value in attrs.items() if sum(value) != 0}
 
-    op_operands = get_global_op_distribution(stats, lambda x: 1 if x.is_operands_results_attrs_declarative(in_tablegen=False) else 0)[1]
-    op_full = get_global_op_distribution(stats, lambda x: 1 if x.is_declarative(in_tablegen=False, check_traits=True, check_interfaces=False) else 0)[1]
+    op_operands = get_global_op_distribution(stats, lambda x: 1 if x.is_operands_results_attrs_declarative() else 0)[1]
+    op_full = get_global_op_distribution(stats, lambda x: 1 if x.is_declarative(check_traits=True, check_interfaces=False) else 0)[1]
     ops = {key: (op_full[key][1], value[1] - op_full[key][1], sum(value) - value[1]) for key, value in op_operands.items() if sum(value) != 0}
 
     print(types)
@@ -1288,6 +1370,9 @@ def create_type_parameters_type_plot(stats: Stats):
 
 def __main__():
     stats = get_stat_from_files()
+
+    print(stats.types)
+    print(stats.attrs)
 
     print("-" * 80)
     print("Culprits:")
@@ -1374,9 +1459,6 @@ def __main__():
     print("Number of declarative attributes")
     print(get_global_attr_distribution(stats, lambda x: int(not x.hasVerifier)))
 
-
-    print("Number of declarative attributes")
-
     print("Has custom assembly format")
     print(get_global_op_distribution(stats, lambda x: 1 if x.hasAssemblyFormat else 0))
 
@@ -1384,19 +1466,13 @@ def __main__():
     print(get_global_op_distribution(stats, lambda x: 1 if x.hasVerifier else 0))
 
     print("Is operands/results declarative in IRDL")
-    print(get_global_op_distribution(stats, lambda x: 1 if x.is_operands_results_attrs_declarative(in_tablegen=False) else 0))
-
-    print("Is operands/results declarative in TableGen")
-    print(get_global_op_distribution(stats, lambda x: 1 if x.is_operands_results_attrs_declarative(in_tablegen=True) else 0))
+    print(get_global_op_distribution(stats, lambda x: 1 if x.is_operands_results_attrs_declarative() else 0))
 
     print("Are traits declarative in IRDL")
     print(get_global_op_distribution(stats, lambda x: 1 if x.is_traits_declarative() else 0))
 
     print("Is operands/results declarative in IRDL with verifiers")
-    print(get_global_op_distribution(stats, lambda x: 1 if x.is_operands_results_attrs_declarative(in_tablegen=False) and not x.hasVerifier else 0))
-
-    print("Is operands/results declarative in TableGen with verifiers")
-    print(get_global_op_distribution(stats, lambda x: 1 if x.is_operands_results_attrs_declarative(in_tablegen=True) and not x.hasVerifier else 0))
+    print(get_global_op_distribution(stats, lambda x: 1 if x.is_operands_results_attrs_declarative() and not x.hasVerifier else 0))
 
     print("Has non-declarative traits")
     print(get_global_op_distribution(stats, lambda x: int(len([trait for trait in x.traits if not trait.is_declarative()])>0)))
@@ -1405,13 +1481,13 @@ def __main__():
     print(get_global_op_distribution(stats, lambda x: 1 if x.is_declarative(True) else 0))
 
     print("Fully declarative in IRDL")
-    print(get_global_op_distribution(stats, lambda x: 1 if x.is_declarative(in_tablegen=False, check_traits=True, check_interfaces=True) else 0))
+    print(get_global_op_distribution(stats, lambda x: 1 if x.is_declarative(check_traits=True, check_interfaces=True) else 0))
 
     print("Fully declarative in IRDL without interfaces")
-    print(get_global_op_distribution(stats, lambda x: 1 if x.is_declarative(in_tablegen=False, check_traits=True, check_interfaces=False) else 0))
+    print(get_global_op_distribution(stats, lambda x: 1 if x.is_declarative(check_traits=True, check_interfaces=False) else 0))
 
     print("Fully declarative in IRDL without interfaces and traits")
-    print(get_global_op_distribution(stats, lambda x: 1 if x.is_declarative(in_tablegen=False, check_traits=False, check_interfaces=False) else 0))
+    print(get_global_op_distribution(stats, lambda x: 1 if x.is_declarative(check_traits=False, check_interfaces=False) else 0))
 
     # create_type_attr_evolution_per_dialect_decl_plot(stats)
     # create_type_attr_evolution_decl_plot(stats)
