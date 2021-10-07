@@ -8,6 +8,7 @@ from typing import *
 import re
 
 verifiers_allow_len_equality = False
+indent_size = 2
 
 def check_balanced_parentheses(val: str) -> bool:
     paren_level = 0
@@ -36,6 +37,12 @@ def remove_outer_parentheses(val: str) -> str:
                 return val
             assert paren_level >= 0
     return remove_outer_parentheses(val[1:-1])
+
+
+def simplify_expression(val: str) -> str:
+    val = remove_outer_parentheses(val)
+    val = re.sub(" +", " ", val)
+    return val
 
 
 def separate_on_operator(val: str, operator: str) -> Optional[Tuple[str, str]]:
@@ -197,7 +204,7 @@ class InternalTraitStats(TraitStats):
 class ConstraintStats(ABC):
     @staticmethod
     def from_predicate(predicate: str) -> 'ConstraintStats':
-        predicate = remove_outer_parentheses(predicate)
+        predicate = simplify_expression(predicate)
 
         m = re.compile(r"\$_self.isa<(.*)>\(\)").match(predicate)
         if m is not None:
@@ -206,22 +213,24 @@ class ConstraintStats(ABC):
         m = re.compile(r"!\((.*)\)").match(predicate)
         if m is not None:
             constraint = ConstraintStats.from_predicate(m.group(0)[2:-1])
-            if constraint is not None:
-                return NotConstraintStats(constraint)
+            return NotConstraintStats(constraint)
 
         and_operands = separate_on_operator(predicate, "&&")
         if and_operands is not None:
             operand1 = ConstraintStats.from_predicate(and_operands[0])
             operand2 = ConstraintStats.from_predicate(and_operands[1])
-            if operand1 is not None and operand2 is not None:
-                return AndConstraintStats(operand1, operand2)
+            return AndConstraintStats(operand1, operand2)
 
         or_operands = separate_on_operator(predicate, "||")
         if or_operands is not None:
             operand1 = ConstraintStats.from_predicate(or_operands[0])
             operand2 = ConstraintStats.from_predicate(or_operands[1])
-            if operand1 is not None and operand2 is not None:
-                return OrConstraintStats(operand1, operand2)
+            return OrConstraintStats([operand1, operand2])
+
+        m = re.compile(r"!(.*)").match(predicate)
+        if m is not None:
+            operand = ConstraintStats.from_predicate(m.group(1))
+            return NotConstraintStats(operand)
 
         if predicate == "true":
             return AnyConstraintStats()
@@ -259,6 +268,9 @@ class ConstraintStats(ABC):
         if m is not None:
             return ParametricTypeConstraintStats("Builtin_Float" + m.group(1), [])
 
+        if predicate == "$_self.isIndex()":
+            return ParametricTypeConstraintStats("Builtin_Index", [])
+
         m = re.match(r"\$_self.cast<::mlir::FloatAttr>\(\).getType\(\)(.*)", predicate)
         if m is not None:
             type_predicate = ConstraintStats.from_predicate("$_self" + m.group(1))
@@ -274,9 +286,9 @@ class ConstraintStats(ABC):
             element_type_constraint = ConstraintStats.from_predicate("$_self" + m.group(1))
             return LLVMVectorOfConstraintStats(element_type_constraint)
 
-        m = re.match(r"\$_self.cast<::mlir::DenseIntElementsAttr>\(\).getType\(\).getElementType\(\)(.*)", predicate)
+        m = re.match(r"\$_self.cast<::mlir::DenseIntElementsAttr>\(\)( ?).getType\(\)( ?).getElementType\(\)( ?)(.*)", predicate)
         if m is not None:
-            sub_constraint = ConstraintStats.from_predicate("$_self" + m.group(1))
+            sub_constraint = ConstraintStats.from_predicate("$_self" + m.group(4))
             # TODO find DenseIntElementsAttr
             return ParametricTypeConstraintStats("DenseIntElementsAttr", [sub_constraint])
 
@@ -308,7 +320,48 @@ class ConstraintStats(ABC):
         m = re.match(r"\$_self.cast<::mlir::ComplexType>\(\).getElementType\(\)(.*)", predicate)
         if m is not None:
             sub_constraint = ConstraintStats.from_predicate("$_self" + m.group(1))
-            return ParametricTypeConstraintStats("PDL_Range", [sub_constraint])
+            return ParametricTypeConstraintStats("Complex", [sub_constraint])
+
+        m = re.match(r"\$_self.cast<::mlir::IntegerAttr>\(\).getType\(\)(.*)", predicate)
+        if m is not None:
+            sub_constraint = ConstraintStats.from_predicate("$_self" + m.group(1))
+            return ParametricTypeConstraintStats("Builtin_IntegerAttr", [sub_constraint, AnyParamConstraintStats()])
+
+        m = re.match(r"::llvm::all_of\(\$_self.cast<::mlir::ArrayAttr>\(\), \[&\]\(::mlir::Attribute attr\) { return (.*); }\)", predicate)
+        if m is not None:
+            group = re.sub("attr\.", "$_self.", m.group(1))
+            sub_constraint = ConstraintStats.from_predicate(group)
+            return AttrArrayOf(sub_constraint)
+
+        m = re.match(r"::llvm::all_of\(\$_self.cast<::mlir::TupleType>\(\).getTypes\(\), \[\]\(Type t\) { return (.*); }\)", predicate)
+        if m is not None:
+            group = re.sub("t\.", "$_self.", m.group(1))
+            sub_constraint = ConstraintStats.from_predicate(group)
+            return TupleOf(sub_constraint)
+
+        m = re.match(r"\$_self.cast<(::mlir::)?StringAttr>\(\).getValue\(\) == \"(.*)\"", predicate)
+        if m is not None:
+            str_val = m.group(1)
+            return ParametricTypeConstraintStats("Builtin_StringAttr", [StringEqParamConstraintStats(str_val)])
+
+        llvm_float_types = ["Builtin_BFloat16", "Builtin_Float16", "Builtin_Float32", "Builtin_Float64", "Builtin_Float80", "Builtin_Float128", "ppc_fp128"]
+
+        if predicate == "::mlir::LLVM::isCompatibleFloatingPointType($_self)":
+            return OrConstraintStats([BaseConstraintStats(typ) for typ in llvm_float_types])
+
+        if predicate == "::mlir::LLVM::isCompatibleFloatingPointType(::mlir::LLVM::getVectorElementType($_self))":
+            element_type_constraint = OrConstraintStats([BaseConstraintStats(typ) for typ in llvm_float_types])
+            return LLVMVectorOfConstraintStats(element_type_constraint)
+
+        if predicate == "::mlir::LLVM::isCompatibleFloatingPointType($_self.cast<::mlir::LLVM::LLVMPointerType>().getElementType())":
+            sub_constraint = OrConstraintStats([BaseConstraintStats(typ) for typ in llvm_float_types])
+            return ParametricTypeConstraintStats("ptr", [sub_constraint, AnyParamConstraintStats()])
+
+        if predicate == "::mlir::LLVM::isCompatibleType($_self)":
+            return LLVMCompatibleType()
+
+        if predicate == "::mlir::LLVM::isCompatibleType($_self.cast<::mlir::LLVM::LLVMPointerType>().getElementType())":
+            return ParametricTypeConstraintStats("ptr", [LLVMCompatibleType(), AnyParamConstraintStats()])
 
         return PredicateConstraintStats.from_predicate(predicate)
 
@@ -344,6 +397,9 @@ class VariadicConstraintStats(ConstraintStats):
     def get_sub_constraints(self) -> List[ConstraintStats]:
         return [self.baseType]
 
+    def __str__(self):
+        return f"Variadic<{self.baseType}>"
+
 
 @from_json
 class OptionalConstraintStats(ConstraintStats):
@@ -354,6 +410,9 @@ class OptionalConstraintStats(ConstraintStats):
 
     def get_sub_constraints(self) -> List[ConstraintStats]:
         return [self.baseType]
+
+    def __str__(self):
+        return f"Optional<{self.baseType}>"
 
 
 @from_json
@@ -367,6 +426,9 @@ class TypeDefConstraintStats(ConstraintStats):
     def get_sub_constraints(self) -> List[ConstraintStats]:
         return []
 
+    def __str__(self):
+        return f"{self.dialect}.{self.name}"
+
 
 @from_json
 class IntegerConstraintStats(ConstraintStats):
@@ -378,6 +440,9 @@ class IntegerConstraintStats(ConstraintStats):
     def get_sub_constraints(self) -> List[ConstraintStats]:
         return []
 
+    def __str__(self):
+        return f"IntegerOfSize<{self.bitwidth}>"
+
 
 @dataclass(eq=False)
 class AnyConstraintStats(ConstraintStats):
@@ -386,6 +451,9 @@ class AnyConstraintStats(ConstraintStats):
 
     def get_sub_constraints(self) -> List[ConstraintStats]:
         return []
+
+    def __str__(self):
+        return f"Any"
 
 
 @dataclass(eq=False)
@@ -397,6 +465,9 @@ class BaseConstraintStats(ConstraintStats):
 
     def get_sub_constraints(self) -> List[ConstraintStats]:
         return []
+
+    def __str__(self):
+        return f"{self.name}"
 
 
 @dataclass(eq=False)
@@ -410,6 +481,9 @@ class ParametricTypeConstraintStats(ConstraintStats):
     def get_sub_constraints(self) -> List[ConstraintStats]:
         return [param for param in self.params if isinstance(param, ConstraintStats)]
 
+    def __str__(self):
+        return f"{self.base}<{', '.join([str(param) for param in self.params])}>"
+
 
 @dataclass(eq=False)
 class NotConstraintStats(ConstraintStats):
@@ -420,6 +494,9 @@ class NotConstraintStats(ConstraintStats):
 
     def get_sub_constraints(self) -> List[ConstraintStats]:
         return [self.constraint]
+
+    def __str__(self):
+        return f"Not<{self.constraint}>"
 
 
 @dataclass(eq=False)
@@ -433,17 +510,45 @@ class AndConstraintStats(ConstraintStats):
     def get_sub_constraints(self) -> List[ConstraintStats]:
         return [self.operand1, self.operand2]
 
+    def __str__(self):
+        return f"And<{self.operand1}, {self.operand2}>"
+
 
 @dataclass(eq=False)
 class OrConstraintStats(ConstraintStats):
-    operand1: ConstraintStats
-    operand2: ConstraintStats
+    operands: List[ConstraintStats]
+
+    def __init__(self, operands: List[ConstraintStats]):
+        self.operands = []
+        for operand in operands:
+            if isinstance(operand, OrConstraintStats):
+                for sub_operand in operand.operands:
+                    self.operands.append(sub_operand)
+            else:
+                self.operands.append(operand)
 
     def is_declarative(self) -> bool:
-        return self.operand1.is_declarative() and self.operand2.is_declarative()
+        return all([c.is_declarative for c in self.operands])
 
     def get_sub_constraints(self) -> List[ConstraintStats]:
-        return [self.operand1, self.operand2]
+        return self.operands
+
+    def __str__(self):
+        return f"AnyOf<{', '.join([str(operand) for operand in self.operands])}>"
+
+
+@dataclass(eq=False)
+class NotConstraintStats(ConstraintStats):
+    constraint: ConstraintStats
+
+    def is_declarative(self) -> bool:
+        return self.constraint.is_declarative()
+
+    def get_sub_constraints(self) -> List[ConstraintStats]:
+        return [self.constraint]
+
+    def __str__(self):
+        return f"Not<{self.constraint}>"
 
 
 @dataclass(eq=False)
@@ -456,6 +561,9 @@ class ShapedTypeConstraintStats(ConstraintStats):
     def get_sub_constraints(self) -> List[ConstraintStats]:
         return [self.elemTypeConstraint]
 
+    def __str__(self):
+        return f"ShapedTypeOf<{self.elemTypeConstraint}>"
+
 
 @dataclass(eq=False)
 class LLVMVectorOfConstraintStats(ConstraintStats):
@@ -467,6 +575,49 @@ class LLVMVectorOfConstraintStats(ConstraintStats):
     def get_sub_constraints(self) -> List[ConstraintStats]:
         return [self.constraint]
 
+    def __str__(self):
+        return f"LLVMVectorOf<{self.constraint}>"
+
+
+@dataclass(eq=False)
+class AttrArrayOf(ConstraintStats):
+    constraint: ConstraintStats
+
+    def is_declarative(self) -> bool:
+        return self.constraint.is_declarative()
+
+    def get_sub_constraints(self) -> List[ConstraintStats]:
+        return [self.constraint]
+
+    def __str__(self):
+        return f"AttrArrayOf<{self.constraint}>"
+
+
+@dataclass(eq=False)
+class TupleOf(ConstraintStats):
+    constraint: ConstraintStats
+
+    def is_declarative(self) -> bool:
+        return self.constraint.is_declarative()
+
+    def get_sub_constraints(self) -> List[ConstraintStats]:
+        return [self.constraint]
+
+    def __str__(self):
+        return f"TupleOf<{self.constraint}>"
+
+
+@dataclass(eq=False)
+class LLVMCompatibleType(ConstraintStats):
+    def is_declarative(self) -> bool:
+        return True
+
+    def get_sub_constraints(self) -> List[ConstraintStats]:
+        return []
+
+    def __str__(self):
+        return f"LLVMCompatibleType"
+
 
 @from_json
 class PredicateConstraintStats(ConstraintStats):
@@ -477,31 +628,8 @@ class PredicateConstraintStats(ConstraintStats):
         return PredicateConstraintStats(predicate)
 
     def is_declarative(self) -> bool:
-        if remove_outer_parentheses(self.predicate) == "::mlir::LLVM::isCompatibleType($_self)":
-            return True
-
-        if self.predicate == "::mlir::LLVM::isCompatibleFloatingPointType($_self)":
-            return True
-
-        if self.predicate == "::mlir::LLVM::isCompatibleFloatingPointType(::mlir::LLVM::getVectorElementType($_self))":
-            return True
-
-        if self.predicate == "$_self.cast<::mlir::ShapedType>().getElementType().isSignedInteger()":
-            return True
-
-        m = re.compile(r"!\(\(\$_self.isa<(.*)>\(\)\)\)").match(self.predicate)
-        if m is not None:
-            return True
-
-        m = re.compile(r"!\$_self.isa<(.*)>\(\)").match(self.predicate)
-        if m is not None:
-            return True
-
-        m = re.compile(r"\$_self.cast<(.*)>\(\).getRank\(\)                          == (.*)").match(self.predicate)
-        if m is not None:
-            return True
-
-        m = re.compile(r"\$_self.cast<(.*)>\(\).getRank\(\)                            == (.*)").match(self.predicate)
+        self.predicate = simplify_expression(self.predicate)
+        m = re.compile(r"\$_self.cast<(.*)>\(\).getRank\(\) == (.*)").match(self.predicate)
         if m is not None:
             return True
 
@@ -509,65 +637,6 @@ class PredicateConstraintStats(ConstraintStats):
             return True
 
         if self.predicate == "$_self.cast<::mlir::ShapedType>().hasRank()":
-            return True
-
-        m = re.compile(r"::mlir::LLVM::isCompatibleFloatingPointType\(\$_self.cast<::mlir::LLVM::LLVMPointerType>\(\).getElementType\(\)\)").match(self.predicate)
-        if m is not None:
-            return True
-
-        m = re.compile(r"::mlir::LLVM::isCompatibleType\(\$_self.cast<::mlir::LLVM::LLVMPointerType>\(\).getElementType\(\)\)").match(self.predicate)
-        if m is not None:
-            return True
-        
-        if self.predicate == "!$_self.cast<::mlir::LLVM::LLVMPointerType>().getElementType().isa<::mlir::LLVM::LLVMVoidType, ::mlir::LLVM::LLVMFunctionType>()":
-            return True
-
-        if re.compile(r"\$_self.cast<::mlir::IntegerAttr>\(\).getType\(\).is(.*)Integer\((.*)\)").match(self.predicate) is not None:
-            return True
-
-        if self.predicate == "::llvm::all_of($_self.cast<::mlir::ArrayAttr>(), [&](::mlir::Attribute attr) { return ((attr.isa<::mlir::ArrayAttr>())) && (::llvm::all_of(attr.cast<::mlir::ArrayAttr>(), [&](::mlir::Attribute attr) { return ((attr.isa<::mlir::IntegerAttr>())) && ((attr.cast<::mlir::IntegerAttr>().getType().isSignlessInteger(64))); })); })":
-            return True
-
-        if self.predicate == "::llvm::all_of($_self.cast<::mlir::ArrayAttr>(), [&](::mlir::Attribute attr) { return ((attr.isa<::mlir::IntegerAttr>())) && ((attr.cast<::mlir::IntegerAttr>().getType().isSignlessInteger(64))); })":
-            return True
-
-        if re.compile(r"\$_self.cast<(::mlir::)?StringAttr>\(\).getValue\(\) == \"(.*)\"").match(self.predicate) is not None:
-            return True
-
-        if self.predicate == "$_self.cast<::mlir::IntegerAttr>().getType().isa<::mlir::IndexType>()":
-            return True
-
-        if self.predicate == "::llvm::all_of($_self.cast<::mlir::ArrayAttr>(), [&](::mlir::Attribute attr) { return (attr.isa<::mlir::AtomicRMWKindAttr>()); })":
-            return True
-
-        if self.predicate == "::llvm::all_of($_self.cast<::mlir::ArrayAttr>(), [&](::mlir::Attribute attr) { return ((attr.isa<::mlir::IntegerAttr>())) && ((attr.cast<::mlir::IntegerAttr>().getType().isSignlessInteger(32))); })":
-            return True
-
-        if self.predicate == "::llvm::all_of($_self.cast<::mlir::ArrayAttr>(), [&](::mlir::Attribute attr) { return ((attr.isa<::mlir::FloatAttr>())) && ((attr.cast<::mlir::FloatAttr>().getType().isF32())); })":
-            return True
-
-        if self.predicate == "::llvm::all_of($_self.cast<::mlir::ArrayAttr>(), [&](::mlir::Attribute attr) { return (attr.isa<::mlir::SymbolRefAttr>()); })":
-            return True
-
-        if self.predicate == "::llvm::all_of($_self.cast<::mlir::ArrayAttr>(), [&](::mlir::Attribute attr) { return (attr.isa<::mlir::StringAttr>()); })":
-            return True
-
-        if self.predicate == "::llvm::all_of($_self.cast<::mlir::ArrayAttr>(), [&](::mlir::Attribute attr) { return ((attr.isa<::mlir::TypeAttr>())) && ((attr.cast<::mlir::TypeAttr>().getValue().isa<::mlir::Type>())); })":
-            return True
-
-        if self.predicate == "::llvm::all_of($_self.cast<::mlir::TupleType>().getTypes(), [](Type t) { return ((t.isa<::mlir::VectorType>())) && ((true)); })":
-            return True
-
-        if self.predicate == "::llvm::all_of($_self.cast<::mlir::ArrayAttr>(), [&](::mlir::Attribute attr) { return (attr.isa<::mlir::AffineMapAttr>()); })":
-            return True
-
-        if self.predicate == "::llvm::all_of($_self.cast<::mlir::ArrayAttr>(), [&](::mlir::Attribute attr) { return (attr.isa<::mlir::BoolAttr>()); })":
-            return True
-
-        if self.predicate == "::llvm::all_of($_self.cast<::mlir::ArrayAttr>(), [&](::mlir::Attribute attr) { return ((attr.isa<::mlir::ArrayAttr>())) && (::llvm::all_of(attr.cast<::mlir::ArrayAttr>(), [&](::mlir::Attribute attr) { return ((attr.isa<::mlir::TypeAttr>())) && ((attr.cast<::mlir::TypeAttr>().getValue().isa<::mlir::Type>())); })); })":
-            return True
-
-        if self.predicate == "$_self.cast<::mlir::DenseIntElementsAttr>()                                       .getType()                                       .getElementType()                                       .isIndex()":
             return True
 
         if self.predicate == "$_self.cast<::mlir::TypeAttr>().getValue().isa<::mlir::Type>()":
@@ -601,10 +670,10 @@ class PredicateConstraintStats(ConstraintStats):
         if self.predicate == "$_self.cast<IntegerAttr>().getValue().isStrictlyPositive()":
             return False
 
-        if self.predicate == "!$_self.cast<::mlir::IntegerAttr>().getValue().isNegative()":
+        if self.predicate == "$_self.cast<::mlir::IntegerAttr>().getValue().isNegative()":
             return False
 
-        m = re.compile(r"\$_self.cast<(.*)>\(\).getNumElements\(\)                            == (.*)").match(self.predicate)
+        m = re.compile(r"\$_self.cast<(.*)>\(\).getNumElements\(\) == (.*)").match(self.predicate)
         if m is not None:
             return False
 
@@ -633,6 +702,9 @@ class PredicateConstraintStats(ConstraintStats):
     def get_sub_constraints(self) -> List[ConstraintStats]:
         return []
 
+    def __str__(self):
+        return f"Predicate<\"{self.predicate}\">"
+
 
 @dataclass(eq=False)
 class ParamConstraintStats(ABC):
@@ -646,6 +718,9 @@ class AnyParamConstraintStats(ParamConstraintStats):
     def is_declarative(self) -> bool:
         return True
 
+    def __str__(self):
+        return f"Any"
+
 
 @dataclass(eq=False)
 class CppValueParamConstraintStats(ParamConstraintStats):
@@ -655,6 +730,9 @@ class CppValueParamConstraintStats(ParamConstraintStats):
     def is_declarative(self) -> bool:
         return self.is_decl
 
+    def __str__(self):
+        return f'"{self.value}"'
+
 
 @dataclass(eq=False)
 class IntEqParamConstraintStats(ParamConstraintStats):
@@ -662,6 +740,20 @@ class IntEqParamConstraintStats(ParamConstraintStats):
 
     def is_declarative(self) -> bool:
         return True
+
+    def __str__(self):
+        return f"{self.value}"
+
+
+@dataclass(eq=False)
+class StringEqParamConstraintStats(ParamConstraintStats):
+    value: str
+
+    def is_declarative(self) -> bool:
+        return True
+
+    def __str__(self):
+        return f"{self.value}"
 
 
 @from_json
@@ -671,6 +763,9 @@ class NamedConstraintStats:
 
     def is_declarative(self) -> bool:
         return self.constraint.is_declarative()
+
+    def __str__(self):
+        return f"{self.name}: {self.constraint}"
 
 
 @from_json
@@ -722,6 +817,29 @@ class OpStats:
         if check_interfaces and not self.is_interface_declarative():
             return False
         return True
+
+    def print(self, indent_level=0):
+        print(f"{' ' * indent_level}Operation {self.name} {{")
+
+        # Operands
+        if len(self.operands) != 0:
+            print(f"{' ' * (indent_level + indent_size)}Operands (", end='')
+            print(f",\n{' ' * (indent_level + indent_size + len('Operands ('))}".join([str(operand) for operand in self.operands]), end='')
+            print(")")
+
+        # Results
+        if len(self.results) != 0:
+            print(f"{' ' * (indent_level + indent_size)}Results (", end='')
+            print(f",\n{' ' * (indent_level + indent_size + len('Results ('))}".join([str(result) for result in self.results]), end='')
+            print(")")
+
+        # Attributes
+        if len(self.attributes) != 0:
+            print(f"{' ' * (indent_level + indent_size)}Attributes (", end='')
+            print(f",\n{' ' * (indent_level + indent_size + len('Attributes ('))}".join([f'{name}: {attr}' for name, attr in self.attributes.items()]), end='')
+            print(")")
+
+        print(f"{' ' * indent_level}}}")
 
 
 @from_json
@@ -856,6 +974,23 @@ class TypeStats:
             assert False
         return True
 
+    def print(self, indent_level=0):
+        print(f"{' ' * indent_level}Type {self.name} {{")
+
+        # Parameters
+        print(f"{' ' * (indent_level + indent_size)}Parameters (", end='')
+        print(', '.join([f"{param.name}: \"{param.cppType}\"" for param in self.parameters]), end='')
+        print(f")")
+
+        # Verifier
+        if self.hasVerifier:
+            print(f"{' ' * (indent_level + indent_size)}CppVerifier \"verify($_self)\"")
+
+        # TODO traits and interfaces
+
+        # Traits
+        print(f"{' ' * indent_level}}}")
+
 
 @from_json
 class AttrStats:
@@ -901,6 +1036,21 @@ class DialectStats:
         if attr.name in self.attrs.keys():
             assert "attr was already in dialect"
         self.attrs[attr.name] = attr
+
+    def print(self, indent_level=0):
+        print(f"{' ' * indent_level}Dialect {self.name} {{")
+
+        # Types
+        for type in self.types.values():
+            type.print(indent_level + indent_size)
+
+        # TODO Attributes
+
+        # Ops
+        for op in self.ops.values():
+            op.print(indent_level + indent_size)
+
+        print(f"{' ' * indent_level}}}")
 
 
 @dataclass
@@ -1156,7 +1306,6 @@ def get_stat_from_files():
         dialect_stats.numAttributes = json_dialect["numAttributes"]
 
     return stats
-
 
 def get_op_list_distribution(ops: List[OpStats], f: Callable[[OpStats], int], maxi: Optional[int] = None) -> List[
     float]:
