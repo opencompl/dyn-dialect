@@ -83,10 +83,4 @@ def IRDL_Dialect : Dialect {
   let cppNamespace = "::mlir::irdl";
 }
 
-class IRDL_AttrDef<string name, list<Trait> traits = []>
-  : AttrDef<IRDL_Dialect, name, traits, "::mlir::Attribute"> {
-  let cppClassName = name;
-  let mnemonic = ?;
-}
-
 #endif // DYN_DIALECT_IRDL_IR_IRDL
