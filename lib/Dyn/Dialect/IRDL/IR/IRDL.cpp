@@ -25,6 +25,8 @@ using namespace mlir::irdl;
 // IRDL dialect.
 //===----------------------------------------------------------------------===//
 
+#include "Dyn/Dialect/IRDL/IR/IRDLDialect.cpp.inc"
+
 void IRDLDialect::initialize() {
   addOperations<
 #define GET_OP_LIST
