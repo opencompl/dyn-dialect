@@ -31,6 +31,7 @@ def EqTypeConstraintAttr : IRDL_AttrDef<"EqTypeConstraint", "eq_type_constraint"
     satisfied when given this type.
   }];
   let parameters = (ins "Type":$type);
+  let assemblyFormat = "`<` $type `>`";
 
   let extraClassDeclaration = [{
     std::unique_ptr<TypeConstraint> getTypeConstraint();
@@ -60,6 +61,7 @@ def AnyOfTypeConstraintAttr : IRDL_AttrDef<"AnyOfTypeConstraint", "any_of_type_c
     The associated type constraint is satisfied when any of the types is given. 
   }];
   let parameters = (ins ArrayRefParameter<"mlir::Type", "list of types">:$types);
+  let assemblyFormat = "`<` $types `>`";
 
   let extraClassDeclaration = [{
     std::unique_ptr<TypeConstraint> getTypeConstraint();
@@ -75,6 +77,7 @@ def VarTypeConstraintAttr : IRDL_AttrDef<"VarTypeConstraint", "var_type_constrai
     The first type matching the variable is the one setting the value.
   }];
   let parameters = (ins "size_t":$index);
+  let assemblyFormat = "`<` $index `>`";
 
   let extraClassDeclaration = [{
     std::unique_ptr<TypeConstraint> getTypeConstraint();
@@ -89,12 +92,19 @@ def DynTypeParamsConstraintAttr : IRDL_AttrDef<"DynTypeParamsConstraint", "dyn_t
     The constraint is satisfied by types that are of a specifc base dynamic
     type, and that have parameters satisfying the parameter constraints.
   }];
-  let parameters = (ins "DynamicTypeDefinition*":$typeDef,
+  let parameters = (ins StringRefParameter<>:$typeName,
       ArrayRefParameter<"mlir::Attribute", "list of param constraints">:$paramConstraints);
+  let assemblyFormat = "`<` $typeName `<` $paramConstraints `>` `>`";
 
   let extraClassDeclaration = [{
     std::unique_ptr<TypeConstraint> getTypeConstraint();
   }];
+}
+
+class TypeWrapperParameter<string desc = ""> :
+    AttrOrTypeParameter<"mlir::irdl::TypeWrapper*", desc> {
+  let printer = "assert(false)";
+  let parser = "failure()";
 }
 
 def TypeParamsConstraintAttr : IRDL_AttrDef<"TypeParamsConstraint", "type_params_constraint",
@@ -105,8 +115,9 @@ def TypeParamsConstraintAttr : IRDL_AttrDef<"TypeParamsConstraint", "type_params
     The constraint is satisfied by types that are of a specifc base
     type, and that have parameters satisfying the parameter constraints.
   }];
-  let parameters = (ins "mlir::irdl::TypeWrapper*":$typeDef,
+  let parameters = (ins TypeWrapperParameter<>:$typeDef,
       ArrayRefParameter<"mlir::Attribute", "list of param constraints">:$paramConstraints);
+  let assemblyFormat = "`<` $typeDef `<` $paramConstraints `>` `>`";
 
   let extraClassDeclaration = [{
     std::unique_ptr<TypeConstraint> getTypeConstraint();
@@ -117,6 +128,8 @@ def TypeParamsConstraintAttr : IRDL_AttrDef<"TypeParamsConstraint", "type_params
 class OpDefParameter<string desc = ""> :
     AttrOrTypeParameter<"mlir::irdl::OpDef", desc> {
   let allocator = [{$_dst = mlir::irdl::opDefAllocator($_allocator, $_self);}];
+  let printer = "assert(false)";
+  let parser = "failure()";
 }
 
 def OpDefAttr : IRDL_AttrDef<"OpDef", "op_def"> {
@@ -127,11 +140,14 @@ def OpDefAttr : IRDL_AttrDef<"OpDef", "op_def"> {
     and interface implementation.
   }];
   let parameters = (ins OpDefParameter<>:$opDef);
+  let assemblyFormat = "`<` $opDef `>`";
 }
 
 class TypeDefParameter<string desc = ""> :
     AttrOrTypeParameter<"mlir::irdl::TypeDef", desc> {
   let allocator = [{$_dst = mlir::irdl::typeDefAllocator($_allocator, $_self);}];
+  let printer = "assert(false)";
+  let parser = "failure()";
 }
 
 def TypeDefAttr : IRDL_AttrDef<"TypeDef", "type_def"> {
@@ -141,6 +157,7 @@ def TypeDefAttr : IRDL_AttrDef<"TypeDef", "type_def"> {
     It contains the parameter type constraints.
   }];
   let parameters = (ins TypeDefParameter<>:$typeDef);
+  let assemblyFormat = "`<` $typeDef `>`";
 }
 
 

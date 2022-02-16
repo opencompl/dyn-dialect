@@ -15,7 +15,9 @@
 #include "Dyn/Dialect/IRDL/TypeConstraint.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/IR/Metadata.h"
 #include "mlir/IR/DialectImplementation.h"
+#include "mlir/IR/OpImplementation.h"
 
 #define GET_ATTRDEF_CLASSES
 #include "Dyn/Dialect/IRDL/IR/IRDLAttributes.cpp.inc"
@@ -53,19 +55,19 @@ std::unique_ptr<TypeConstraint> EqTypeConstraintAttr::getTypeConstraint() {
 }
 
 //===----------------------------------------------------------------------===//
-// IRDL AnyOf type constraint attribute
-//===----------------------------------------------------------------------===//
-
-std::unique_ptr<TypeConstraint> AnyOfTypeConstraintAttr::getTypeConstraint() {
-  return std::make_unique<AnyOfTypeConstraint>(getTypes());
-}
-
-//===----------------------------------------------------------------------===//
 // Always true type constraint attribute
 //===----------------------------------------------------------------------===//
 
 std::unique_ptr<TypeConstraint> AnyTypeConstraintAttr::getTypeConstraint() {
   return std::make_unique<AnyTypeConstraint>();
+}
+
+//===----------------------------------------------------------------------===//
+// IRDL AnyOf type constraint attribute
+//===----------------------------------------------------------------------===//
+
+std::unique_ptr<TypeConstraint> AnyOfTypeConstraintAttr::getTypeConstraint() {
+  return std::make_unique<AnyOfTypeConstraint>(getTypes());
 }
 
 //===----------------------------------------------------------------------===//
@@ -82,30 +84,24 @@ std::unique_ptr<TypeConstraint> VarTypeConstraintAttr::getTypeConstraint() {
 
 std::unique_ptr<TypeConstraint>
 DynTypeParamsConstraintAttr::getTypeConstraint() {
-  auto allEqs = llvm::all_of(getParamConstraints(), [](Attribute attr) {
-    return attr.isa<EqTypeConstraintAttr>();
-  });
-
-  // If all parameter constraints are equalities, we can return an equality
-  // type constraint
-  if (allEqs) {
-    SmallVector<Attribute> params;
-    // Get all parameters from the equality constraints
-    for (auto paramConstraintAttr : getParamConstraints())
-      params.push_back(TypeAttr::get(
-          paramConstraintAttr.cast<EqTypeConstraintAttr>().getType()));
-
-    return std::make_unique<EqTypeConstraint>(
-        DynamicType::get(getTypeDef(), params));
-  }
-
   SmallVector<std::unique_ptr<TypeConstraint>> paramConstraints;
   for (auto paramConstraintAttr : getParamConstraints())
     paramConstraints.push_back(
         paramConstraintAttr.cast<TypeConstraintAttrInterface>()
             .getTypeConstraint());
 
-  return std::make_unique<DynTypeParamsConstraint>(getTypeDef(),
+  auto splittedTypeName = getTypeName().split('.');
+  auto dialectName = splittedTypeName.first;
+  auto typeName = splittedTypeName.second;
+
+  auto dialect = getContext()->getOrLoadDialect(dialectName);
+  assert(!dialect && "dialect is not registered");
+  auto extensibleDialect = llvm::dyn_cast<ExtensibleDialect>(dialect);
+  assert(!extensibleDialect && "dialect is not extensible");
+
+  auto* typeDef = extensibleDialect->lookupTypeDefinition(typeName);
+
+  return std::make_unique<DynTypeParamsConstraint>(typeDef,
                                                    std::move(paramConstraints));
 }
 

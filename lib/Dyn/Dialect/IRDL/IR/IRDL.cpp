@@ -196,19 +196,8 @@ parseOptionalDynTypeParamsConstraint(OpAsmParser &p, StringRef keyword,
     return {failure()};
   }
 
-  // Get the dynamic type by its name in the dialect
-  auto typeDef = extensibleDialect->lookupTypeDefinition(typeName);
-  if (!typeDef) {
-    p.emitError(loc).append("dynamic type '", typeName,
-                            "' was not registered in ", dialectName);
-    return {failure()};
-  }
-
-  // Empty case, we can return an equality constraint instead of a parameters
-  // constraint
   if (p.parseOptionalLess() || !p.parseOptionalGreater()) {
-    *typeConstraint = EqTypeConstraintAttr::get(p.getBuilder().getContext(),
-                                                DynamicType::get(typeDef));
+    *typeConstraint = DynTypeParamsConstraintAttr::get(ctx, typeName, {});
     return {success()};
   }
 
@@ -228,15 +217,15 @@ parseOptionalDynTypeParamsConstraint(OpAsmParser &p, StringRef keyword,
   }
 
   *typeConstraint =
-      DynTypeParamsConstraintAttr::get(ctx, typeDef, paramConstraints);
+      DynTypeParamsConstraintAttr::get(ctx, typeName, paramConstraints);
   return {success()};
 }
 
 void printDynTypeParamsConstraint(OpAsmPrinter &p,
                                   DynTypeParamsConstraintAttr constraint,
                                   ArgDefs variables) {
-  auto *typeDef = constraint.getTypeDef();
-  p << typeDef->getDialect()->getNamespace() << "." << typeDef->getName();
+  auto typeName = constraint.getTypeName();
+  p << typeName;
 
   auto paramConstraints = constraint.getParamConstraints();
   if (paramConstraints.empty())
