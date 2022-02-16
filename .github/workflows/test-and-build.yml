@@ -1,11 +1,6 @@
 name: Build and Test
 # todo install Ninja-dev
 on:
-  push:
-    branches:
-      - main
-  pull_request:
-    types: [assigned, opened, synchronize, reopened]
   workflow_dispatch:
 
 jobs:
