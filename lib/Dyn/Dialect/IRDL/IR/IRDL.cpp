@@ -559,71 +559,6 @@ void printArgDefs(OpAsmPrinter &p, ArgDefs typedVars, ArgDefs variables) {
   p << ")";
 }
 
-ParseResult parseTraitDef(OpAsmParser &p,
-                          std::pair<std::string, DynamicOpTrait *> &trait) {
-  auto ctx = p.getBuilder().getContext();
-  auto loc = p.getCurrentLocation();
-
-  StringRef traitName;
-  if (p.parseKeyword(&traitName)) {
-    p.emitError(loc, "expected trait name");
-    return failure();
-  }
-
-  auto res = ctx->getDynamicTrait(traitName);
-  if (!res) {
-    p.emitError(loc, "trait '")
-        .append(traitName, "' is not registered in the context");
-    return failure();
-  }
-  trait.first = traitName.str();
-  trait.second = res;
-
-  return success();
-}
-
-/// Parse a TraitDefs with format '(traits [(name,)*])?'.
-ParseResult parseTraitDefs(OpAsmParser &p, OwningTraitDefs &traitDefs) {
-  // If the trait keyword is not present, then it means that no traits is
-  // defined.
-  if (p.parseOptionalKeyword("traits"))
-    return success();
-
-  if (p.parseLSquare())
-    return failure();
-
-  // Empty
-  if (!p.parseOptionalRSquare())
-    return success();
-
-  std::pair<std::string, DynamicOpTrait *> trait;
-  if (parseTraitDef(p, trait))
-    return failure();
-  traitDefs.push_back(std::move(trait));
-
-  while (p.parseOptionalRSquare()) {
-    if (p.parseComma())
-      return failure();
-
-    std::pair<std::string, DynamicOpTrait *> trait;
-    if (parseTraitDef(p, trait))
-      return failure();
-    traitDefs.push_back(trait);
-  }
-
-  return success();
-}
-
-void printTraitDefs(OpAsmPrinter &p, TraitDefs traitDefs) {
-  if (traitDefs.empty())
-    return;
-  p << "traits [";
-  for (size_t i = 0; i + 1 < traitDefs.size(); i++) {
-    p << traitDefs[i].first << ", ";
-  }
-  p << traitDefs.back().first << "]";
-}
-
 /// Parse an OpDefAttr.
 /// The format is "operandDef -> resultDef (traits (name)+)?" where operandDef
 /// and resultDef have the ArgDefs format.
@@ -645,13 +580,8 @@ ParseResult parseOpDefAttr(OpAsmParser &p, OpDefAttr *opDefAttr) {
   if (parseArgDefs(p, &resultDefs, typeConstrVars))
     return failure();
 
-  // Parse the associated traits.
-  OwningTraitDefs traitDefs;
-  if (parseTraitDefs(p, traitDefs))
-    return failure();
-
   *opDefAttr =
-      OpDefAttr::get(ctx, {typeConstrVars, operandDefs, resultDefs, traitDefs});
+      OpDefAttr::get(ctx, {typeConstrVars, operandDefs, resultDefs});
 
   return success();
 }
@@ -661,10 +591,6 @@ void printOpDef(OpAsmPrinter &p, OpDef opDef) {
   printArgDefs(p, opDef.operandDef, opDef.typeConstraintVars);
   p << " -> ";
   printArgDefs(p, opDef.resultDef, opDef.typeConstraintVars);
-  if (!opDef.traitDefs.empty()) {
-    p << " ";
-    printTraitDefs(p, opDef.traitDefs);
-  }
 }
 
 } // namespace

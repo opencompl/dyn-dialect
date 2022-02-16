@@ -63,7 +63,7 @@ void registerType(ExtensibleDialect *dialect, TypeDef typeDef) {
   auto type =
       DynamicTypeDefinition::get(typeDef.name, dialect, std::move(verifier));
 
-  dialect->addDynamicType(std::move(type));
+  dialect->registerDynamicType(std::move(type));
 }
 } // namespace irdl
 } // namespace mlir
@@ -150,7 +150,7 @@ void registerOperation(ExtensibleDialect *dialect, StringRef name,
   auto parser = [](OpAsmParser &parser, OperationState &result) {
     return failure();
   };
-  auto printer = [](Operation *op, OpAsmPrinter &printer) {
+  auto printer = [](Operation *op, OpAsmPrinter &printer, StringRef) {
     printer.printGenericOp(op);
   };
 
@@ -163,10 +163,7 @@ void registerOperation(ExtensibleDialect *dialect, StringRef name,
 
   auto op = DynamicOpDefinition::get(name, dialect, std::move(verifier),
                                      std::move(parser), std::move(printer));
-  for (auto trait : opDef.traitDefs) {
-    op->addTrait(trait.second);
-  }
-  dialect->addDynamicOp(std::move(op));
+  dialect->registerDynamicOp(std::move(op));
 }
 } // namespace irdl
 } // namespace mlir

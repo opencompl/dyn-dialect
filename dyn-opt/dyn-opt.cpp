@@ -45,17 +45,6 @@ int main(int argc, char **argv) {
   MLIRContext ctx;
   auto irdl = ctx.getOrLoadDialect<irdl::IRDLDialect>();
 
-  auto trait = DynamicOpTrait::get(&ctx, [](Operation *op) {
-    if (op->getNumOperands() == 0) {
-      return success();
-    }
-    auto type = op->getOperand(0).getType();
-    return success(
-        llvm::all_of(op->getOperandTypes(),
-                     [type](auto operandType) { return operandType == type; }));
-  });
-  ctx.registerDynamicTrait("SameTypeOperands", std::move(trait));
-
   irdl->addTypeWrapper<ComplexTypeWrapper>();
 
   // Register the standard dialect and the IRDL dialect in the MLIR context

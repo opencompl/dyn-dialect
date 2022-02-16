@@ -17,12 +17,13 @@ include "mlir/IR/OpBase.td"
 include "IRDLInterfaces.td"
 include "IRDL.td"
 
-class IRDL_AttrDef<string name, list<Trait> traits = []>
+class IRDL_AttrDef<string name, string attrMnemonic, list<Trait> traits = []>
   : AttrDef<IRDL_Dialect, name, traits, "::mlir::Attribute"> {
-  let mnemonic = ?;
+  let mnemonic = attrMnemonic;
 }
 
-def EqTypeConstraintAttr : IRDL_AttrDef<"EqTypeConstraint", [TypeConstraintAttrInterface]> {
+def EqTypeConstraintAttr : IRDL_AttrDef<"EqTypeConstraint", "eq_type_constraint",
+                                        [TypeConstraintAttrInterface]> {
   let summary = "IRDL equality type constraint attribute";
   let description = [{
     Attribute representing the data of an equality type constraint.
@@ -36,7 +37,8 @@ def EqTypeConstraintAttr : IRDL_AttrDef<"EqTypeConstraint", [TypeConstraintAttrI
   }];
 }
 
-def AnyTypeConstraintAttr : IRDL_AttrDef<"AnyTypeConstraint", [TypeConstraintAttrInterface]> {
+def AnyTypeConstraintAttr : IRDL_AttrDef<"AnyTypeConstraint", "any_type_constraint",
+                                         [TypeConstraintAttrInterface]> {
   let summary = "Any type constraint attribute";
   let description = [{
     Attribute representing an Any type constraint.
@@ -49,7 +51,8 @@ def AnyTypeConstraintAttr : IRDL_AttrDef<"AnyTypeConstraint", [TypeConstraintAtt
   }];
 }
 
-def AnyOfTypeConstraintAttr : IRDL_AttrDef<"AnyOfTypeConstraint", [TypeConstraintAttrInterface]> {
+def AnyOfTypeConstraintAttr : IRDL_AttrDef<"AnyOfTypeConstraint", "any_of_type_constraint",
+                                           [TypeConstraintAttrInterface]> {
   let summary = "AnyOf type constraint attribute";
   let description = [{
     Attribute representing an AnyOf type constraint.
@@ -63,7 +66,8 @@ def AnyOfTypeConstraintAttr : IRDL_AttrDef<"AnyOfTypeConstraint", [TypeConstrain
   }];
 }
 
-def VarTypeConstraintAttr : IRDL_AttrDef<"VarTypeConstraint", [TypeConstraintAttrInterface]> {
+def VarTypeConstraintAttr : IRDL_AttrDef<"VarTypeConstraint", "var_type_constraint",
+                                         [TypeConstraintAttrInterface]> {
   let summary = "Type constraint variable";
   let description = [{
     Attribute representing a type constraint variable.
@@ -77,7 +81,8 @@ def VarTypeConstraintAttr : IRDL_AttrDef<"VarTypeConstraint", [TypeConstraintAtt
   }];
 }
 
-def DynTypeParamsConstraintAttr : IRDL_AttrDef<"DynTypeParamsConstraint", [TypeConstraintAttrInterface]> {
+def DynTypeParamsConstraintAttr : IRDL_AttrDef<"DynTypeParamsConstraint", "dyn_type_params_constraint",
+                                               [TypeConstraintAttrInterface]> {
   let summary = "constraint on dynamic type parameters";
   let description = [{
     Attribute representing a constraint on dynamic type parameters.
@@ -92,7 +97,8 @@ def DynTypeParamsConstraintAttr : IRDL_AttrDef<"DynTypeParamsConstraint", [TypeC
   }];
 }
 
-def TypeParamsConstraintAttr : IRDL_AttrDef<"TypeParamsConstraint", [TypeConstraintAttrInterface]> {
+def TypeParamsConstraintAttr : IRDL_AttrDef<"TypeParamsConstraint", "type_params_constraint",
+                                            [TypeConstraintAttrInterface]> {
   let summary = "constraint on C++ type parameters";
   let description = [{
     Attribute representing a constraint on C++ type parameters.
@@ -113,7 +119,7 @@ class OpDefParameter<string desc = ""> :
   let allocator = [{$_dst = mlir::irdl::opDefAllocator($_allocator, $_self);}];
 }
 
-def OpDefAttr : IRDL_AttrDef<"OpDef"> {
+def OpDefAttr : IRDL_AttrDef<"OpDef", "op_def"> {
   let summary = "Declaration of a dynamic operation";
   let description = [{
     Attribute representing an operation definition.
@@ -128,7 +134,7 @@ class TypeDefParameter<string desc = ""> :
   let allocator = [{$_dst = mlir::irdl::typeDefAllocator($_allocator, $_self);}];
 }
 
-def TypeDefAttr : IRDL_AttrDef<"TypeDef"> {
+def TypeDefAttr : IRDL_AttrDef<"TypeDef", "type_def"> {
   let summary = "Declaration of a dynamic operation";
   let description = [{
     Attribute representing an type definition.

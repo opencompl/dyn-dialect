@@ -14,6 +14,8 @@
 #include "Dyn/Dialect/IRDL/IR/IRDL.h"
 #include "Dyn/Dialect/IRDL/TypeConstraint.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/TypeSwitch.h"
+#include "mlir/IR/DialectImplementation.h"
 
 #define GET_ATTRDEF_CLASSES
 #include "Dyn/Dialect/IRDL/IR/IRDLAttributes.cpp.inc"
@@ -25,7 +27,7 @@ namespace mlir {
 namespace irdl {
 
 llvm::hash_code hash_value(mlir::irdl::OpDef opDef) {
-  return llvm::hash_combine(opDef.operandDef, opDef.resultDef, opDef.traitDefs);
+  return llvm::hash_combine(opDef.operandDef, opDef.resultDef);
 }
 
 llvm::hash_code hash_value(mlir::irdl::TypeDef typeDef) {

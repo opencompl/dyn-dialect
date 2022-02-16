@@ -44,8 +44,6 @@ def IRDL_Dialect : Dialect {
     a `mul` operation.
   }];
 
-  let isExtensible = 1;
-
   let extraClassDeclaration = [{
   public:
     /// Register new attributes that can be used by IRDL.
@@ -60,12 +58,20 @@ def IRDL_Dialect : Dialect {
     /// Add a concrete type wrapper in IRDL.
     template <typename T>
     void addTypeWrapper() {
-         addTypeWrapper(std::make_unique<T>(new T()));
+         addTypeWrapper(std::make_unique<T>());
     }
 
     /// Get a type wrapper with the given name.
     /// Returns nullptr if no type wrapper with that name is found.
     TypeWrapper* getTypeWrapper(StringRef typeName);
+
+    // TODO: Why are those declarations needed?
+    /// Parse an attribute registered to this dialect.
+    ::mlir::Attribute parseAttribute(::mlir::DialectAsmParser &parser,
+                                     ::mlir::Type type) const override;
+    /// Print an attribute registered to this dialect.
+    void printAttribute(::mlir::Attribute attr,
+                        ::mlir::DialectAsmPrinter &os) const override;
 
   private:
     /// Add a type wrapper to IRDL.

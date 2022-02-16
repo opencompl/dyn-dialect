@@ -40,16 +40,12 @@ namespace irdl {
 using ArgDef = std::pair<StringRef, Attribute>;
 using ArgDefs = ArrayRef<ArgDef>;
 using OwningArgDefs = llvm::SmallVector<ArgDef>;
-using TraitDefs = ArrayRef<std::pair<std::string, DynamicOpTrait *>>;
-using OwningTraitDefs =
-    llvm::SmallVector<std::pair<std::string, DynamicOpTrait *>>;
 
 /// Definition of a dynamic operation type.
 /// It contains the definition of every operand and result.
 class OpDef {
 public:
   ArgDefs typeConstraintVars, operandDef, resultDef;
-  TraitDefs traitDefs;
 
   ArgDefs getTypeConstraintVars() const { return typeConstraintVars; }
 
@@ -67,13 +63,8 @@ public:
   /// Each result is defined by a name, and a type constraint.
   ArgDefs getResDefinitions() const { return resultDef; }
 
-  /// Return the traits definitions.
-  /// A trait is defined by its name.
-  TraitDefs getTraitsDefinitions() const { return traitDefs; };
-
   bool operator==(const OpDef &o) const {
     return o.operandDef == operandDef && o.resultDef == resultDef &&
-           o.traitDefs == traitDefs &&
            o.typeConstraintVars == typeConstraintVars;
   }
 
@@ -94,10 +85,8 @@ inline OpDef opDefAllocator(mlir::AttributeStorageAllocator &allocator,
       argDefAllocator(allocator, typeDef.typeConstraintVars);
   auto allocatedOperandDefs = argDefAllocator(allocator, typeDef.operandDef);
   auto allocatedResultDefs = argDefAllocator(allocator, typeDef.resultDef);
-  auto allocatedTraitDefs = allocator.copyInto(typeDef.traitDefs);
 
-  return {allocatedTypeConstrVars, allocatedOperandDefs, allocatedResultDefs,
-          allocatedTraitDefs};
+  return {allocatedTypeConstrVars, allocatedOperandDefs, allocatedResultDefs};
 }
 
 //===----------------------------------------------------------------------===//
