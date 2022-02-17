@@ -13,11 +13,11 @@
 #include "Dyn/Dialect/IRDL/IR/IRDLAttributes.h"
 #include "Dyn/Dialect/IRDL/IR/IRDL.h"
 #include "Dyn/Dialect/IRDL/TypeConstraint.h"
+#include "mlir/IR/DialectImplementation.h"
+#include "mlir/IR/OpImplementation.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/Metadata.h"
-#include "mlir/IR/DialectImplementation.h"
-#include "mlir/IR/OpImplementation.h"
 
 #define GET_ATTRDEF_CLASSES
 #include "Dyn/Dialect/IRDL/IR/IRDLAttributes.cpp.inc"
@@ -99,7 +99,7 @@ DynTypeParamsConstraintAttr::getTypeConstraint() {
   auto extensibleDialect = llvm::dyn_cast<ExtensibleDialect>(dialect);
   assert(extensibleDialect && "dialect is not extensible");
 
-  auto* typeDef = extensibleDialect->lookupTypeDefinition(typeName);
+  auto *typeDef = extensibleDialect->lookupTypeDefinition(typeName);
 
   return std::make_unique<DynTypeParamsConstraint>(typeDef,
                                                    std::move(paramConstraints));
