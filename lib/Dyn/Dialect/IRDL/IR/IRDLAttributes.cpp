@@ -95,9 +95,9 @@ DynTypeParamsConstraintAttr::getTypeConstraint() {
   auto typeName = splittedTypeName.second;
 
   auto dialect = getContext()->getOrLoadDialect(dialectName);
-  assert(!dialect && "dialect is not registered");
+  assert(dialect && "dialect is not registered");
   auto extensibleDialect = llvm::dyn_cast<ExtensibleDialect>(dialect);
-  assert(!extensibleDialect && "dialect is not extensible");
+  assert(extensibleDialect && "dialect is not extensible");
 
   auto* typeDef = extensibleDialect->lookupTypeDefinition(typeName);
 

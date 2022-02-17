@@ -199,7 +199,7 @@ parseOptionalDynTypeParamsConstraint(OpAsmParser &p, StringRef keyword,
   }
 
   if (p.parseOptionalLess() || !p.parseOptionalGreater()) {
-    *typeConstraint = DynTypeParamsConstraintAttr::get(ctx, typeName, {});
+    *typeConstraint = DynTypeParamsConstraintAttr::get(ctx, keyword, {});
     return {success()};
   }
 
@@ -219,7 +219,7 @@ parseOptionalDynTypeParamsConstraint(OpAsmParser &p, StringRef keyword,
   }
 
   *typeConstraint =
-      DynTypeParamsConstraintAttr::get(ctx, typeName, paramConstraints);
+      DynTypeParamsConstraintAttr::get(ctx, keyword, paramConstraints);
   return {success()};
 }
 
@@ -357,6 +357,7 @@ static ParseResult parseDialectOp(OpAsmParser &p, OperationState &state) {
 
   // Register the dialect in the dynamic context.
   auto *ctx = state.getContext();
+  llvm::errs() << "loading dialect " << name << "\n";
   ctx->loadDynamicDialect(name);
 
   auto *dialect =
@@ -383,10 +384,8 @@ static ParseResult parseDialectOp(OpAsmParser &p, OperationState &state) {
 }
 
 static void print(OpAsmPrinter &p, DialectOp dialectOp) {
-  p << DialectOp::getOperationName() << " ";
-
   // Print the dialect name.
-  p << dialectOp.name() << " ";
+  p << " " << dialectOp.name() << " ";
 
   // Print the dialect body.
   p.printRegion(dialectOp.body(), false, false);
@@ -460,7 +459,7 @@ static ParseResult parseTypeOp(OpAsmParser &p, OperationState &state) {
 
 static void print(OpAsmPrinter &p, TypeOp typeOp) {
   auto typeDef = typeOp.def().getTypeDef();
-  p << TypeOp::getOperationName() << " " << typeDef.name;
+  p << " " << typeDef.name;
 
   printTypeParams(p, typeDef.paramDefs);
 }
@@ -620,7 +619,7 @@ static ParseResult parseOperationOp(OpAsmParser &p, OperationState &state) {
 }
 
 static void print(OpAsmPrinter &p, OperationOp operationOp) {
-  p << OperationOp::getOperationName() << " ";
+  p << " ";
 
   // Print the operation name.
   p << operationOp.name();
