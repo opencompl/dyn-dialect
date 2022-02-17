@@ -570,8 +570,7 @@ ParseResult parseOpDefAttr(OpAsmParser &p, OpDefAttr *opDefAttr) {
   if (parseArgDefs(p, &resultDefs, typeConstrVars))
     return failure();
 
-  *opDefAttr =
-      OpDefAttr::get(ctx, {typeConstrVars, operandDefs, resultDefs});
+  *opDefAttr = OpDefAttr::get(ctx, {typeConstrVars, operandDefs, resultDefs});
 
   return success();
 }
