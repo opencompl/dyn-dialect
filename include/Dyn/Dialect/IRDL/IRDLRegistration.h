@@ -14,6 +14,7 @@
 #define DYN_IRDL_IR_IRDLREGISTRATION_H
 
 #include "Dyn/Dialect/IRDL/IR/IRDL.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/Support/LogicalResult.h"
 
 namespace mlir {
@@ -24,6 +25,9 @@ void registerType(ExtensibleDialect *dialect, TypeDef typeDef);
 
 /// Register a new dynamic operation in a dynamic dialect.
 void registerOperation(ExtensibleDialect *dialect, StringRef name, OpDef opDef);
+
+/// Register all the dialects in a module.
+void registerDialects(ModuleOp op);
 
 } // namespace irdl
 } // namespace mlir

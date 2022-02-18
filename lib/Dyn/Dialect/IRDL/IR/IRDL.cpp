@@ -173,28 +173,11 @@ parseOptionalDynTypeParamsConstraint(OpAsmParser &p, StringRef keyword,
   auto loc = p.getCurrentLocation();
   auto ctx = p.getBuilder().getContext();
   auto splittedNames = keyword.split('.');
-  auto dialectName = splittedNames.first;
   auto typeName = splittedNames.second;
 
   // Check that the type name is in the format dialectname.typename
   if (typeName == "") {
     p.emitError(loc, " expected type name prefixed with the dialect name");
-    return {failure()};
-  }
-
-  // Get the dialect by its name
-  auto dialect = ctx->getOrLoadDialect(dialectName);
-  if (!dialect) {
-    p.emitError(loc).append("dialect ", dialectName, " is not defined");
-    return {failure()};
-  }
-
-  // Check that the dialect is an extensible dialect
-  auto extensibleDialect = llvm::dyn_cast<ExtensibleDialect>(dialect);
-  if (!extensibleDialect) {
-    p.emitError(loc).append("dialect ", dialectName,
-                            " is not extensible, and thus cannot be used on a "
-                            "parameters constraint");
     return {failure()};
   }
 
@@ -355,28 +338,10 @@ static ParseResult parseDialectOp(OpAsmParser &p, OperationState &state) {
     return failure();
   state.addAttribute("name", builder.getStringAttr(name));
 
-  // Register the dialect in the dynamic context.
-  auto *ctx = state.getContext();
-  llvm::errs() << "loading dialect " << name << "\n";
-  ctx->loadDynamicDialect(name);
-
-  auto *dialect =
-      llvm::dyn_cast<ExtensibleDialect>(ctx->getLoadedDialect(name));
-  assert(dialect && "extensible dialect should have been registered");
-
-  // Set the current dialect to the dialect that we are currently defining.
-  // Every IRDL operation that is parsed in the next region will be registered
-  // inside this dialect.
-  auto irdlDialect = ctx->getLoadedDialect<irdl::IRDLDialect>();
-  irdlDialect->currentlyParsedDialect = dialect;
-
   // Parse the dialect body.
   Region *region = state.addRegion();
   if (failed(p.parseRegion(*region)))
     return failure();
-
-  // We are not parsing the dialect anymore.
-  irdlDialect->currentlyParsedDialect = nullptr;
 
   DialectOp::ensureTerminator(*region, builder, state.location);
 
@@ -389,6 +354,56 @@ static void print(OpAsmPrinter &p, DialectOp dialectOp) {
 
   // Print the dialect body.
   p.printRegion(dialectOp.body(), false, false);
+}
+
+//===----------------------------------------------------------------------===//
+// NamedTypeConstraintArray
+//===----------------------------------------------------------------------===//
+
+ParseResult parseNamedTypeConstraint(OpAsmParser &p,
+                                     NamedTypeConstraintAttr &param) {
+  std::string name;
+  if (failed(p.parseKeywordOrString(&name)))
+    return failure();
+  if (failed(p.parseColon()))
+    return failure();
+  Attribute attr;
+  if (failed(parseTypeConstraint(p, &attr, {})))
+    return failure();
+  param = NamedTypeConstraintAttr::get(p.getContext(), name, attr);
+  return success();
+}
+
+void printNamedTypeConstraint(OpAsmPrinter &p, NamedTypeConstraintAttr attr) {
+  p.printKeywordOrString(attr.getName());
+  p << ": ";
+  printTypeConstraint(p, attr.getConstraint(), {});
+}
+
+ParseResult parseNamedTypeConstraintArray(OpAsmParser &p,
+                                          ArrayAttr &paramsAttr) {
+  SmallVector<Attribute> attrs;
+  auto parseRes = p.parseCommaSeparatedList(
+      OpAsmParser::Delimiter::Paren, [&]() -> ParseResult {
+        NamedTypeConstraintAttr attr;
+        if (failed(parseNamedTypeConstraint(p, attr)))
+          return failure();
+        attrs.push_back(attr);
+        return success();
+      });
+  if (parseRes.failed())
+    return failure();
+  paramsAttr = ArrayAttr::get(p.getContext(), attrs);
+  return success();
+}
+
+void printNamedTypeConstraintArray(OpAsmPrinter &p, Operation *,
+                                   ArrayAttr paramsAttr) {
+  p << "(";
+  llvm::interleaveComma(paramsAttr.getValue(), p, [&](Attribute attr) {
+    printNamedTypeConstraint(p, attr.cast<NamedTypeConstraintAttr>());
+  });
+  p << ")";
 }
 
 //===----------------------------------------------------------------------===//
@@ -443,16 +458,22 @@ static ParseResult parseTypeOp(OpAsmParser &p, OperationState &state) {
   if (failed(parseTypeParams(p, &params)))
     return failure();
 
+  // Parse the type definition region.
+  auto *region = state.addRegion();
+  auto regionParseRes = p.parseOptionalRegion(*region);
+  if (regionParseRes.hasValue()) {
+    if (failed(regionParseRes.getValue()))
+      return failure();
+  }
+  // If no regions are parsed, add a single empty block to the operation
+  // region.
+  if (region->getBlocks().size() == 0) {
+    region->push_back(new Block());
+  }
+
   auto *ctx = state.getContext();
   auto typeDef = TypeDefAttr::get(ctx, {name, params});
   state.addAttribute("def", typeDef);
-
-  // Get the currently parsed dialect, and register the type in it.
-  auto *irdlDialect = ctx->getOrLoadDialect<irdl::IRDLDialect>();
-  auto *dialect = irdlDialect->currentlyParsedDialect;
-  assert(dialect != nullptr && "Trying to parse an 'irdl.type' when there is "
-                               "no 'irdl.dialect' currently being parsed.");
-  registerType(dialect, typeDef.getTypeDef());
 
   return success();
 }
@@ -462,6 +483,10 @@ static void print(OpAsmPrinter &p, TypeOp typeOp) {
   p << " " << typeDef.name;
 
   printTypeParams(p, typeDef.paramDefs);
+
+  if (!typeOp.body().getBlocks().front().empty()) {
+    p.printRegion(typeOp.body());
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -602,17 +627,6 @@ static ParseResult parseOperationOp(OpAsmParser &p, OperationState &state) {
   if (parseOpDefAttr(p, &opDef))
     return failure();
   state.addAttribute("op_def", opDef);
-
-  // Get the currently parsed dialect
-  auto *ctx = p.getBuilder().getContext();
-  auto *irdlDialect = ctx->getOrLoadDialect<irdl::IRDLDialect>();
-  auto *dialect = irdlDialect->currentlyParsedDialect;
-  assert(dialect != nullptr &&
-         "Trying to parse an 'irdl.operation' when there is "
-         "no 'irdl.dialect' currently being parsed.");
-
-  // and register the operation in the dialect
-  registerOperation(dialect, name, opDef.getOpDef());
 
   return success();
 }

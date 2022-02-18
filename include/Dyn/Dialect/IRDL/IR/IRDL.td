@@ -51,9 +51,6 @@ def IRDL_Dialect : Dialect {
     void addNewAttribute() {
       addAttributes<Attr>();
     }
-    /// This field is used during parsing. If this field is non-null, it points
-    /// to the dialect that is currently being parsed by MLIR.
-    ExtensibleDialect *currentlyParsedDialect = nullptr;
 
     /// Add a concrete type wrapper in IRDL.
     template <typename T>

@@ -55,29 +55,63 @@ def IRDL_EndDialectOp : IRDL_Op<"end_dialect", [Terminator]> {
 }
 
 //===----------------------------------------------------------------------===//
-// IRDL Type definition
+// IRDL Type and Attribute parameters definition
 //===----------------------------------------------------------------------===//
 
-def IRDL_TypeOp : IRDL_Op<"type", [HasParent<"DialectOp">]> {
-  let summary = "Define a new type";
+def IRDL_ParametersOp : IRDL_Op<"parameters", [HasParent<"TypeOp">]> {
+  let summary = "Define the parameters of a type/attribute definition";
   let description = [{
-    `irdl.type` defines new types belonging to the previously defined dialect
-    using `irdl.dialect`.
-
-    Types defined by `irdl.type` are singleton types.
+    `irdl.parameters` defines new parameters belonging to the type or attribute
+    defined by the parent operation.
 
     Example:
 
     ```mlir
     irdl.dialect "cmath" {
-      irdl.type "complex"
+      irdl.type "complex" {
+        irdl.parameters(elementType: AnyOf<i32, i64>)
+      }
+    }
+    ```
+
+    The above program defines a type `complex` inside the dialect `cmath`. The
+    type has a single parameter named `elementType` that should be either `i32`
+    or `i64`.
+  }];
+
+  let arguments = (ins TypedArrayAttrBase<NamedTypeConstraintAttr, "Named constraint array">:$params);
+  let assemblyFormat = [{ custom<NamedTypeConstraintArray>($params) attr-dict }];
+}
+
+//===----------------------------------------------------------------------===//
+// IRDL Type definition
+//===----------------------------------------------------------------------===//
+
+def IRDL_TypeOp : IRDL_Op<"type", [HasParent<"DialectOp">, NoTerminator, NoRegionArguments]> {
+  let summary = "Define a new type";
+  let description = [{
+    `irdl.type` defines new types belonging to the previously defined dialect
+    using `irdl.dialect`.
+
+    The type parameters can be defined with an `irdl.parameters` operation in
+    the optional region.
+
+    Example:
+
+    ```mlir
+    irdl.dialect "cmath" {
+      irdl.type "complex" {
+        irdl.parameters(elementType: AnyOf<i32, i64>)
+      }
     }
     ```
     
-    The above program defines a type `complex` inside the dialect `cmath`.
+    The above program defines a type `complex` inside the dialect `cmath`. The
+    type has a single parameter that should be either `i32` or `i64`.
   }];
 
   let arguments = (ins TypeDefAttr:$def);
+  let regions = (region SizedRegion<1>:$body);
   let printer = [{ ::print(p, *this); }];
   let parser = [{ return ::parse$cppClass(parser, result); }];
 

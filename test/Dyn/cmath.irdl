@@ -1,17 +1,19 @@
 // RUN: dyn-opt %s | dyn-opt | FileCheck %s
 
 module {
-    // CHECK-LABEL: irdl.dialect cmath {
-    irdl.dialect cmath {
-        // CHECK: irdl.type real 
-        irdl.type real
-        // CHECK: irdl.type ccomplex
-        irdl.type ccomplex
-        // CHECK: irdl.operation make_complex(re: !cmath.real, im: !cmath.real) -> (res: !cmath.ccomplex)
-        irdl.operation make_complex(re : !cmath.real, im: !cmath.real) -> (res: !cmath.ccomplex)
-        irdl.operation mul(lhs: !cmath.ccomplex, rhs: !cmath.ccomplex) -> (res: !cmath.ccomplex)
-        irdl.operation norm(c: !cmath.ccomplex) -> (res: !cmath.real)
-        irdl.operation get_real(c: !cmath.ccomplex) -> (res: !cmath.real)
-        irdl.operation get_imaginary(c: !cmath.ccomplex) -> (res: !cmath.real)
-    }
+  // CHECK-LABEL: irdl.dialect cmath {
+  irdl.dialect cmath {
+    // CHECK: irdl.type real 
+    irdl.type real
+
+    // CHECK: irdl.type ccomplex
+    irdl.type ccomplex
+
+    // CHECK: irdl.operation make_complex(re: cmath.real, im: cmath.real) -> (res: cmath.ccomplex)
+    irdl.operation make_complex(re : cmath.real, im: cmath.real) -> (res: cmath.ccomplex)
+    irdl.operation mul(lhs: cmath.ccomplex, rhs: cmath.ccomplex) -> (res: cmath.ccomplex)
+    irdl.operation norm(c: cmath.ccomplex) -> (res: cmath.real)
+    irdl.operation get_real(c: cmath.ccomplex) -> (res: cmath.real)
+    irdl.operation get_imaginary(c: cmath.ccomplex) -> (res: cmath.real)
+  }
 }

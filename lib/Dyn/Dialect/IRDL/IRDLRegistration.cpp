@@ -167,3 +167,27 @@ void registerOperation(ExtensibleDialect *dialect, StringRef name,
 }
 } // namespace irdl
 } // namespace mlir
+
+static void registerDialect(DialectOp op) {
+  auto *ctx = op.getContext();
+  auto dialectName = op.name();
+
+  ctx->loadDynamicDialect(dialectName);
+
+  auto *dialect =
+      llvm::dyn_cast<ExtensibleDialect>(ctx->getLoadedDialect(dialectName));
+  assert(dialect && "extensible dialect should have been registered.");
+
+  op.walk([&](TypeOp op) { registerType(dialect, op.def().getTypeDef()); });
+  op.walk([&](OperationOp op) {
+    registerOperation(dialect, op.name(), op.op_def().getOpDef());
+  });
+}
+
+namespace mlir {
+namespace irdl {
+void registerDialects(ModuleOp op) {
+  op.walk([](DialectOp dialect) { registerDialect(dialect); });
+}
+} // namespace irdl
+} // namespace mlir

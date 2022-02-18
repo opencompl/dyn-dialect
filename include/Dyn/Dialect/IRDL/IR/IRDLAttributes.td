@@ -124,6 +124,15 @@ def TypeParamsConstraintAttr : IRDL_AttrDef<"TypeParamsConstraint", "type_params
   }];
 }
 
+def TypeConstraintParameter :
+  AttrOrTypeParameter<"::mlir::Attribute", "type constraint attribute"> {}
+
+def NamedTypeConstraintAttr : IRDL_AttrDef<"NamedTypeConstraint",
+                                           "Named type constraint"> {
+  let summary = "Type constraint with an associated name";
+  let parameters = (ins StringRefParameter<>:$name, TypeConstraintParameter:$constraint);
+  let assemblyFormat = "`<` $name `:` $constraint `>`";
+}
 
 class OpDefParameter<string desc = ""> :
     AttrOrTypeParameter<"mlir::irdl::OpDef", desc> {
@@ -146,7 +155,7 @@ def OpDefAttr : IRDL_AttrDef<"OpDef", "op_def"> {
 class TypeDefParameter<string desc = ""> :
     AttrOrTypeParameter<"mlir::irdl::TypeDef", desc> {
   let allocator = [{$_dst = mlir::irdl::typeDefAllocator($_allocator, $_self);}];
-  let printer = "assert(false)";
+  let printer = "1";
   let parser = "failure()";
 }
 
