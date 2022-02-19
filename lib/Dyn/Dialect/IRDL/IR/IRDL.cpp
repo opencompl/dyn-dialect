@@ -50,6 +50,46 @@ TypeWrapper *IRDLDialect::getTypeWrapper(StringRef typeName) {
 }
 
 //===----------------------------------------------------------------------===//
+// Parsing/Printing
+//===----------------------------------------------------------------------===//
+
+static ParseResult parseKeywordOrString(OpAsmParser &p, StringAttr &attr) {
+  std::string str;
+  if (failed(p.parseKeywordOrString(&str)))
+    return failure();
+  attr = p.getBuilder().getStringAttr(str);
+  return success();
+}
+
+static void printKeywordOrString(OpAsmPrinter &p, Operation *,
+                                 StringAttr attr) {
+  p.printKeywordOrString(attr.getValue());
+}
+
+/// Parse a region, and add a single block if the region is empty.
+/// If no region is parsed, create a new region with a single empty block.
+static ParseResult parseSingleBlockRegion(OpAsmParser &p, Region &region) {
+  auto regionParseRes = p.parseOptionalRegion(region);
+  if (regionParseRes.hasValue()) {
+    if (failed(regionParseRes.getValue()))
+      return failure();
+  }
+  // If the region is empty, add a single empty block.
+  if (region.getBlocks().size() == 0) {
+    region.push_back(new Block());
+  }
+
+  return success();
+}
+
+static void printSingleBlockRegion(OpAsmPrinter &p, Operation *op,
+                                   Region &region) {
+  if (!region.getBlocks().front().empty()) {
+    p.printRegion(region);
+  }
+}
+
+//===----------------------------------------------------------------------===//
 // Type constraints.
 //===----------------------------------------------------------------------===//
 
@@ -405,43 +445,6 @@ void printNamedTypeConstraintArray(OpAsmPrinter &p, Operation *,
     printNamedTypeConstraint(p, attr.cast<NamedTypeConstraintAttr>());
   });
   p << ")";
-}
-
-//===----------------------------------------------------------------------===//
-// irdl::TypeOp
-//===----------------------------------------------------------------------===//
-
-static ParseResult parseTypeOp(OpAsmParser &p, OperationState &state) {
-  Builder builder = p.getBuilder();
-
-  // Parse the type name.
-  StringRef name;
-  if (failed(p.parseKeyword(&name)))
-    return failure();
-  state.addAttribute("name", builder.getStringAttr(name));
-
-  // Parse the type definition region.
-  auto *region = state.addRegion();
-  auto regionParseRes = p.parseOptionalRegion(*region);
-  if (regionParseRes.hasValue()) {
-    if (failed(regionParseRes.getValue()))
-      return failure();
-  }
-  // If no regions are parsed, add a single empty block to the operation
-  // region.
-  if (region->getBlocks().size() == 0) {
-    region->push_back(new Block());
-  }
-
-  return success();
-}
-
-static void print(OpAsmPrinter &p, TypeOp typeOp) {
-  p << " " << typeOp.name() << " ";
-
-  if (!typeOp.body().getBlocks().front().empty()) {
-    p.printRegion(typeOp.body());
-  }
 }
 
 //===----------------------------------------------------------------------===//

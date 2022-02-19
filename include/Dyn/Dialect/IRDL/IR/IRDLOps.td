@@ -114,8 +114,7 @@ def IRDL_TypeOp : IRDL_Op<"type", [HasParent<"DialectOp">, NoTerminator, NoRegio
 
   let arguments = (ins StrAttr:$name);
   let regions = (region SizedRegion<1>:$body);
-  let printer = [{ ::print(p, *this); }];
-  let parser = [{ return ::parse$cppClass(parser, result); }];
+  let assemblyFormat = "custom<KeywordOrString>($name) attr-dict-with-keyword custom<SingleBlockRegion>($body)";
 
   let extraClassDeclaration = [{
     /// Get the parent dialect operation.
