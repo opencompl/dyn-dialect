@@ -1,0 +1,25 @@
+// RUN: dyn-opt %s | dyn-opt | FileCheck %s
+
+irdl.dialect testd {
+  // CHECK: irdl.type parametric<param: irdl.Any>
+  irdl.type parametric<param: irdl.Any> {
+    irdl.parameters(param: irdl.Any)
+  }
+
+  // CHECK: irdl.operation eq() -> (res: i32)
+  irdl.operation eq() -> (res: i32)
+  // CHECK: irdl.operation anyof() -> (res: irdl.AnyOf<i32, i64>)
+  irdl.operation anyof() -> (res: irdl.AnyOf<i32, i64>)
+
+  // CHECK: irdl.operation any() -> (res: irdl.Any)
+  irdl.operation any() -> (res: irdl.Any)
+
+  // CHECK: irdl.operation dynparams() -> (res: testd.parametric<irdl.AnyOf<i32, i64>>)
+  irdl.operation dynparams() -> (res: testd.parametric<irdl.AnyOf<i32, i64>>)
+
+  // CHECK: irdl.operation params() -> (res: std.complex<irdl.AnyOf<i32, i64>>)
+  irdl.operation params() -> (res: std.complex<irdl.AnyOf<i32, i64>>)
+
+  // CHECK: irdl.operation typeConstrVars<a: irdl.AnyOf<i32, i64>>() -> (res1: a, res2: a)
+  irdl.operation typeConstrVars<a: irdl.AnyOf<i32, i64>>() -> (res1: a, res2: a)
+}
