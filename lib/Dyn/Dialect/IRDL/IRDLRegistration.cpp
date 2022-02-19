@@ -13,6 +13,7 @@
 #include "Dyn/Dialect/IRDL/IRDLRegistration.h"
 #include "Dyn/Dialect/IRDL/IR/IRDL.h"
 #include "Dyn/Dialect/IRDL/IR/IRDLAttributes.h"
+#include "Dyn/Dialect/IRDL/IR/IRDLInterfaces.h"
 #include "Dyn/Dialect/IRDL/TypeConstraint.h"
 #include "mlir/IR/ExtensibleDialect.h"
 #include "mlir/IR/Visitors.h"
@@ -168,6 +169,32 @@ void registerOperation(ExtensibleDialect *dialect, StringRef name,
 } // namespace irdl
 } // namespace mlir
 
+static void registerType(ExtensibleDialect *dialect, TypeOp op) {
+  auto params = op.getOp<ParametersOp>();
+  auto typeDef = op.def().getTypeDef();
+
+  SmallVector<std::unique_ptr<TypeConstraint>> paramConstraints;
+  if (params.hasValue()) {
+    for (auto param : params->params().getValue()) {
+      paramConstraints.push_back(param.cast<NamedTypeConstraintAttr>()
+                                     .getConstraint()
+                                     .cast<TypeConstraintAttrInterface>()
+                                     .getTypeConstraint());
+    }
+  }
+
+  auto verifier = [paramConstraints{std::move(paramConstraints)}](
+                      function_ref<InFlightDiagnostic()> emitError,
+                      ArrayRef<Attribute> params) {
+    return irdlTypeVerifier(emitError, params, paramConstraints);
+  };
+
+  auto type =
+      DynamicTypeDefinition::get(typeDef.name, dialect, std::move(verifier));
+
+  dialect->registerDynamicType(std::move(type));
+}
+
 static void registerDialect(DialectOp op) {
   auto *ctx = op.getContext();
   auto dialectName = op.name();
@@ -178,7 +205,7 @@ static void registerDialect(DialectOp op) {
       llvm::dyn_cast<ExtensibleDialect>(ctx->getLoadedDialect(dialectName));
   assert(dialect && "extensible dialect should have been registered.");
 
-  op.walk([&](TypeOp op) { registerType(dialect, op.def().getTypeDef()); });
+  op.walk([&](TypeOp op) { registerType(dialect, op); });
   op.walk([&](OperationOp op) {
     registerOperation(dialect, op.name(), op.op_def().getOpDef());
   });

@@ -1,8 +1,10 @@
 // RUN: dyn-opt %s | dyn-opt | FileCheck %s
 
 irdl.dialect testd {
-  // CHECK: irdl.type parametric<param: irdl.Any>
-  irdl.type parametric<param: irdl.Any> {
+  // CHECK: irdl.type parametric {
+  // CHECK:   irdl.parameters(param: irdl.Any)
+  // CHECK: }
+  irdl.type parametric {
     irdl.parameters(param: irdl.Any)
   }
 

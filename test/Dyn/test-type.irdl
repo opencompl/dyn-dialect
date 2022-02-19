@@ -6,8 +6,13 @@ module {
         // CHECK: irdl.type singleton
         irdl.type singleton
 
-        // CHECK: irdl.type parametrized<arg1: irdl.Any, arg2: irdl.AnyOf<i32, i64>>
-        irdl.type parametrized<arg1: irdl.Any, arg2: irdl.AnyOf<i32, i64>>
+        // CHECK: irdl.type parametrized {
+        // CHECK:   irdl.parameters(arg1: irdl.Any, arg2: irdl.AnyOf<i32, i64>)
+        // CHECK: }
+
+        irdl.type parametrized {
+            irdl.parameters(arg1: irdl.Any, arg2: irdl.AnyOf<i32, i64>)
+        }
 
         irdl.operation any() -> (res: irdl.Any)
     }

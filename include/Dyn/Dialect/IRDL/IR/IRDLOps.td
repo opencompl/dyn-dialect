@@ -82,7 +82,7 @@ def IRDL_ParametersOp : IRDL_Op<"parameters", [HasParent<"TypeOp">]> {
   }];
 
   let arguments = (ins TypedArrayAttrBase<NamedTypeConstraintAttr, "Named constraint array">:$params);
-  let assemblyFormat = [{ custom<NamedTypeConstraintArray>($params) attr-dict }];
+  let assemblyFormat = [{ `` custom<NamedTypeConstraintArray>($params) attr-dict }];
 }
 
 //===----------------------------------------------------------------------===//

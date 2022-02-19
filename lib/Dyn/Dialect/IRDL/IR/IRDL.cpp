@@ -480,7 +480,7 @@ static ParseResult parseTypeOp(OpAsmParser &p, OperationState &state) {
 
 static void print(OpAsmPrinter &p, TypeOp typeOp) {
   auto typeDef = typeOp.def().getTypeDef();
-  p << " " << typeDef.name;
+  p << " " << typeDef.name << " ";
 
   printTypeParams(p, typeDef.paramDefs);
 
