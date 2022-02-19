@@ -21,6 +21,8 @@ class IRDL_Op<string mnemonic, list<OpTrait> traits = []>
     : Op<IRDL_Dialect, mnemonic, traits> {
 }
 
+class AtMostOneChildOf<string op> : ParamNativeOpTrait<"AtMostOneChildOf", op>;
+
 //===----------------------------------------------------------------------===//
 // IRDL Dialect definition
 //===----------------------------------------------------------------------===//
@@ -87,7 +89,7 @@ def IRDL_ParametersOp : IRDL_Op<"parameters", [HasParent<"TypeOp">]> {
 // IRDL Type definition
 //===----------------------------------------------------------------------===//
 
-def IRDL_TypeOp : IRDL_Op<"type", [HasParent<"DialectOp">, NoTerminator, NoRegionArguments]> {
+def IRDL_TypeOp : IRDL_Op<"type", [HasParent<"DialectOp">, NoTerminator, NoRegionArguments, AtMostOneChildOf<"ParametersOp">]> {
   let summary = "Define a new type";
   let description = [{
     `irdl.type` defines new types belonging to the previously defined dialect
