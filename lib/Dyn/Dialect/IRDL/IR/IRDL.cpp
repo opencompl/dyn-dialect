@@ -11,6 +11,7 @@
 #include "Dyn/Dialect/IRDL/IRDLRegistration.h"
 #include "Dyn/Dialect/IRDL/TypeConstraint.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/ExtensibleDialect.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"
@@ -410,53 +411,14 @@ void printNamedTypeConstraintArray(OpAsmPrinter &p, Operation *,
 // irdl::TypeOp
 //===----------------------------------------------------------------------===//
 
-/// Parse the type parameters with the format "(<argdef (, argdef)*>)?"
-ParseResult parseTypeParams(OpAsmParser &p, OwningArgDefs *argDefs) {
-  // No parameters
-  if (p.parseOptionalLess() || !p.parseOptionalGreater())
-    return success();
-
-  ArgDef argDef;
-  if (parseArgDef(p, &argDef, {}))
-    return failure();
-  argDefs->push_back(argDef);
-
-  while (p.parseOptionalGreater()) {
-    if (p.parseComma())
-      return failure();
-
-    ArgDef argDef;
-    if (parseArgDef(p, &argDef, {}))
-      return failure();
-    argDefs->push_back(argDef);
-  }
-
-  return success();
-}
-
-void printTypeParams(OpAsmPrinter &p, ArgDefs params) {
-  if (params.empty()) {
-    return;
-  }
-  p << "<";
-  for (size_t i = 0; i + 1 < params.size(); i++) {
-    const auto &typedVar = params[i];
-    printArgDef(p, typedVar, {});
-    p << ", ";
-  }
-  printArgDef(p, params.back(), {});
-  p << ">";
-}
-
 static ParseResult parseTypeOp(OpAsmParser &p, OperationState &state) {
+  Builder builder = p.getBuilder();
+
   // Parse the type name.
   StringRef name;
   if (failed(p.parseKeyword(&name)))
     return failure();
-
-  OwningArgDefs params;
-  if (failed(parseTypeParams(p, &params)))
-    return failure();
+  state.addAttribute("name", builder.getStringAttr(name));
 
   // Parse the type definition region.
   auto *region = state.addRegion();
@@ -471,18 +433,11 @@ static ParseResult parseTypeOp(OpAsmParser &p, OperationState &state) {
     region->push_back(new Block());
   }
 
-  auto *ctx = state.getContext();
-  auto typeDef = TypeDefAttr::get(ctx, {name, params});
-  state.addAttribute("def", typeDef);
-
   return success();
 }
 
 static void print(OpAsmPrinter &p, TypeOp typeOp) {
-  auto typeDef = typeOp.def().getTypeDef();
-  p << " " << typeDef.name << " ";
-
-  printTypeParams(p, typeDef.paramDefs);
+  p << " " << typeOp.name() << " ";
 
   if (!typeOp.body().getBlocks().front().empty()) {
     p.printRegion(typeOp.body());

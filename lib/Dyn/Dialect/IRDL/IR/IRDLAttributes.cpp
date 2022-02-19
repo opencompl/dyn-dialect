@@ -32,10 +32,6 @@ llvm::hash_code hash_value(mlir::irdl::OpDef opDef) {
   return llvm::hash_combine(opDef.operandDef, opDef.resultDef);
 }
 
-llvm::hash_code hash_value(mlir::irdl::TypeDef typeDef) {
-  return llvm::hash_combine(typeDef.name, typeDef.paramDefs);
-}
-
 void IRDLDialect::registerAttributes() {
 #define GET_ATTRDEF_LIST
   addAttributes<

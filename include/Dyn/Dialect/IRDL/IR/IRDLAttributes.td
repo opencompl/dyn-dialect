@@ -152,22 +152,4 @@ def OpDefAttr : IRDL_AttrDef<"OpDef", "op_def"> {
   let assemblyFormat = "`<` $opDef `>`";
 }
 
-class TypeDefParameter<string desc = ""> :
-    AttrOrTypeParameter<"mlir::irdl::TypeDef", desc> {
-  let allocator = [{$_dst = mlir::irdl::typeDefAllocator($_allocator, $_self);}];
-  let printer = "1";
-  let parser = "failure()";
-}
-
-def TypeDefAttr : IRDL_AttrDef<"TypeDef", "type_def"> {
-  let summary = "Declaration of a dynamic operation";
-  let description = [{
-    Attribute representing an type definition.
-    It contains the parameter type constraints.
-  }];
-  let parameters = (ins TypeDefParameter<>:$typeDef);
-  let assemblyFormat = "`<` $typeDef `>`";
-}
-
-
 #endif // DYN_DIALECT_IRDL_IR_IRDLATTRIBUTES

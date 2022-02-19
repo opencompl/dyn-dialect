@@ -26,8 +26,6 @@ namespace mlir {
 namespace irdl {
 class OpDef;
 class OpDefAttr;
-class TypeDef;
-class TypeDefAttr;
 } // namespace irdl
 } // namespace mlir
 

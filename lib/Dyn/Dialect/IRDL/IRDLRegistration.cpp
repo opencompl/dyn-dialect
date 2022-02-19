@@ -48,24 +48,6 @@ irdlTypeVerifier(function_ref<InFlightDiagnostic()> emitError,
 }
 } // namespace
 
-void registerType(ExtensibleDialect *dialect, TypeDef typeDef) {
-  SmallVector<std::unique_ptr<TypeConstraint>> paramConstraints;
-  for (auto param : typeDef.paramDefs) {
-    paramConstraints.push_back(
-        param.second.cast<TypeConstraintAttrInterface>().getTypeConstraint());
-  }
-
-  auto verifier = [paramConstraints{std::move(paramConstraints)}](
-                      function_ref<InFlightDiagnostic()> emitError,
-                      ArrayRef<Attribute> params) {
-    return irdlTypeVerifier(emitError, params, paramConstraints);
-  };
-
-  auto type =
-      DynamicTypeDefinition::get(typeDef.name, dialect, std::move(verifier));
-
-  dialect->registerDynamicType(std::move(type));
-}
 } // namespace irdl
 } // namespace mlir
 
@@ -171,7 +153,6 @@ void registerOperation(ExtensibleDialect *dialect, StringRef name,
 
 static void registerType(ExtensibleDialect *dialect, TypeOp op) {
   auto params = op.getOp<ParametersOp>();
-  auto typeDef = op.def().getTypeDef();
 
   SmallVector<std::unique_ptr<TypeConstraint>> paramConstraints;
   if (params.hasValue()) {
@@ -190,7 +171,7 @@ static void registerType(ExtensibleDialect *dialect, TypeOp op) {
   };
 
   auto type =
-      DynamicTypeDefinition::get(typeDef.name, dialect, std::move(verifier));
+      DynamicTypeDefinition::get(op.name(), dialect, std::move(verifier));
 
   dialect->registerDynamicType(std::move(type));
 }

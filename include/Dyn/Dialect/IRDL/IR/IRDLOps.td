@@ -112,7 +112,7 @@ def IRDL_TypeOp : IRDL_Op<"type", [HasParent<"DialectOp">, NoTerminator, NoRegio
     type has a single parameter that should be either `i32` or `i64`.
   }];
 
-  let arguments = (ins TypeDefAttr:$def);
+  let arguments = (ins StrAttr:$name);
   let regions = (region SizedRegion<1>:$body);
   let printer = [{ ::print(p, *this); }];
   let parser = [{ return ::parse$cppClass(parser, result); }];
