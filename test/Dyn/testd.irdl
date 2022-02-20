@@ -8,20 +8,38 @@ irdl.dialect testd {
     irdl.parameters(param: irdl.Any)
   }
 
-  // CHECK: irdl.operation eq() -> (res: i32)
-  irdl.operation eq() -> (res: i32)
-  // CHECK: irdl.operation anyof() -> (res: irdl.AnyOf<i32, i64>)
-  irdl.operation anyof() -> (res: irdl.AnyOf<i32, i64>)
+  // CHECK: irdl.operation eq {
+  // CHECK:   irdl.results(res: i32)
+  // CHECK: }  
+  irdl.operation eq {
+    irdl.results(res: i32)
+  }
 
-  // CHECK: irdl.operation any() -> (res: irdl.Any)
-  irdl.operation any() -> (res: irdl.Any)
+  // CHECK: irdl.operation anyof {
+  // CHECK:   irdl.results(res: irdl.AnyOf<i32, i64>)
+  // CHECK: }
+  irdl.operation anyof {
+    irdl.results(res: irdl.AnyOf<i32, i64>)
+  }
 
-  // CHECK: irdl.operation dynparams() -> (res: testd.parametric<irdl.AnyOf<i32, i64>>)
-  irdl.operation dynparams() -> (res: testd.parametric<irdl.AnyOf<i32, i64>>)
+  // CHECK: irdl.operation any {
+  // CHECK:   irdl.results(res: irdl.Any)
+  // CHECK: }
+  irdl.operation any {
+    irdl.results(res: irdl.Any)
+  }
 
-  // CHECK: irdl.operation params() -> (res: std.complex<irdl.AnyOf<i32, i64>>)
-  irdl.operation params() -> (res: std.complex<irdl.AnyOf<i32, i64>>)
+  // CHECK: irdl.operation dynparams {
+  // CHECK:   irdl.results(res: testd.parametric<irdl.AnyOf<i32, i64>>)
+  // CHECK: }
+  irdl.operation dynparams {
+    irdl.results(res: testd.parametric<irdl.AnyOf<i32, i64>>)
+  }
 
-  // CHECK: irdl.operation typeConstrVars<a: irdl.AnyOf<i32, i64>>() -> (res1: a, res2: a)
-  irdl.operation typeConstrVars<a: irdl.AnyOf<i32, i64>>() -> (res1: a, res2: a)
+  // CHECK: irdl.operation params {
+  // CHECK:   irdl.results(res: std.complex<irdl.AnyOf<i32, i64>>)
+  // CHECK: }
+  irdl.operation params {
+    irdl.results(res: std.complex<irdl.AnyOf<i32, i64>>)
+  }
 }

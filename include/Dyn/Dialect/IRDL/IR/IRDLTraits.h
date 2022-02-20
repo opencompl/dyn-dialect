@@ -26,16 +26,24 @@ public:
   class Impl
       : public ::mlir::OpTrait::TraitBase<ConcreteType,
                                           AtMostOneChildOf<ChildOp...>::Impl> {
+  private:
+    template <typename ChildOpT>
+    static bool hasAtMostOneChildOf(Operation *op) {
+      auto ops = cast<ConcreteType>(op).template getOps<ChildOpT>();
+      return ops.empty() || ++ops.begin() == ops.end();
+    }
+
   public:
     static LogicalResult verifyTrait(Operation *op) {
       static_assert(
           ConcreteType::template hasTrait<::mlir::OpTrait::OneRegion>(),
           "expected operation to have a single region");
 
-      auto ops = {cast<ConcreteType>(op).template getOps<ChildOp>()...};
-      for (auto op : ops) {
-        if (!op.empty() && ++op.begin() != op.end()) {
+      auto satisfiedOps = {hasAtMostOneChildOf<ChildOp>(op)...};
+      for (auto satisfiedOp : satisfiedOps) {
+        if (!satisfiedOp) {
           // TODO: Write a proper error message here.
+          op->emitError("Error in AtMostOneChildOf trait.");
           return failure();
         }
       }

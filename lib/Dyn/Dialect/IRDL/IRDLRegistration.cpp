@@ -55,8 +55,7 @@ namespace {
 
 LogicalResult verifyOpDefConstraints(
     Operation *op, ArrayRef<std::unique_ptr<TypeConstraint>> operandConstrs,
-    ArrayRef<std::unique_ptr<TypeConstraint>> resultConstrs,
-    ArrayRef<std::unique_ptr<TypeConstraint>> typeConstrVars) {
+    ArrayRef<std::unique_ptr<TypeConstraint>> resultConstrs) {
   /// Check that we have the right number of operands.
   auto numOperands = op->getNumOperands();
   auto numExpectedOperands = operandConstrs.size();
@@ -74,14 +73,14 @@ LogicalResult verifyOpDefConstraints(
                            std::to_string(numResults));
 
   auto emitError = [op]() { return op->emitError(); };
-  SmallVector<Type> varAssignments(typeConstrVars.size());
+  SmallVector<Type> varAssignments;
 
   /// Check that all operands satisfy the constraints.
   for (unsigned i = 0; i < numOperands; ++i) {
     auto operandType = op->getOperand(i).getType();
     auto &constraint = operandConstrs[i];
-    if (failed(constraint->verifyType(emitError, operandType, typeConstrVars,
-                                      varAssignments)))
+    if (failed(
+            constraint->verifyType(emitError, operandType, {}, varAssignments)))
       return failure();
   }
 
@@ -89,8 +88,8 @@ LogicalResult verifyOpDefConstraints(
   for (unsigned i = 0; i < numResults; ++i) {
     auto resultType = op->getResult(i).getType();
     auto &constraint = resultConstrs[i];
-    if (failed(constraint->verifyType(emitError, resultType, typeConstrVars,
-                                      varAssignments)))
+    if (failed(
+            constraint->verifyType(emitError, resultType, {}, varAssignments)))
       return failure();
   }
 
@@ -101,33 +100,34 @@ LogicalResult verifyOpDefConstraints(
 namespace mlir {
 namespace irdl {
 /// Register an operation represented by a `irdl.operation` operation.
-void registerOperation(ExtensibleDialect *dialect, StringRef name,
-                       OpDef opDef) {
-  SmallVector<std::unique_ptr<TypeConstraint>> typeConstrVars;
+void registerOperation(ExtensibleDialect *dialect, OperationOp op) {
   SmallVector<std::unique_ptr<TypeConstraint>> operandConstraints;
   SmallVector<std::unique_ptr<TypeConstraint>> resultConstraints;
 
-  typeConstrVars.reserve(opDef.typeConstraintVars.size());
-  for (auto typeConstr : opDef.typeConstraintVars) {
-    auto constraint = typeConstr.second.cast<TypeConstraintAttrInterface>()
-                          .getTypeConstraint();
-    typeConstrVars.emplace_back(std::move(constraint));
-  }
-
   // Add the operand constraints to the type constraints.
-  operandConstraints.reserve(opDef.operandDef.size());
-  for (auto &def : opDef.operandDef) {
-    auto constraint =
-        def.second.cast<TypeConstraintAttrInterface>().getTypeConstraint();
-    operandConstraints.emplace_back(std::move(constraint));
+  auto operandsOp = op.getOp<OperandsOp>();
+  if (operandsOp.hasValue()) {
+    operandConstraints.reserve(operandsOp->params().size());
+    for (auto operand : operandsOp->params().getValue()) {
+      auto operandAttr = operand.cast<NamedTypeConstraintAttr>();
+      auto constraint = operandAttr.getConstraint()
+                            .cast<TypeConstraintAttrInterface>()
+                            .getTypeConstraint();
+      operandConstraints.emplace_back(std::move(constraint));
+    }
   }
 
   // Add the result constraints to the type constraints.
-  resultConstraints.reserve(opDef.resultDef.size());
-  for (auto &def : opDef.resultDef) {
-    auto constraint =
-        def.second.cast<TypeConstraintAttrInterface>().getTypeConstraint();
-    resultConstraints.emplace_back(std::move(constraint));
+  auto resultsOp = op.getOp<ResultsOp>();
+  if (resultsOp.hasValue()) {
+    resultConstraints.reserve(resultsOp->params().size());
+    for (auto result : resultsOp->params().getValue()) {
+      auto resultAttr = result.cast<NamedTypeConstraintAttr>();
+      auto constraint = resultAttr.getConstraint()
+                            .cast<TypeConstraintAttrInterface>()
+                            .getTypeConstraint();
+      resultConstraints.emplace_back(std::move(constraint));
+    }
   }
 
   auto parser = [](OpAsmParser &parser, OperationState &result) {
@@ -138,15 +138,14 @@ void registerOperation(ExtensibleDialect *dialect, StringRef name,
   };
 
   auto verifier = [operandConstraints{std::move(operandConstraints)},
-                   resultConstraints{std::move(resultConstraints)},
-                   typeConstrVars{std::move(typeConstrVars)}](Operation *op) {
-    return verifyOpDefConstraints(op, operandConstraints, resultConstraints,
-                                  typeConstrVars);
+                   resultConstraints{std::move(resultConstraints)}](
+                      Operation *op) {
+    return verifyOpDefConstraints(op, operandConstraints, resultConstraints);
   };
 
-  auto op = DynamicOpDefinition::get(name, dialect, std::move(verifier),
-                                     std::move(parser), std::move(printer));
-  dialect->registerDynamicOp(std::move(op));
+  auto opDef = DynamicOpDefinition::get(op.name(), dialect, std::move(verifier),
+                                        std::move(parser), std::move(printer));
+  dialect->registerDynamicOp(std::move(opDef));
 }
 } // namespace irdl
 } // namespace mlir
@@ -187,9 +186,7 @@ static void registerDialect(DialectOp op) {
   assert(dialect && "extensible dialect should have been registered.");
 
   op.walk([&](TypeOp op) { registerType(dialect, op); });
-  op.walk([&](OperationOp op) {
-    registerOperation(dialect, op.name(), op.op_def().getOpDef());
-  });
+  op.walk([&](OperationOp op) { registerOperation(dialect, op); });
 }
 
 namespace mlir {

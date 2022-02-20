@@ -20,9 +20,6 @@
 namespace mlir {
 namespace irdl {
 
-/// Register a new dynamic operation in a dynamic dialect.
-void registerOperation(ExtensibleDialect *dialect, StringRef name, OpDef opDef);
-
 /// Register all the dialects in a module.
 void registerDialects(ModuleOp op);
 

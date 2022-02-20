@@ -37,7 +37,7 @@ def IRDL_DialectOp : IRDL_Op<"dialect", [
     Example:
 
     ```mlir
-    irdl.dialect "cmath" {
+    irdl.dialect cmath {
       ...
     }
     ```
@@ -69,8 +69,8 @@ def IRDL_ParametersOp : IRDL_Op<"parameters", [HasParent<"TypeOp">]> {
     Example:
 
     ```mlir
-    irdl.dialect "cmath" {
-      irdl.type "complex" {
+    irdl.dialect cmath {
+      irdl.type complex {
         irdl.parameters(elementType: AnyOf<i32, i64>)
       }
     }
@@ -101,8 +101,8 @@ def IRDL_TypeOp : IRDL_Op<"type", [HasParent<"DialectOp">, NoTerminator, NoRegio
     Example:
 
     ```mlir
-    irdl.dialect "cmath" {
-      irdl.type "complex" {
+    irdl.dialect cmath {
+      irdl.type complex {
         irdl.parameters(elementType: AnyOf<i32, i64>)
       }
     }
@@ -126,8 +126,59 @@ def IRDL_TypeOp : IRDL_Op<"type", [HasParent<"DialectOp">, NoTerminator, NoRegio
 // IRDL Operation definition
 //===----------------------------------------------------------------------===//
 
+def IRDL_OperandsOp : IRDL_Op<"operands", [HasParent<"OperationOp">]> {
+  let summary = "Define the operands of an operation";
+  let description = [{
+    `irdl.operands` define the operands of the `irdl.operation` parent operation
+    definition.
 
-def IRDL_OperationOp : IRDL_Op<"operation", [HasParent<"DialectOp">]> {
+    Example:
+
+    ```mlir
+    irdl.dialect testd {
+      irdl.operation test_op {
+        irdl.operands(operand1: !i32, operand2: AnyOf<i32, i64>)
+      }
+    }
+    ```
+
+    The above program defines an operation `test_op` with two expected operands.
+    The first operand is expected to be of type `i32`, and the second operand is
+    expected to be either of type `i32` or `i64`.
+  }];
+
+  let arguments = (ins TypedArrayAttrBase<NamedTypeConstraintAttr, "Named constraint array">:$params);
+  let assemblyFormat = [{ `` custom<NamedTypeConstraintArray>($params) attr-dict }];
+}
+
+def IRDL_ResultsOp : IRDL_Op<"results", [HasParent<"OperationOp">]> {
+  let summary = "Define the results of an operation";
+  let description = [{
+    `irdl.results` define the results of the `irdl.operation` parent operation
+    definition.
+
+    Example:
+
+    ```mlir
+    irdl.dialect testd {
+      irdl.operation test_op {
+        irdl.results(result1: !i32, result2: AnyOf<i32, i64>)
+      }
+    }
+    ```
+
+    The above program defines an operation `test_op` with two expected results.
+    The first result is expected to be an `i32`, and the second result is
+    expected to be either an `i32` or an `i64`.
+  }];
+
+  let arguments = (ins TypedArrayAttrBase<NamedTypeConstraintAttr, "Named constraint array">:$params);
+  let assemblyFormat = [{ `` custom<NamedTypeConstraintArray>($params) attr-dict }];
+}
+
+def IRDL_OperationOp : IRDL_Op<"operation",
+    [HasParent<"DialectOp">, NoTerminator, NoRegionArguments,
+    AtMostOneChildOf<"OperandsOp, ResultsOp">]> {
   let summary = "Define a new operation";
   let description = [{
     `irdl.operation` defines new operations belonging to the previously
@@ -146,9 +197,9 @@ def IRDL_OperationOp : IRDL_Op<"operation", [HasParent<"DialectOp">]> {
     The above program defines an operation `mul` inside the dialect `cmath`.
   }];
 
-  let arguments = (ins StrAttr:$name, OpDefAttr:$op_def);
-  let printer = [{ ::print(p, *this); }];
-  let parser = [{ return ::parse$cppClass(parser, result); }];
+  let arguments = (ins StrAttr:$name);
+  let regions = (region SizedRegion<1>:$body);
+  let assemblyFormat = "custom<KeywordOrString>($name) attr-dict-with-keyword custom<SingleBlockRegion>($body)";
 
   let extraClassDeclaration = [{
     /// Get the parent dialect operation.

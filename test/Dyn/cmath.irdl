@@ -9,11 +9,33 @@ module {
     // CHECK: irdl.type ccomplex
     irdl.type ccomplex
 
-    // CHECK: irdl.operation make_complex(re: cmath.real, im: cmath.real) -> (res: cmath.ccomplex)
-    irdl.operation make_complex(re : cmath.real, im: cmath.real) -> (res: cmath.ccomplex)
-    irdl.operation mul(lhs: cmath.ccomplex, rhs: cmath.ccomplex) -> (res: cmath.ccomplex)
-    irdl.operation norm(c: cmath.ccomplex) -> (res: cmath.real)
-    irdl.operation get_real(c: cmath.ccomplex) -> (res: cmath.real)
-    irdl.operation get_imaginary(c: cmath.ccomplex) -> (res: cmath.real)
+    // CHECK: irdl.operation make_complex {
+    // CHECK:   irdl.operands(re: cmath.real, im: cmath.real)
+    // CHECK:   irdl.results(res: cmath.ccomplex)
+    // CHECK: }
+    irdl.operation make_complex {
+      irdl.operands(re: cmath.real, im: cmath.real)
+      irdl.results(res: cmath.ccomplex)
+    }
+
+    irdl.operation mul {
+      irdl.operands(lhs: cmath.ccomplex, rhs: cmath.ccomplex)
+      irdl.results(res: cmath.ccomplex)
+    }
+
+    irdl.operation norm {
+      irdl.operands(c: cmath.ccomplex)
+      irdl.results(res: cmath.real)
+    }
+
+    irdl.operation get_real {
+      irdl.operands(c: cmath.ccomplex)
+      irdl.results(res: cmath.real)
+    }
+
+    irdl.operation get_imaginary {
+      irdl.operands(c: cmath.ccomplex)
+      irdl.results(res: cmath.real)
+    }
   }
 }

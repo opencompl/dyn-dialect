@@ -114,36 +114,4 @@ func @failedDynParamsConstraintParam() {
   return
 }
 
-// -----
-
-//===----------------------------------------------------------------------===//
-// Type constraint variables
-//===----------------------------------------------------------------------===//
-
-func @succeededTypeConstraintVars() {
-  // CHECK: "testd.typeConstrVars"() : () -> (i32, i32)
-  "testd.typeConstrVars"() : () -> (i32, i32)
-  // CHECK: "testd.typeConstrVars"() : () -> (i64, i64)
-  "testd.typeConstrVars"() : () -> (i64, i64)
-  return
-}
-
-// -----
-
-// Check that the type constraint variables should respect the corresponding
-// constraint.
-func @failedTypeConstraintVarsConstraint() {
-  // expected-error@+1 {{type 'i1' does not satisfy the constraint}}
-  "testd.typeConstrVars"() : () -> (i1, i1)
-  return
-}
-
-// -----
-
-// Check that the type constraint variables should match equal types.
-func @failedTypeConstraintVarsConstraint() {
-  // expected-error@+1 {{expected 'i32' but got 'i64'}}
-  "testd.typeConstrVars"() : () -> (i32, i64)
-  return
-}
 
