@@ -134,22 +134,4 @@ def NamedTypeConstraintAttr : IRDL_AttrDef<"NamedTypeConstraint",
   let assemblyFormat = "`<` $name `:` $constraint `>`";
 }
 
-class OpDefParameter<string desc = ""> :
-    AttrOrTypeParameter<"mlir::irdl::OpDef", desc> {
-  let allocator = [{$_dst = mlir::irdl::opDefAllocator($_allocator, $_self);}];
-  let printer = "assert(false)";
-  let parser = "failure()";
-}
-
-def OpDefAttr : IRDL_AttrDef<"OpDef", "op_def"> {
-  let summary = "Declaration of a dynamic operation";
-  let description = [{
-    Attribute representing an operation definition.
-    It contains the arguments/results constraints, as well as trait
-    and interface implementation.
-  }];
-  let parameters = (ins OpDefParameter<>:$opDef);
-  let assemblyFormat = "`<` $opDef `>`";
-}
-
 #endif // DYN_DIALECT_IRDL_IR_IRDLATTRIBUTES

@@ -22,6 +22,9 @@
 using namespace mlir;
 using namespace mlir::irdl;
 
+using ArgDef = std::pair<StringRef, Attribute>;
+using ArgDefs = ArrayRef<ArgDef>;
+
 //===----------------------------------------------------------------------===//
 // IRDL dialect.
 //===----------------------------------------------------------------------===//

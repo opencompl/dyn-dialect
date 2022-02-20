@@ -28,10 +28,6 @@ using namespace irdl;
 namespace mlir {
 namespace irdl {
 
-llvm::hash_code hash_value(mlir::irdl::OpDef opDef) {
-  return llvm::hash_combine(opDef.operandDef, opDef.resultDef);
-}
-
 void IRDLDialect::registerAttributes() {
 #define GET_ATTRDEF_LIST
   addAttributes<
