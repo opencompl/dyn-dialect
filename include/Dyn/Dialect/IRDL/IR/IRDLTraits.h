@@ -20,29 +20,36 @@ namespace OpTrait {
 
 /// This class adds the property that there is at most one child of a given op
 /// in the operation region. It also provides an API to retrieve the operation.
-template <typename ChildOp> class AtMostOneChildOf {
+template <typename... ChildOp> class AtMostOneChildOf {
 public:
   template <typename ConcreteType>
   class Impl
       : public ::mlir::OpTrait::TraitBase<ConcreteType,
-                                          AtMostOneChildOf<ChildOp>::Impl> {
+                                          AtMostOneChildOf<ChildOp...>::Impl> {
   public:
     static LogicalResult verifyTrait(Operation *op) {
       static_assert(
           ConcreteType::template hasTrait<::mlir::OpTrait::OneRegion>(),
           "expected operation to have a single region");
 
-      auto ops = cast<ConcreteType>(op).template getOps<ChildOp>();
-      return success(ops.empty() || ++ops.begin() == ops.end());
+      auto ops = {cast<ConcreteType>(op).template getOps<ChildOp>()...};
+      for (auto op : ops) {
+        if (!op.empty() && ++op.begin() != op.end()) {
+          // TODO: Write a proper error message here.
+          return failure();
+        }
+      }
+      return success();
     }
 
     /// Get the unique operation of a specific op that is in the operation
     /// region.
-    template <typename OpT = ChildOp>
-    std::enable_if_t<std::is_same<OpT, ChildOp>::value, llvm::Optional<OpT>>
+    template <typename OpT>
+    std::enable_if_t<llvm::disjunction<std::is_same<OpT, ChildOp>...>::value,
+                     llvm::Optional<OpT>>
     getOp() {
       auto ops =
-          cast<ConcreteType>(this->getOperation()).template getOps<ChildOp>();
+          cast<ConcreteType>(this->getOperation()).template getOps<OpT>();
       if (ops.empty())
         return {};
       return {*ops.begin()};
