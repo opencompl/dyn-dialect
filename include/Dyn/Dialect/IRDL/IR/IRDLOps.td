@@ -126,6 +126,33 @@ def IRDL_TypeOp : IRDL_Op<"type", [HasParent<"DialectOp">, NoTerminator, NoRegio
 // IRDL Operation definition
 //===----------------------------------------------------------------------===//
 
+def IRDL_ConstraintVarsOp : IRDL_Op<"constraint_vars", [HasParent<"OperationOp">]> {
+  let summary = "Define constraint variables";
+  let description = [{
+    `irdl.constraint_vars` define constraint variables that can be used in the
+    current region.
+
+    Example:
+
+    ```mlir
+    irdl.dialect testd {
+      irdl.operation test_op {
+        irdl.constraint_vars(T: irdl.AnyOf<i32, i64>)
+        irdl.operands(operand1: ?T, operand2: ?T)
+      }
+    }
+    ```
+
+    The above program defines an operation `test_op` with two expected operands.
+    Both operands are expected to be either of type `i32` or of type `i64`.
+    Additionally, they are expected to be of equal type.
+  }];
+
+  let arguments = (ins TypedArrayAttrBase<NamedTypeConstraintAttr, "Named constraint array">:$params);
+  let assemblyFormat = [{ `` custom<NamedTypeConstraintArray>($params) attr-dict }];
+}
+
+
 def IRDL_OperandsOp : IRDL_Op<"operands", [HasParent<"OperationOp">]> {
   let summary = "Define the operands of an operation";
   let description = [{
@@ -178,7 +205,7 @@ def IRDL_ResultsOp : IRDL_Op<"results", [HasParent<"OperationOp">]> {
 
 def IRDL_OperationOp : IRDL_Op<"operation",
     [HasParent<"DialectOp">, NoTerminator, NoRegionArguments,
-    AtMostOneChildOf<"OperandsOp, ResultsOp">]> {
+    AtMostOneChildOf<"OperandsOp, ResultsOp, ConstraintVarsOp">]> {
   let summary = "Define a new operation";
   let description = [{
     `irdl.operation` defines new operations belonging to the previously
