@@ -3,47 +3,34 @@
 module {
   // CHECK-LABEL: irdl.dialect cmath {
   irdl.dialect cmath {
-    // CHECK: irdl.type real 
-    irdl.type real
 
-    // CHECK: irdl.type ccomplex
-    irdl.type ccomplex {
+// CHECK: irdl.type complex {
+    // CHECK:   irdl.parameters(elementType: irdl.AnyOf<f32, f64>)
+    // CHECK: }
+    irdl.type complex {
       irdl.parameters(elementType: irdl.AnyOf<f32, f64>)
     }
 
-    // CHECK: irdl.operation make_complex {
+    // CHECK: irdl.operation norm {
     // CHECK:   irdl.constraint_vars(T: irdl.AnyOf<f32, f64>)
-    // CHECK:   irdl.operands(re: ?T, im: ?T)
-    // CHECK:   irdl.results(res: cmath.ccomplex<?T>)
+    // CHECK:   irdl.operands(c: cmath.complex<?T>)
+    // CHECK:   irdl.results(res: ?T)
     // CHECK: }
-    irdl.operation make_complex {
-      irdl.constraint_vars(T: irdl.AnyOf<f32, f64>)
-      irdl.operands(re: ?T, im: ?T)
-      irdl.results(res: cmath.ccomplex<?T>)
-    }
-
-    irdl.operation mul {
-      irdl.constraint_vars(T: irdl.AnyOf<f32, f64>)
-      irdl.operands(lhs: cmath.ccomplex<?T>, rhs: cmath.ccomplex<?T>)
-      irdl.results(res: cmath.ccomplex<?T>)
-    }
-
     irdl.operation norm {
       irdl.constraint_vars(T: irdl.AnyOf<f32, f64>)
-      irdl.operands(c: cmath.ccomplex<?T>)
+      irdl.operands(c: cmath.complex<?T>)
       irdl.results(res: ?T)
     }
 
-    irdl.operation get_real {
+    // CHECK: irdl.operation mul {
+    // CHECK:   irdl.constraint_vars(T: irdl.AnyOf<f32, f64>)
+    // CHECK:   irdl.operands(lhs: cmath.complex<?T>, rhs: cmath.complex<?T>)
+    // CHECK:   irdl.results(res: cmath.complex<?T>)
+    // CHECK: }
+    irdl.operation mul {
       irdl.constraint_vars(T: irdl.AnyOf<f32, f64>)
-      irdl.operands(c: cmath.ccomplex<?T>)
-      irdl.results(res: ?T)
-    }
-
-    irdl.operation get_imaginary {
-      irdl.constraint_vars(T: irdl.AnyOf<f32, f64>)
-      irdl.operands(c: cmath.ccomplex<?T>)
-      irdl.results(res: ?T)
+      irdl.operands(lhs: cmath.complex<?T>, rhs: cmath.complex<?T>)
+      irdl.results(res: cmath.complex<?T>)
     }
   }
 }
