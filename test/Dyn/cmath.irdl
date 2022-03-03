@@ -12,32 +12,38 @@ module {
     }
 
     // CHECK: irdl.operation make_complex {
-    // CHECK:   irdl.operands(re: cmath.real, im: cmath.real)
-    // CHECK:   irdl.results(res: cmath.ccomplex<irdl.Any>)
+    // CHECK:   irdl.constraint_vars(T: irdl.AnyOf<f32, f64>)
+    // CHECK:   irdl.operands(re: ?T, im: ?T)
+    // CHECK:   irdl.results(res: cmath.ccomplex<?T>)
     // CHECK: }
     irdl.operation make_complex {
-      irdl.operands(re: cmath.real, im: cmath.real)
-      irdl.results(res: cmath.ccomplex<irdl.Any>)
+      irdl.constraint_vars(T: irdl.AnyOf<f32, f64>)
+      irdl.operands(re: ?T, im: ?T)
+      irdl.results(res: cmath.ccomplex<?T>)
     }
 
     irdl.operation mul {
-      irdl.operands(lhs: cmath.ccomplex<irdl.Any>, rhs: cmath.ccomplex<irdl.Any>)
-      irdl.results(res: cmath.ccomplex<irdl.Any>)
+      irdl.constraint_vars(T: irdl.AnyOf<f32, f64>)
+      irdl.operands(lhs: cmath.ccomplex<?T>, rhs: cmath.ccomplex<?T>)
+      irdl.results(res: cmath.ccomplex<?T>)
     }
 
     irdl.operation norm {
-      irdl.operands(c: cmath.ccomplex<irdl.Any>)
-      irdl.results(res: cmath.real)
+      irdl.constraint_vars(T: irdl.AnyOf<f32, f64>)
+      irdl.operands(c: cmath.ccomplex<?T>)
+      irdl.results(res: ?T)
     }
 
     irdl.operation get_real {
-      irdl.operands(c: cmath.ccomplex<irdl.Any>)
-      irdl.results(res: cmath.real)
+      irdl.constraint_vars(T: irdl.AnyOf<f32, f64>)
+      irdl.operands(c: cmath.ccomplex<?T>)
+      irdl.results(res: ?T)
     }
 
     irdl.operation get_imaginary {
-      irdl.operands(c: cmath.ccomplex<irdl.Any>)
-      irdl.results(res: cmath.real)
+      irdl.constraint_vars(T: irdl.AnyOf<f32, f64>)
+      irdl.operands(c: cmath.ccomplex<?T>)
+      irdl.results(res: ?T)
     }
   }
 }

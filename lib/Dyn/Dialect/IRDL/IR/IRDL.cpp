@@ -97,10 +97,8 @@ static void printSingleBlockRegion(OpAsmPrinter &p, Operation *op,
 //===----------------------------------------------------------------------===//
 
 namespace {
-ParseResult parseTypeConstraint(OpAsmParser &p, Attribute *typeConstraint,
-                                ArgDefs variables);
-void printTypeConstraint(OpAsmPrinter &p, Attribute typeConstraint,
-                         ArgDefs variables);
+ParseResult parseTypeConstraint(OpAsmParser &p, Attribute *typeConstraint);
+void printTypeConstraint(OpAsmPrinter &p, Attribute typeConstraint);
 
 /// Parse an Any constraint if there is one.
 /// It has the format 'irdl.Any'
@@ -161,8 +159,7 @@ void printAnyOfTypeConstraint(OpAsmPrinter &p,
 /// Parse a type parameters constraint.
 /// It has the format 'dialectname.typename<(typeConstraint ,)*>'
 ParseResult parseTypeParamsConstraint(OpAsmParser &p, TypeWrapper *wrapper,
-                                      Attribute *typeConstraint,
-                                      ArgDefs variables) {
+                                      Attribute *typeConstraint) {
   auto ctx = p.getBuilder().getContext();
 
   // Empty case
@@ -174,7 +171,7 @@ ParseResult parseTypeParamsConstraint(OpAsmParser &p, TypeWrapper *wrapper,
   SmallVector<Attribute> paramConstraints;
 
   paramConstraints.push_back({});
-  if (parseTypeConstraint(p, &paramConstraints.back(), variables))
+  if (parseTypeConstraint(p, &paramConstraints.back()))
     return {failure()};
 
   while (p.parseOptionalGreater()) {
@@ -182,7 +179,7 @@ ParseResult parseTypeParamsConstraint(OpAsmParser &p, TypeWrapper *wrapper,
       return {failure()};
 
     paramConstraints.push_back({});
-    if (parseTypeConstraint(p, &paramConstraints.back(), variables))
+    if (parseTypeConstraint(p, &paramConstraints.back()))
       return {failure()};
   }
 
@@ -192,8 +189,7 @@ ParseResult parseTypeParamsConstraint(OpAsmParser &p, TypeWrapper *wrapper,
 }
 
 void printTypeParamsConstraint(OpAsmPrinter &p,
-                               TypeParamsConstraintAttr constraint,
-                               ArgDefs variables) {
+                               TypeParamsConstraintAttr constraint) {
   auto *typeDef = constraint.getTypeDef();
   p << typeDef->getName();
 
@@ -202,8 +198,8 @@ void printTypeParamsConstraint(OpAsmPrinter &p,
     return;
 
   p << "<";
-  llvm::interleaveComma(paramConstraints, p, [&p, variables](Attribute a) {
-    printTypeConstraint(p, a, variables);
+  llvm::interleaveComma(paramConstraints, p, [&p](Attribute a) {
+    printTypeConstraint(p, a);
   });
   p << ">";
 }
@@ -212,8 +208,7 @@ void printTypeParamsConstraint(OpAsmPrinter &p,
 /// It has the format 'dialectname.typename<(typeConstraint ,)*>'
 OptionalParseResult
 parseOptionalDynTypeParamsConstraint(OpAsmParser &p, StringRef keyword,
-                                     Attribute *typeConstraint,
-                                     ArgDefs variables) {
+                                     Attribute *typeConstraint) {
   auto loc = p.getCurrentLocation();
   auto ctx = p.getBuilder().getContext();
   auto splittedNames = keyword.split('.');
@@ -233,7 +228,7 @@ parseOptionalDynTypeParamsConstraint(OpAsmParser &p, StringRef keyword,
   SmallVector<Attribute> paramConstraints;
 
   paramConstraints.push_back({});
-  if (parseTypeConstraint(p, &paramConstraints.back(), variables))
+  if (parseTypeConstraint(p, &paramConstraints.back()))
     return {failure()};
 
   while (p.parseOptionalGreater()) {
@@ -241,7 +236,7 @@ parseOptionalDynTypeParamsConstraint(OpAsmParser &p, StringRef keyword,
       return {failure()};
 
     paramConstraints.push_back({});
-    if (parseTypeConstraint(p, &paramConstraints.back(), variables))
+    if (parseTypeConstraint(p, &paramConstraints.back()))
       return {failure()};
   }
 
@@ -251,8 +246,7 @@ parseOptionalDynTypeParamsConstraint(OpAsmParser &p, StringRef keyword,
 }
 
 void printDynTypeParamsConstraint(OpAsmPrinter &p,
-                                  DynTypeParamsConstraintAttr constraint,
-                                  ArgDefs variables) {
+                                  DynTypeParamsConstraintAttr constraint) {
   auto typeName = constraint.getTypeName();
   p << typeName;
 
@@ -261,16 +255,15 @@ void printDynTypeParamsConstraint(OpAsmPrinter &p,
     return;
 
   p << "<";
-  llvm::interleaveComma(paramConstraints, p, [&p, variables](Attribute a) {
-    printTypeConstraint(p, a, variables);
+  llvm::interleaveComma(paramConstraints, p, [&p](Attribute a) {
+    printTypeConstraint(p, a);
   });
   p << ">";
 }
 
 /// Parse a type constraint.
 /// The verifier ensures that the format is respected.
-ParseResult parseTypeConstraint(OpAsmParser &p, Attribute *typeConstraint,
-                                ArgDefs variables) {
+ParseResult parseTypeConstraint(OpAsmParser &p, Attribute *typeConstraint) {
   auto loc = p.getCurrentLocation();
 
   // Parse an Any constraint.
@@ -297,25 +290,25 @@ ParseResult parseTypeConstraint(OpAsmParser &p, Attribute *typeConstraint,
     return success();
   }
 
+  if (succeeded(p.parseOptionalQuestion())) {
+    StringRef keyword;
+    if (failed(p.parseKeyword(&keyword)))
+        return failure();
+    *typeConstraint = VarTypeConstraintAttr::get(ctx, keyword);
+    return success();
+  }
+
   StringRef keyword;
   if (succeeded(p.parseOptionalKeyword(&keyword))) {
-    // Check if the constraint is a type constraint variable
-    for (size_t i = 0; i < variables.size(); i++)
-      if (variables[i].first == keyword) {
-        *typeConstraint = VarTypeConstraintAttr::get(ctx, i);
-        return success();
-      }
-
     // Parse a non-dynamic type parameter constraint.
     auto irdl = ctx->getOrLoadDialect<IRDLDialect>();
     auto typeWrapper = irdl->getTypeWrapper(keyword);
     if (typeWrapper)
-      return parseTypeParamsConstraint(p, typeWrapper, typeConstraint,
-                                       variables);
+      return parseTypeParamsConstraint(p, typeWrapper, typeConstraint);
 
     // Parse a dynamic type parameter constraint.
     auto paramRes = parseOptionalDynTypeParamsConstraint(
-        p, keyword, typeConstraint, variables);
+        p, keyword, typeConstraint);
     if (paramRes.hasValue())
       return *paramRes;
   }
@@ -325,8 +318,7 @@ ParseResult parseTypeConstraint(OpAsmParser &p, Attribute *typeConstraint,
 }
 
 /// Print a type constraint.
-void printTypeConstraint(OpAsmPrinter &p, Attribute typeConstraint,
-                         ArgDefs variables) {
+void printTypeConstraint(OpAsmPrinter &p, Attribute typeConstraint) {
   if (auto eqConstr = typeConstraint.dyn_cast<EqTypeConstraintAttr>()) {
     p << eqConstr.getType();
   } else if (auto anyConstr =
@@ -337,13 +329,13 @@ void printTypeConstraint(OpAsmPrinter &p, Attribute typeConstraint,
     printAnyOfTypeConstraint(p, anyOfConstr);
   } else if (auto typeParamsConstr =
                  typeConstraint.dyn_cast<TypeParamsConstraintAttr>()) {
-    printTypeParamsConstraint(p, typeParamsConstr, variables);
+    printTypeParamsConstraint(p, typeParamsConstr);
   } else if (auto dynTypeParamsConstr =
                  typeConstraint.dyn_cast<DynTypeParamsConstraintAttr>()) {
-    printDynTypeParamsConstraint(p, dynTypeParamsConstr, variables);
+    printDynTypeParamsConstraint(p, dynTypeParamsConstr);
   } else if (auto typeConstraintParam =
                  typeConstraint.dyn_cast<VarTypeConstraintAttr>()) {
-    p << variables[typeConstraintParam.getIndex()].first;
+    p << "?" << typeConstraintParam.getName();
   } else {
     assert(false && "Unknown type constraint.");
   }
@@ -397,7 +389,7 @@ ParseResult parseNamedTypeConstraint(OpAsmParser &p,
   if (failed(p.parseColon()))
     return failure();
   Attribute attr;
-  if (failed(parseTypeConstraint(p, &attr, {})))
+  if (failed(parseTypeConstraint(p, &attr)))
     return failure();
   param = NamedTypeConstraintAttr::get(p.getContext(), name, attr);
   return success();
@@ -406,7 +398,7 @@ ParseResult parseNamedTypeConstraint(OpAsmParser &p,
 void printNamedTypeConstraint(OpAsmPrinter &p, NamedTypeConstraintAttr attr) {
   p.printKeywordOrString(attr.getName());
   p << ": ";
-  printTypeConstraint(p, attr.getConstraint(), {});
+  printTypeConstraint(p, attr.getConstraint());
 }
 
 ParseResult parseNamedTypeConstraintArray(OpAsmParser &p,

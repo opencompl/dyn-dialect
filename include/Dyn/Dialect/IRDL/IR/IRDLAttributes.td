@@ -34,7 +34,8 @@ def EqTypeConstraintAttr : IRDL_AttrDef<"EqTypeConstraint", "eq_type_constraint"
   let assemblyFormat = "`<` $type `>`";
 
   let extraClassDeclaration = [{
-    std::unique_ptr<TypeConstraint> getTypeConstraint();
+    std::unique_ptr<TypeConstraint> getTypeConstraint(
+        SmallVector<std::pair<StringRef, std::unique_ptr<TypeConstraint>>> const& constr_vars);
   }];
 }
 
@@ -48,7 +49,8 @@ def AnyTypeConstraintAttr : IRDL_AttrDef<"AnyTypeConstraint", "any_type_constrai
   let parameters = (ins);
 
   let extraClassDeclaration = [{
-    std::unique_ptr<TypeConstraint> getTypeConstraint();
+    std::unique_ptr<TypeConstraint> getTypeConstraint(
+        SmallVector<std::pair<StringRef, std::unique_ptr<TypeConstraint>>> const& constr_vars);
   }];
 }
 
@@ -64,7 +66,8 @@ def AnyOfTypeConstraintAttr : IRDL_AttrDef<"AnyOfTypeConstraint", "any_of_type_c
   let assemblyFormat = "`<` $types `>`";
 
   let extraClassDeclaration = [{
-    std::unique_ptr<TypeConstraint> getTypeConstraint();
+    std::unique_ptr<TypeConstraint> getTypeConstraint(
+        SmallVector<std::pair<StringRef, std::unique_ptr<TypeConstraint>>> const& constr_vars);
   }];
 }
 
@@ -76,11 +79,12 @@ def VarTypeConstraintAttr : IRDL_AttrDef<"VarTypeConstraint", "var_type_constrai
     All types matching the variable should be equal.
     The first type matching the variable is the one setting the value.
   }];
-  let parameters = (ins "size_t":$index);
-  let assemblyFormat = "`<` $index `>`";
+  let parameters = (ins StringRefParameter<>:$name);
+  let assemblyFormat = "`<` $name `>`";
 
   let extraClassDeclaration = [{
-    std::unique_ptr<TypeConstraint> getTypeConstraint();
+    std::unique_ptr<TypeConstraint> getTypeConstraint(
+        SmallVector<std::pair<StringRef, std::unique_ptr<TypeConstraint>>> const& constr_vars);
   }];
 }
 
@@ -97,7 +101,8 @@ def DynTypeParamsConstraintAttr : IRDL_AttrDef<"DynTypeParamsConstraint", "dyn_t
   let assemblyFormat = "`<` $typeName `<` $paramConstraints `>` `>`";
 
   let extraClassDeclaration = [{
-    std::unique_ptr<TypeConstraint> getTypeConstraint();
+    std::unique_ptr<TypeConstraint> getTypeConstraint(
+        SmallVector<std::pair<StringRef, std::unique_ptr<TypeConstraint>>> const& constr_vars);
   }];
 }
 
@@ -120,7 +125,8 @@ def TypeParamsConstraintAttr : IRDL_AttrDef<"TypeParamsConstraint", "type_params
   let assemblyFormat = "`<` $typeDef `<` $paramConstraints `>` `>`";
 
   let extraClassDeclaration = [{
-    std::unique_ptr<TypeConstraint> getTypeConstraint();
+    std::unique_ptr<TypeConstraint> getTypeConstraint(
+        SmallVector<std::pair<StringRef, std::unique_ptr<TypeConstraint>>> const& constr_vars);
   }];
 }
 

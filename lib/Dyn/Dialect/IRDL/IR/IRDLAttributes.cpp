@@ -42,7 +42,9 @@ void IRDLDialect::registerAttributes() {
 // IRDL equality type constraint attribute
 //===----------------------------------------------------------------------===//
 
-std::unique_ptr<TypeConstraint> EqTypeConstraintAttr::getTypeConstraint() {
+std::unique_ptr<TypeConstraint> EqTypeConstraintAttr::getTypeConstraint(
+    SmallVector<std::pair<StringRef, std::unique_ptr<TypeConstraint>>> const
+        &constrVars) {
   return std::make_unique<EqTypeConstraint>(getType());
 }
 
@@ -50,7 +52,9 @@ std::unique_ptr<TypeConstraint> EqTypeConstraintAttr::getTypeConstraint() {
 // Always true type constraint attribute
 //===----------------------------------------------------------------------===//
 
-std::unique_ptr<TypeConstraint> AnyTypeConstraintAttr::getTypeConstraint() {
+std::unique_ptr<TypeConstraint> AnyTypeConstraintAttr::getTypeConstraint(
+    SmallVector<std::pair<StringRef, std::unique_ptr<TypeConstraint>>> const
+        &constrVars) {
   return std::make_unique<AnyTypeConstraint>();
 }
 
@@ -58,7 +62,9 @@ std::unique_ptr<TypeConstraint> AnyTypeConstraintAttr::getTypeConstraint() {
 // IRDL AnyOf type constraint attribute
 //===----------------------------------------------------------------------===//
 
-std::unique_ptr<TypeConstraint> AnyOfTypeConstraintAttr::getTypeConstraint() {
+std::unique_ptr<TypeConstraint> AnyOfTypeConstraintAttr::getTypeConstraint(
+    SmallVector<std::pair<StringRef, std::unique_ptr<TypeConstraint>>> const
+        &constrVars) {
   return std::make_unique<AnyOfTypeConstraint>(getTypes());
 }
 
@@ -66,21 +72,32 @@ std::unique_ptr<TypeConstraint> AnyOfTypeConstraintAttr::getTypeConstraint() {
 // Type constraint variable
 //===----------------------------------------------------------------------===//
 
-std::unique_ptr<TypeConstraint> VarTypeConstraintAttr::getTypeConstraint() {
-  return std::make_unique<VarTypeConstraint>(getIndex());
+std::unique_ptr<TypeConstraint> VarTypeConstraintAttr::getTypeConstraint(
+    SmallVector<std::pair<StringRef, std::unique_ptr<TypeConstraint>>> const
+        &constrVars) {
+  auto name = getName();
+  // Iterate in reverse to match the latest defined variable.
+  for (int i = constrVars.size() - 1; i >= 0; i--) {
+    if (constrVars[i].first == name) {
+      return std::make_unique<VarTypeConstraint>(i);
+    }
+  }
+  // TODO: Make this an error
+  assert(false && "Unknown type constraint variable");
 }
 
 //===----------------------------------------------------------------------===//
 // Attribute for constraint on dynamic type parameters
 //===----------------------------------------------------------------------===//
 
-std::unique_ptr<TypeConstraint>
-DynTypeParamsConstraintAttr::getTypeConstraint() {
+std::unique_ptr<TypeConstraint> DynTypeParamsConstraintAttr::getTypeConstraint(
+    SmallVector<std::pair<StringRef, std::unique_ptr<TypeConstraint>>> const
+        &constrVars) {
   SmallVector<std::unique_ptr<TypeConstraint>> paramConstraints;
   for (auto paramConstraintAttr : getParamConstraints())
     paramConstraints.push_back(
         paramConstraintAttr.cast<TypeConstraintAttrInterface>()
-            .getTypeConstraint());
+            .getTypeConstraint(constrVars));
 
   auto splittedTypeName = getTypeName().split('.');
   auto dialectName = splittedTypeName.first;
@@ -101,12 +118,14 @@ DynTypeParamsConstraintAttr::getTypeConstraint() {
 // Attribute for constraint on non-dynamic type parameters
 //===----------------------------------------------------------------------===//
 
-std::unique_ptr<TypeConstraint> TypeParamsConstraintAttr::getTypeConstraint() {
+std::unique_ptr<TypeConstraint> TypeParamsConstraintAttr::getTypeConstraint(
+    SmallVector<std::pair<StringRef, std::unique_ptr<TypeConstraint>>> const
+        &constrVars) {
   SmallVector<std::unique_ptr<TypeConstraint>> paramConstraints;
   for (auto paramConstraintAttr : getParamConstraints())
     paramConstraints.push_back(
         paramConstraintAttr.cast<TypeConstraintAttrInterface>()
-            .getTypeConstraint());
+            .getTypeConstraint(constrVars));
 
   return std::make_unique<TypeParamsConstraint>(getTypeDef(),
                                                 std::move(paramConstraints));

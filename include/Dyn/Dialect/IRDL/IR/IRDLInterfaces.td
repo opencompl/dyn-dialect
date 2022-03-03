@@ -26,7 +26,8 @@ def TypeConstraintAttrInterface : AttrInterface<"TypeConstraintAttrInterface"> {
   let methods = [
     InterfaceMethod<
       "Get the type constraint",
-      "std::unique_ptr<mlir::irdl::TypeConstraint>", "getTypeConstraint"
+      "std::unique_ptr<mlir::irdl::TypeConstraint>", "getTypeConstraint",
+      (ins "mlir::SmallVector<std::pair<StringRef, std::unique_ptr<mlir::irdl::TypeConstraint>>> const&":$constr_vars)
     >
   ];
 }
