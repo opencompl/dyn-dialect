@@ -7,34 +7,36 @@ module {
     irdl.type real
 
     // CHECK: irdl.type ccomplex
-    irdl.type ccomplex
+    irdl.type ccomplex {
+      irdl.parameters(elementType: irdl.AnyOf<f32, f64>)
+    }
 
     // CHECK: irdl.operation make_complex {
     // CHECK:   irdl.operands(re: cmath.real, im: cmath.real)
-    // CHECK:   irdl.results(res: cmath.ccomplex)
+    // CHECK:   irdl.results(res: cmath.ccomplex<irdl.Any>)
     // CHECK: }
     irdl.operation make_complex {
       irdl.operands(re: cmath.real, im: cmath.real)
-      irdl.results(res: cmath.ccomplex)
+      irdl.results(res: cmath.ccomplex<irdl.Any>)
     }
 
     irdl.operation mul {
-      irdl.operands(lhs: cmath.ccomplex, rhs: cmath.ccomplex)
-      irdl.results(res: cmath.ccomplex)
+      irdl.operands(lhs: cmath.ccomplex<irdl.Any>, rhs: cmath.ccomplex<irdl.Any>)
+      irdl.results(res: cmath.ccomplex<irdl.Any>)
     }
 
     irdl.operation norm {
-      irdl.operands(c: cmath.ccomplex)
+      irdl.operands(c: cmath.ccomplex<irdl.Any>)
       irdl.results(res: cmath.real)
     }
 
     irdl.operation get_real {
-      irdl.operands(c: cmath.ccomplex)
+      irdl.operands(c: cmath.ccomplex<irdl.Any>)
       irdl.results(res: cmath.real)
     }
 
     irdl.operation get_imaginary {
-      irdl.operands(c: cmath.ccomplex)
+      irdl.operands(c: cmath.ccomplex<irdl.Any>)
       irdl.results(res: cmath.real)
     }
   }
