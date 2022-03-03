@@ -42,4 +42,13 @@ irdl.dialect testd {
   irdl.operation params {
     irdl.results(res: std.complex<irdl.AnyOf<i32, i64>>)
   }
+
+  // CHECK: irdl.operation constraint_vars {
+  // CHECK:   irdl.constraint_vars(T: irdl.AnyOf<i32, i64>)
+  // CHECK:   irdl.results(res1: ?T, res2: ?T)
+  // CHECK: }
+  irdl.operation constraint_vars {
+    irdl.constraint_vars(T: irdl.AnyOf<i32, i64>)
+    irdl.results(res1: ?T, res2: ?T)
+  }
 }

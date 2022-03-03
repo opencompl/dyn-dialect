@@ -114,4 +114,30 @@ func @failedDynParamsConstraintParam() {
   return
 }
 
+// -----
 
+//===----------------------------------------------------------------------===//
+// Constraint variables
+//===----------------------------------------------------------------------===//
+
+func @succeededConstraintVars() {
+  // CHECK: "testd.constraint_vars"() : () -> (i32, i32)
+  "testd.constraint_vars"() : () -> (i32, i32)
+  return
+}
+
+// -----
+
+func @succeededConstraintVars2() {
+  // CHECK: "testd.constraint_vars"() : () -> (i64, i64)
+  "testd.constraint_vars"() : () -> (i64, i64)
+  return
+}
+
+// -----
+
+func @failedConstraintVars() {
+  // expected-error@+1 {{expected 'i64' but got 'i32'}}
+  "testd.constraint_vars"() : () -> (i64, i32)
+  return
+}
