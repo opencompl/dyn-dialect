@@ -116,6 +116,25 @@ private:
 };
 
 //===----------------------------------------------------------------------===//
+// Base type constraint
+//===----------------------------------------------------------------------===//
+
+/// Type constraint asserting that the base type is of a certain dynamic type.
+class DynTypeBaseConstraint : public TypeConstraint {
+public:
+  DynTypeBaseConstraint(DynamicTypeDefinition *dynTypeDef)
+      : dynTypeDef(dynTypeDef) {}
+
+  virtual LogicalResult
+  verifyType(Optional<function_ref<InFlightDiagnostic()>> emitError, Type type,
+             ArrayRef<std::unique_ptr<TypeConstraint>> typeConstraintVars,
+             MutableArrayRef<Type> varsValue) override;
+
+private:
+  DynamicTypeDefinition *dynTypeDef;
+};
+
+//===----------------------------------------------------------------------===//
 // Parameters type constraint
 //===----------------------------------------------------------------------===//
 
