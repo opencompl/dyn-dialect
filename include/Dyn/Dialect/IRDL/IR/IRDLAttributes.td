@@ -59,11 +59,11 @@ def AnyOfTypeConstraintAttr : IRDL_AttrDef<"AnyOfTypeConstraint", "any_of_type_c
   let summary = "AnyOf type constraint attribute";
   let description = [{
     Attribute representing an AnyOf type constraint.
-    It contains a set of types.
-    The associated type constraint is satisfied when any of the types is given. 
+    It contains a set of constraints.
+    The associated type constraint is satisfied when any of the constraints is satisfied. 
   }];
-  let parameters = (ins ArrayRefParameter<"mlir::Type", "list of types">:$types);
-  let assemblyFormat = "`<` $types `>`";
+  let parameters = (ins ArrayRefParameter<"mlir::Attribute", "list of constraints">:$constrs);
+  let assemblyFormat = "`<` $constrs `>`";
 
   let extraClassDeclaration = [{
     std::unique_ptr<TypeConstraint> getTypeConstraint(

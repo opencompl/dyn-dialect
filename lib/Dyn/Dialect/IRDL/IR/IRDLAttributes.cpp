@@ -12,6 +12,7 @@
 
 #include "Dyn/Dialect/IRDL/IR/IRDLAttributes.h"
 #include "Dyn/Dialect/IRDL/IR/IRDL.h"
+#include "Dyn/Dialect/IRDL/IR/IRDLInterfaces.h"
 #include "Dyn/Dialect/IRDL/TypeConstraint.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/OpImplementation.h"
@@ -65,7 +66,13 @@ std::unique_ptr<TypeConstraint> AnyTypeConstraintAttr::getTypeConstraint(
 std::unique_ptr<TypeConstraint> AnyOfTypeConstraintAttr::getTypeConstraint(
     SmallVector<std::pair<StringRef, std::unique_ptr<TypeConstraint>>> const
         &constrVars) {
-  return std::make_unique<AnyOfTypeConstraint>(getTypes());
+  SmallVector<std::unique_ptr<TypeConstraint>> constraints;
+  auto constraintAttrs = getConstrs();
+  for (auto constrAttr : constraintAttrs)
+    constraints.push_back(
+        constrAttr.cast<TypeConstraintAttrInterface>().getTypeConstraint(
+            constrVars));
+  return std::make_unique<AnyOfTypeConstraint>(std::move(constraints));
 }
 
 //===----------------------------------------------------------------------===//

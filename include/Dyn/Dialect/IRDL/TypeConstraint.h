@@ -35,7 +35,7 @@ public:
   /// varsValue contains the values of the constraint variables that are already
   /// defined, or contains Type{} if the value is not set yet.
   virtual LogicalResult
-  verifyType(function_ref<InFlightDiagnostic()> emitError, Type type,
+  verifyType(Optional<function_ref<InFlightDiagnostic()>> emitError, Type type,
              ArrayRef<std::unique_ptr<TypeConstraint>> typeConstraintVars,
              MutableArrayRef<Type> varsValue) = 0;
 };
@@ -49,7 +49,7 @@ public:
   EqTypeConstraint(Type expectedType) : expectedType(expectedType) {}
 
   virtual LogicalResult
-  verifyType(function_ref<InFlightDiagnostic()> emitError, Type type,
+  verifyType(Optional<function_ref<InFlightDiagnostic()>> emitError, Type type,
              ArrayRef<std::unique_ptr<TypeConstraint>> typeConstraintVars,
              MutableArrayRef<Type> varsValue) override;
 
@@ -65,16 +65,16 @@ private:
 /// A type satisfies this constraint if it is included in a set of types.
 class AnyOfTypeConstraint : public TypeConstraint {
 public:
-  AnyOfTypeConstraint(llvm::ArrayRef<Type> types)
-      : types(types.begin(), types.end()) {}
+  AnyOfTypeConstraint(SmallVector<std::unique_ptr<TypeConstraint>> constrs)
+      : constrs(std::move(constrs)) {}
 
   virtual LogicalResult
-  verifyType(function_ref<InFlightDiagnostic()> emitError, Type type,
+  verifyType(Optional<function_ref<InFlightDiagnostic()>> emitError, Type type,
              ArrayRef<std::unique_ptr<TypeConstraint>> typeConstraintVars,
              MutableArrayRef<Type> varsValue) override;
 
 private:
-  llvm::SmallVector<Type, 4> types;
+  llvm::SmallVector<std::unique_ptr<TypeConstraint>> constrs;
 };
 
 //===----------------------------------------------------------------------===//
@@ -88,7 +88,7 @@ public:
   AnyTypeConstraint() {}
 
   virtual LogicalResult
-  verifyType(function_ref<InFlightDiagnostic()> emitError, Type type,
+  verifyType(Optional<function_ref<InFlightDiagnostic()>> emitError, Type type,
              ArrayRef<std::unique_ptr<TypeConstraint>> typeConstraintVars,
              MutableArrayRef<Type> varsValue) override {
     return success();
@@ -107,7 +107,7 @@ public:
   VarTypeConstraint(size_t varIndex) : varIndex{varIndex} {}
 
   virtual LogicalResult
-  verifyType(function_ref<InFlightDiagnostic()> emitError, Type type,
+  verifyType(Optional<function_ref<InFlightDiagnostic()>> emitError, Type type,
              ArrayRef<std::unique_ptr<TypeConstraint>> typeConstraintVars,
              MutableArrayRef<Type> varsValue) override;
 
@@ -130,7 +130,7 @@ public:
       : dynTypeDef(dynTypeDef), paramConstraints(std::move(paramConstraints)) {}
 
   virtual LogicalResult
-  verifyType(function_ref<InFlightDiagnostic()> emitError, Type type,
+  verifyType(Optional<function_ref<InFlightDiagnostic()>> emitError, Type type,
              ArrayRef<std::unique_ptr<TypeConstraint>> typeConstraintVars,
              MutableArrayRef<Type> varsValue) override;
 
@@ -153,7 +153,7 @@ public:
       : typeDef(typeDef), paramConstraints(std::move(paramConstraints)) {}
 
   virtual LogicalResult
-  verifyType(function_ref<InFlightDiagnostic()> emitError, Type type,
+  verifyType(Optional<function_ref<InFlightDiagnostic()>> emitError, Type type,
              ArrayRef<std::unique_ptr<TypeConstraint>> typeConstraintVars,
              MutableArrayRef<Type> varsValue) override;
 

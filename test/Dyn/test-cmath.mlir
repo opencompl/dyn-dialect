@@ -18,7 +18,7 @@ module {
   // CHECK: func @conorm2(%{{.*}}: !cmath.complex<f32>, %{{.*}}: !cmath.complex<f32>) -> f32 {
   // CHECK:   %{{.*}} = "cmath.mul"(%{{.*}}, %{{.*}}) : (!cmath.complex<f32>, !cmath.complex<f32>) -> !cmath.complex<f32>
   // CHECK:   %{{.*}} = "cmath.norm"(%{{.*}}) : (!cmath.complex<f32>) -> f32
-  // CHECK:   return %{{.*} : f32
+  // CHECK:   return %{{.*}} : f32
   // CHECK: }
   func @conorm2(%p: !cmath.complex<f32>, %q: !cmath.complex<f32>) -> f32 {
     %pq = "cmath.mul"(%p, %q) : (!cmath.complex<f32>, !cmath.complex<f32>) -> !cmath.complex<f32>

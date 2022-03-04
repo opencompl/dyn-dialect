@@ -121,25 +121,27 @@ parseOptionalAnyOfTypeConstraint(OpAsmParser &p, Attribute *typeConstraint) {
   if (p.parseLess())
     return {failure()};
 
-  std::vector<Type> types;
-  Type type;
+  SmallVector<Attribute> constraints;
 
-  if (p.parseType(type))
-    return {failure()};
-  types.push_back(type);
+  {
+    Attribute constraint;
+    if (parseTypeConstraint(p, &constraint))
+      return {failure()};
+    constraints.push_back(constraint);
+  }
 
   while (p.parseOptionalGreater()) {
     if (p.parseComma())
       return {failure()};
 
-    Type type;
-    if (p.parseType(type))
+    Attribute constraint;
+    if (parseTypeConstraint(p, &constraint))
       return {failure()};
-    types.push_back(type);
+    constraints.push_back(constraint);
   }
 
   *typeConstraint =
-      AnyOfTypeConstraintAttr::get(p.getBuilder().getContext(), types);
+      AnyOfTypeConstraintAttr::get(p.getBuilder().getContext(), constraints);
   return {success()};
 }
 
@@ -147,13 +149,15 @@ parseOptionalAnyOfTypeConstraint(OpAsmParser &p, Attribute *typeConstraint) {
 /// It has the format 'AnyOf<type, (, type)*>'.
 void printAnyOfTypeConstraint(OpAsmPrinter &p,
                               AnyOfTypeConstraintAttr anyOfConstr) {
-  auto types = anyOfConstr.getTypes();
+  auto constrs = anyOfConstr.getConstrs();
 
   p << "AnyOf<";
-  for (size_t i = 0; i + 1 < types.size(); i++) {
-    p << types[i] << ", ";
+  for (size_t i = 0; i + 1 < constrs.size(); i++) {
+    printTypeConstraint(p, constrs[i]);
+    p << ", ";
   }
-  p << types.back() << ">";
+  printTypeConstraint(p, constrs.back());
+  p << ">";
 }
 
 /// Parse a type parameters constraint.

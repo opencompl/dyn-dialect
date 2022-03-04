@@ -18,28 +18,42 @@ using namespace mlir;
 using namespace irdl;
 
 LogicalResult EqTypeConstraint::verifyType(
-    function_ref<InFlightDiagnostic()> emitError, Type type,
+    Optional<function_ref<InFlightDiagnostic()>> emitError, Type type,
     ArrayRef<std::unique_ptr<TypeConstraint>> typeConstraintVars,
     MutableArrayRef<Type> varsValue) {
   if (type == expectedType)
     return success();
 
-  return emitError().append("expected type ", expectedType, " but got type ",
-                            type);
+  if (emitError)
+    return (*emitError)().append("expected type ", expectedType,
+                                 " but got type ", type);
+  return failure();
 }
 
 LogicalResult AnyOfTypeConstraint::verifyType(
-    function_ref<InFlightDiagnostic()> emitError, Type type,
+    Optional<function_ref<InFlightDiagnostic()>> emitError, Type type,
     ArrayRef<std::unique_ptr<TypeConstraint>> typeConstraintVars,
     MutableArrayRef<Type> varsValue) {
-  if (std::find(types.begin(), types.end(), type) != types.end())
-    return success();
+  SmallVector<Type> newVarsValue(varsValue.begin(), varsValue.end());
+  for (auto &constr : constrs) {
+    if (succeeded(
+            constr->verifyType({}, type, typeConstraintVars, varsValue))) {
+      for (size_t i = 0; i < varsValue.size(); i++)
+        varsValue[i] = newVarsValue[i];
+      return success();
+    }
+    for (size_t i = 0; i < varsValue.size(); i++)
+      newVarsValue[i] = varsValue[i];
+  }
 
-  return emitError().append("type ", type, " does not satisfy the constraint");
+  if (emitError)
+    return (*emitError)().append(
+        "type ", type, " does not satisfy the constraint");
+  return failure();
 }
 
 LogicalResult VarTypeConstraint::verifyType(
-    function_ref<InFlightDiagnostic()> emitError, Type type,
+    Optional<function_ref<InFlightDiagnostic()>> emitError, Type type,
     ArrayRef<std::unique_ptr<TypeConstraint>> typeConstraintVars,
     MutableArrayRef<Type> varsValue) {
   assert(varIndex < typeConstraintVars.size() &&
@@ -56,7 +70,10 @@ LogicalResult VarTypeConstraint::verifyType(
     if (type == expectedType) {
       return success();
     } else {
-      return emitError().append("expected ", expectedType, " but got ", type);
+      if (emitError)
+        return (*emitError)().append("expected ", expectedType, " but got ",
+                                     type);
+      return failure();
     }
   }
 
@@ -72,14 +89,17 @@ LogicalResult VarTypeConstraint::verifyType(
 }
 
 LogicalResult DynTypeParamsConstraint::verifyType(
-    function_ref<InFlightDiagnostic()> emitError, Type type,
+    Optional<function_ref<InFlightDiagnostic()>> emitError, Type type,
     ArrayRef<std::unique_ptr<TypeConstraint>> typeConstraintVars,
     MutableArrayRef<Type> varsValue) {
   auto dynType = type.dyn_cast<DynamicType>();
-  if (!dynType || dynType.getTypeDef() != dynTypeDef)
-    return emitError().append("expected base type '",
-                              dynTypeDef->getDialect()->getNamespace(), ".",
-                              dynTypeDef->getName(), "' but got type ", type);
+  if (!dynType || dynType.getTypeDef() != dynTypeDef) {
+    if (emitError)
+      return (*emitError)().append(
+          "expected base type '", dynTypeDef->getDialect()->getNamespace(), ".",
+          dynTypeDef->getName(), "' but got type ", type);
+    return failure();
+  }
 
   // Since we do not have variadic parameters yet, we should have the
   // exact number of constraints.
@@ -97,12 +117,15 @@ LogicalResult DynTypeParamsConstraint::verifyType(
 }
 
 LogicalResult TypeParamsConstraint::verifyType(
-    function_ref<InFlightDiagnostic()> emitError, Type type,
+    Optional<function_ref<InFlightDiagnostic()>> emitError, Type type,
     ArrayRef<std::unique_ptr<TypeConstraint>> typeConstraintVars,
     MutableArrayRef<Type> varsValue) {
-  if (!typeDef->isCorrectType(type))
-    return emitError().append("expected base type '", typeDef->getName(),
-                              "' but got type ", type);
+  if (!typeDef->isCorrectType(type)) {
+    if (emitError)
+      return (*emitError)().append("expected base type '", typeDef->getName(),
+                                   "' but got type ", type);
+    return failure();
+  }
 
   auto params = typeDef->getParameters(type);
   // Since we do not have variadic parameters yet, we should have the

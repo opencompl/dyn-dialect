@@ -80,7 +80,7 @@ LogicalResult verifyOpDefConstraints(
   for (unsigned i = 0; i < numOperands; ++i) {
     auto operandType = op->getOperand(i).getType();
     auto &constraint = operandConstrs[i];
-    if (failed(constraint->verifyType(emitError, operandType, constraintVars,
+    if (failed(constraint->verifyType({emitError}, operandType, constraintVars,
                                       varAssignments)))
       return failure();
   }
@@ -89,7 +89,7 @@ LogicalResult verifyOpDefConstraints(
   for (unsigned i = 0; i < numResults; ++i) {
     auto resultType = op->getResult(i).getType();
     auto &constraint = resultConstrs[i];
-    if (failed(constraint->verifyType(emitError, resultType, constraintVars,
+    if (failed(constraint->verifyType({emitError}, resultType, constraintVars,
                                       varAssignments)))
       return failure();
   }
