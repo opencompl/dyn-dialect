@@ -198,8 +198,6 @@ void printTypeParamsConstraint(OpAsmPrinter &p,
   p << typeDef->getName();
 
   auto paramConstraints = constraint.getParamConstraints();
-  if (paramConstraints.empty())
-    return;
 
   p << "<";
   llvm::interleaveComma(paramConstraints, p,
@@ -254,8 +252,6 @@ void printDynTypeParamsConstraint(OpAsmPrinter &p,
   p << typeName;
 
   auto paramConstraints = constraint.getParamConstraints();
-  if (paramConstraints.empty())
-    return;
 
   p << "<";
   llvm::interleaveComma(paramConstraints, p,
