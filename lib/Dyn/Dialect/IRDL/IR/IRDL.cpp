@@ -205,6 +205,32 @@ void printTypeParamsConstraint(OpAsmPrinter &p,
   p << ">";
 }
 
+/// Parse a dynamic type base type constraint.
+/// It has the format 'dialectname.typename'
+OptionalParseResult
+parseOptionalDynTypeBaseConstraint(OpAsmParser &p, StringRef keyword,
+                                   Attribute *typeConstraint) {
+  auto loc = p.getCurrentLocation();
+  auto ctx = p.getBuilder().getContext();
+  auto splittedNames = keyword.split('.');
+  auto typeName = splittedNames.second;
+
+  // Check that the type name is in the format dialectname.typename
+  if (typeName == "") {
+    p.emitError(loc, " expected type name prefixed with the dialect name");
+    return {failure()};
+  }
+
+  *typeConstraint = DynTypeBaseConstraintAttr::get(ctx, keyword);
+  return {success()};
+}
+
+void printDynTypeBaseConstraint(OpAsmPrinter &p,
+                                DynTypeBaseConstraintAttr constraint) {
+  auto typeName = constraint.getTypeName();
+  p << typeName;
+}
+
 /// Parse a dynamic type parameters constraint.
 /// It has the format 'dialectname.typename<(typeConstraint ,)*>'
 OptionalParseResult
@@ -221,7 +247,7 @@ parseOptionalDynTypeParamsConstraint(OpAsmParser &p, StringRef keyword,
     return {failure()};
   }
 
-  if (p.parseOptionalLess() || !p.parseOptionalGreater()) {
+  if (!p.parseOptionalGreater()) {
     *typeConstraint = DynTypeParamsConstraintAttr::get(ctx, keyword, {});
     return {success()};
   }
@@ -304,11 +330,23 @@ ParseResult parseTypeConstraint(OpAsmParser &p, Attribute *typeConstraint) {
     if (typeWrapper)
       return parseTypeParamsConstraint(p, typeWrapper, typeConstraint);
 
-    // Parse a dynamic type parameter constraint.
-    auto paramRes =
-        parseOptionalDynTypeParamsConstraint(p, keyword, typeConstraint);
-    if (paramRes.hasValue())
-      return *paramRes;
+    if (p.parseLess().succeeded()) {
+      // Parse a dynamic type parameter constraint.
+      auto paramRes =
+          parseOptionalDynTypeParamsConstraint(p, keyword, typeConstraint);
+      if (paramRes.hasValue())
+        return *paramRes;
+      p.emitError(loc, "type constraint expected");
+      return failure();
+    }
+
+    auto baseRes =
+        parseOptionalDynTypeBaseConstraint(p, keyword, typeConstraint);
+    if (baseRes.hasValue())
+      return *baseRes;
+
+    p.emitError(loc, "type constraint expected");
+    return failure();
   }
 
   p.emitError(loc, "type constraint expected");
@@ -328,6 +366,9 @@ void printTypeConstraint(OpAsmPrinter &p, Attribute typeConstraint) {
   } else if (auto typeParamsConstr =
                  typeConstraint.dyn_cast<TypeParamsConstraintAttr>()) {
     printTypeParamsConstraint(p, typeParamsConstr);
+  } else if (auto dynTypeBaseConstr =
+                 typeConstraint.dyn_cast<DynTypeBaseConstraintAttr>()) {
+    printDynTypeBaseConstraint(p, dynTypeBaseConstr);
   } else if (auto dynTypeParamsConstr =
                  typeConstraint.dyn_cast<DynTypeParamsConstraintAttr>()) {
     printDynTypeParamsConstraint(p, dynTypeParamsConstr);

@@ -29,6 +29,13 @@ irdl.dialect testd {
     irdl.results(res: Any)
   }
 
+  // CHECK: irdl.operation dynbase {
+  // CHECK:   irdl.results(res: testd.parametric)
+  // CHECK: }
+  irdl.operation dynbase {
+    irdl.results(res: testd.parametric)
+  }
+
   // CHECK: irdl.operation dynparams {
   // CHECK:   irdl.results(res: testd.parametric<AnyOf<i32, i64>>)
   // CHECK: }

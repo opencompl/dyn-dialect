@@ -87,6 +87,30 @@ func @failedDynParamsConstraintParam() {
 // -----
 
 //===----------------------------------------------------------------------===//
+// Dynamic base constraint
+//===----------------------------------------------------------------------===//
+
+func @succeededDynBaseConstraint() {
+  // CHECK: "testd.dynbase"() : () -> !testd.parametric<i32>
+  "testd.dynbase"() : () -> !testd.parametric<i32>
+  // CHECK: "testd.dynbase"() : () -> !testd.parametric<i64>
+  "testd.dynbase"() : () -> !testd.parametric<i64>
+  // CHECK: "testd.dynbase"() : () -> !testd.parametric<!testd.parametric<i64>>
+  "testd.dynbase"() : () -> !testd.parametric<!testd.parametric<i64>>
+  return
+}
+
+// -----
+
+func @failedDynBaseConstraint() {
+  // expected-error@+1 {{expected base type 'testd.parametric' but got type 'i32'}}
+  "testd.dynbase"() : () -> i32
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // Dynamic parameters constraint
 //===----------------------------------------------------------------------===//
 
