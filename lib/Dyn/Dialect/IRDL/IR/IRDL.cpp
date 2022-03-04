@@ -202,9 +202,8 @@ void printTypeParamsConstraint(OpAsmPrinter &p,
     return;
 
   p << "<";
-  llvm::interleaveComma(paramConstraints, p, [&p](Attribute a) {
-    printTypeConstraint(p, a);
-  });
+  llvm::interleaveComma(paramConstraints, p,
+                        [&p](Attribute a) { printTypeConstraint(p, a); });
   p << ">";
 }
 
@@ -259,9 +258,8 @@ void printDynTypeParamsConstraint(OpAsmPrinter &p,
     return;
 
   p << "<";
-  llvm::interleaveComma(paramConstraints, p, [&p](Attribute a) {
-    printTypeConstraint(p, a);
-  });
+  llvm::interleaveComma(paramConstraints, p,
+                        [&p](Attribute a) { printTypeConstraint(p, a); });
   p << ">";
 }
 
@@ -297,7 +295,7 @@ ParseResult parseTypeConstraint(OpAsmParser &p, Attribute *typeConstraint) {
   if (succeeded(p.parseOptionalQuestion())) {
     StringRef keyword;
     if (failed(p.parseKeyword(&keyword)))
-        return failure();
+      return failure();
     *typeConstraint = VarTypeConstraintAttr::get(ctx, keyword);
     return success();
   }
@@ -311,8 +309,8 @@ ParseResult parseTypeConstraint(OpAsmParser &p, Attribute *typeConstraint) {
       return parseTypeParamsConstraint(p, typeWrapper, typeConstraint);
 
     // Parse a dynamic type parameter constraint.
-    auto paramRes = parseOptionalDynTypeParamsConstraint(
-        p, keyword, typeConstraint);
+    auto paramRes =
+        parseOptionalDynTypeParamsConstraint(p, keyword, typeConstraint);
     if (paramRes.hasValue())
       return *paramRes;
   }

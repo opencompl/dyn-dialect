@@ -47,8 +47,8 @@ LogicalResult AnyOfTypeConstraint::verifyType(
   }
 
   if (emitError)
-    return (*emitError)().append(
-        "type ", type, " does not satisfy the constraint");
+    return (*emitError)().append("type ", type,
+                                 " does not satisfy the constraint");
   return failure();
 }
 
