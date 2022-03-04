@@ -94,6 +94,27 @@ std::unique_ptr<TypeConstraint> VarTypeConstraintAttr::getTypeConstraint(
 }
 
 //===----------------------------------------------------------------------===//
+// Attribute for constraint on dynamic type base type
+//===----------------------------------------------------------------------===//
+
+std::unique_ptr<TypeConstraint> DynTypeBaseConstraintAttr::getTypeConstraint(
+    SmallVector<std::pair<StringRef, std::unique_ptr<TypeConstraint>>> const
+        &constrVars) {
+  auto splittedTypeName = getTypeName().split('.');
+  auto dialectName = splittedTypeName.first;
+  auto typeName = splittedTypeName.second;
+
+  auto dialect = getContext()->getOrLoadDialect(dialectName);
+  assert(dialect && "dialect is not registered");
+  auto extensibleDialect = llvm::dyn_cast<ExtensibleDialect>(dialect);
+  assert(extensibleDialect && "dialect is not extensible");
+
+  auto *typeDef = extensibleDialect->lookupTypeDefinition(typeName);
+
+  return std::make_unique<DynTypeBaseConstraint>(typeDef);
+}
+
+//===----------------------------------------------------------------------===//
 // Attribute for constraint on dynamic type parameters
 //===----------------------------------------------------------------------===//
 

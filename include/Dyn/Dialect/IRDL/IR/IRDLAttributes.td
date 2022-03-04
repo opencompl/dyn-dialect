@@ -88,6 +88,22 @@ def VarTypeConstraintAttr : IRDL_AttrDef<"VarTypeConstraint", "var_type_constrai
   }];
 }
 
+def DynTypeBaseConstraintAttr : IRDL_AttrDef<"DynTypeBaseConstraint", "dyn_type_base_constraint",
+                                               [TypeConstraintAttrInterface]> {
+  let summary = "constraint on the base of a dynamic type";
+  let description = [{
+    Attribute representing a constraint on dynamic type base type.
+    The constraint is satisfied by types that have the correct base type.
+  }];
+  let parameters = (ins StringRefParameter<>:$typeName);
+  let assemblyFormat = "`<` $typeName `>`";
+
+  let extraClassDeclaration = [{
+    std::unique_ptr<TypeConstraint> getTypeConstraint(
+        SmallVector<std::pair<StringRef, std::unique_ptr<TypeConstraint>>> const& constr_vars);
+  }];
+}
+
 def DynTypeParamsConstraintAttr : IRDL_AttrDef<"DynTypeParamsConstraint", "dyn_type_params_constraint",
                                                [TypeConstraintAttrInterface]> {
   let summary = "constraint on dynamic type parameters";
