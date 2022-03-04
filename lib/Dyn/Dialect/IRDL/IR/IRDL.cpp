@@ -101,10 +101,10 @@ ParseResult parseTypeConstraint(OpAsmParser &p, Attribute *typeConstraint);
 void printTypeConstraint(OpAsmPrinter &p, Attribute typeConstraint);
 
 /// Parse an Any constraint if there is one.
-/// It has the format 'irdl.Any'
+/// It has the format 'Any'
 OptionalParseResult parseOptionalAnyTypeConstraint(OpAsmParser &p,
                                                    Attribute *typeConstraint) {
-  if (p.parseOptionalKeyword("irdl.Any"))
+  if (p.parseOptionalKeyword("Any"))
     return {};
 
   *typeConstraint = AnyTypeConstraintAttr::get(p.getBuilder().getContext());
@@ -112,10 +112,10 @@ OptionalParseResult parseOptionalAnyTypeConstraint(OpAsmParser &p,
 }
 
 /// Parse an AnyOf constraint if there is one.
-/// It has the format 'irdl.AnyOf<type (, type)*>'
+/// It has the format 'AnyOf<type (, type)*>'
 OptionalParseResult
 parseOptionalAnyOfTypeConstraint(OpAsmParser &p, Attribute *typeConstraint) {
-  if (p.parseOptionalKeyword("irdl.AnyOf"))
+  if (p.parseOptionalKeyword("AnyOf"))
     return {};
 
   if (p.parseLess())
@@ -144,12 +144,12 @@ parseOptionalAnyOfTypeConstraint(OpAsmParser &p, Attribute *typeConstraint) {
 }
 
 /// Print an AnyOf type constraint.
-/// It has the format 'irdl.AnyOf<type, (, type)*>'.
+/// It has the format 'AnyOf<type, (, type)*>'.
 void printAnyOfTypeConstraint(OpAsmPrinter &p,
                               AnyOfTypeConstraintAttr anyOfConstr) {
   auto types = anyOfConstr.getTypes();
 
-  p << "irdl.AnyOf<";
+  p << "AnyOf<";
   for (size_t i = 0; i + 1 < types.size(); i++) {
     p << types[i] << ", ";
   }
@@ -323,7 +323,7 @@ void printTypeConstraint(OpAsmPrinter &p, Attribute typeConstraint) {
     p << eqConstr.getType();
   } else if (auto anyConstr =
                  typeConstraint.dyn_cast<AnyTypeConstraintAttr>()) {
-    p << "irdl.Any";
+    p << "Any";
   } else if (auto anyOfConstr =
                  typeConstraint.dyn_cast<AnyOfTypeConstraintAttr>()) {
     printAnyOfTypeConstraint(p, anyOfConstr);

@@ -5,30 +5,30 @@ module {
   irdl.dialect cmath {
 
 // CHECK: irdl.type complex {
-    // CHECK:   irdl.parameters(elementType: irdl.AnyOf<f32, f64>)
+    // CHECK:   irdl.parameters(elementType: AnyOf<f32, f64>)
     // CHECK: }
     irdl.type complex {
-      irdl.parameters(elementType: irdl.AnyOf<f32, f64>)
+      irdl.parameters(elementType: AnyOf<f32, f64>)
     }
 
     // CHECK: irdl.operation norm {
-    // CHECK:   irdl.constraint_vars(T: irdl.AnyOf<f32, f64>)
+    // CHECK:   irdl.constraint_vars(T: AnyOf<f32, f64>)
     // CHECK:   irdl.operands(c: cmath.complex<?T>)
     // CHECK:   irdl.results(res: ?T)
     // CHECK: }
     irdl.operation norm {
-      irdl.constraint_vars(T: irdl.AnyOf<f32, f64>)
+      irdl.constraint_vars(T: AnyOf<f32, f64>)
       irdl.operands(c: cmath.complex<?T>)
       irdl.results(res: ?T)
     }
 
     // CHECK: irdl.operation mul {
-    // CHECK:   irdl.constraint_vars(T: irdl.AnyOf<f32, f64>)
+    // CHECK:   irdl.constraint_vars(T: AnyOf<f32, f64>)
     // CHECK:   irdl.operands(lhs: cmath.complex<?T>, rhs: cmath.complex<?T>)
     // CHECK:   irdl.results(res: cmath.complex<?T>)
     // CHECK: }
     irdl.operation mul {
-      irdl.constraint_vars(T: irdl.AnyOf<f32, f64>)
+      irdl.constraint_vars(T: AnyOf<f32, f64>)
       irdl.operands(lhs: cmath.complex<?T>, rhs: cmath.complex<?T>)
       irdl.results(res: cmath.complex<?T>)
     }
