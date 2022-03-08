@@ -17,7 +17,7 @@ include "IRDL.td"
 include "IRDLAttributes.td"
 include "mlir/IR/SymbolInterfaces.td"
 
-class IRDL_Op<string mnemonic, list<OpTrait> traits = []>
+class IRDL_Op<string mnemonic, list<Trait> traits = []>
     : Op<IRDL_Dialect, mnemonic, traits> {
 }
 

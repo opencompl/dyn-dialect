@@ -166,7 +166,10 @@ void registerOperation(ExtensibleDialect *dialect, OperationOp op) {
                                       operandConstraints, resultConstraints);
       };
 
+  auto regionVerifier = [](Operation *op) { return success(); };
+
   auto opDef = DynamicOpDefinition::get(op.name(), dialect, std::move(verifier),
+                                        std::move(regionVerifier),
                                         std::move(parser), std::move(printer));
   dialect->registerDynamicOp(std::move(opDef));
 }

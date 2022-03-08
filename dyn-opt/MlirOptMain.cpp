@@ -53,7 +53,7 @@ static LogicalResult performActions(raw_ostream &os, bool verifyDiagnostics,
   context->disableMultithreading();
 
   // Parse the input file and reset the context threading state.
-  OwningModuleRef module(parseSourceFile(sourceMgr, context));
+  OwningOpRef<ModuleOp> module(parseSourceFile(sourceMgr, context));
   context->enableMultithreading(wasThreadingEnabled);
   if (!module)
     return failure();

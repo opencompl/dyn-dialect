@@ -53,7 +53,7 @@ LogicalResult mlir::registerIRDL(StringRef irdlFile, MLIRContext *ctx) {
   ctx->disableMultithreading();
 
   // Parse the input file and reset the context threading state.
-  OwningModuleRef module(parseSourceFile(sourceMgr, ctx));
+  OwningOpRef<ModuleOp> module(parseSourceFile(sourceMgr, ctx));
   irdl::registerDialects(module.get());
   ctx->enableMultithreading(wasThreadingEnabled);
   return failure(!module);
