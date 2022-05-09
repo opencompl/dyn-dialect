@@ -14,6 +14,7 @@
 #define DYN_DIALECT_IRDL_IR_IRDLATTRIBUTES
 
 include "mlir/IR/OpBase.td"
+include "mlir/IR/AttrTypeBase.td"
 include "IRDLInterfaces.td"
 include "IRDL.td"
 
@@ -123,10 +124,7 @@ def DynTypeParamsConstraintAttr : IRDL_AttrDef<"DynTypeParamsConstraint", "dyn_t
 }
 
 class TypeWrapperParameter<string desc = ""> :
-    AttrOrTypeParameter<"mlir::irdl::TypeWrapper*", desc> {
-  let printer = "assert(false)";
-  let parser = "failure()";
-}
+    AttrOrTypeParameter<"mlir::irdl::TypeWrapper*", desc> {}
 
 def TypeParamsConstraintAttr : IRDL_AttrDef<"TypeParamsConstraint", "type_params_constraint",
                                             [TypeConstraintAttrInterface]> {

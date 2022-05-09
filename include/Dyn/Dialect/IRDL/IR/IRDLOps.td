@@ -27,9 +27,7 @@ class AtMostOneChildOf<string op> : ParamNativeOpTrait<"AtMostOneChildOf", op>;
 // IRDL Dialect definition
 //===----------------------------------------------------------------------===//
 
-def IRDL_DialectOp : IRDL_Op<"dialect", [
-    IsolatedFromAbove, SingleBlockImplicitTerminator<"EndDialectOp">
-  ]> {
+def IRDL_DialectOp : IRDL_Op<"dialect", [IsolatedFromAbove, NoTerminator]> {
   let summary = "Define a new dialect";
   let description = [{
     `irdl.dialect` operations defines a dialect.
@@ -47,13 +45,8 @@ def IRDL_DialectOp : IRDL_Op<"dialect", [
 
   let arguments = (ins StrAttr:$name);
   let regions = (region SizedRegion<1>:$body);
-  let printer = [{ ::print(p, *this); }];
-  let parser = [{ return ::parse$cppClass(parser, result); }];
-  let verifier = [{ return ::verify(*this); }];
-}
-
-def IRDL_EndDialectOp : IRDL_Op<"end_dialect", [Terminator]> {
-  let summary = "Implicit terminator of `irdl.dialect` operation";
+  let assemblyFormat = "custom<KeywordOrString>($name) attr-dict-with-keyword custom<SingleBlockRegion>($body)";
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -114,7 +107,7 @@ def IRDL_TypeOp : IRDL_Op<"type", [HasParent<"DialectOp">, NoTerminator, NoRegio
 
   let arguments = (ins StrAttr:$name);
   let regions = (region SizedRegion<1>:$body);
-  let assemblyFormat = "custom<KeywordOrString>($name) attr-dict-with-keyword custom<SingleBlockRegion>($body)";
+  let assemblyFormat = "custom<KeywordOrString>($name) attr-dict-with-keyword custom<SingleBlockRegion>($body)";  
 
   let extraClassDeclaration = [{
     /// Get the parent dialect operation.

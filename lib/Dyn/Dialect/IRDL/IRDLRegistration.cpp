@@ -205,7 +205,7 @@ static void registerDialect(DialectOp op) {
   auto *ctx = op.getContext();
   auto dialectName = op.name();
 
-  ctx->loadDynamicDialect(dialectName);
+  ctx->createDynamicDialect(dialectName);
 
   auto *dialect =
       llvm::dyn_cast<ExtensibleDialect>(ctx->getLoadedDialect(dialectName));

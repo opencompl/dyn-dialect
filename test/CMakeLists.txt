@@ -8,7 +8,6 @@ configure_lit_site_cfg(
 set(DYN_TEST_DEPENDS
         FileCheck count not
         dyn-opt
-        dyn-translate
         )
 
 add_lit_testsuite(check-dyn "Running the dyn regression tests"

@@ -385,35 +385,8 @@ void printTypeConstraint(OpAsmPrinter &p, Attribute typeConstraint) {
 // irdl::DialectOp
 //===----------------------------------------------------------------------===//
 
-static LogicalResult verify(DialectOp dialectOp) {
-  return success(Dialect::isValidNamespace(dialectOp.name()));
-}
-
-static ParseResult parseDialectOp(OpAsmParser &p, OperationState &state) {
-  Builder &builder = p.getBuilder();
-
-  // Parse the dialect name.
-  StringRef name;
-  if (failed(p.parseKeyword(&name)))
-    return failure();
-  state.addAttribute("name", builder.getStringAttr(name));
-
-  // Parse the dialect body.
-  Region *region = state.addRegion();
-  if (failed(p.parseRegion(*region)))
-    return failure();
-
-  DialectOp::ensureTerminator(*region, builder, state.location);
-
-  return success();
-}
-
-static void print(OpAsmPrinter &p, DialectOp dialectOp) {
-  // Print the dialect name.
-  p << " " << dialectOp.name() << " ";
-
-  // Print the dialect body.
-  p.printRegion(dialectOp.body(), false, false);
+LogicalResult DialectOp::verify() {
+  return success(Dialect::isValidNamespace(name()));
 }
 
 //===----------------------------------------------------------------------===//

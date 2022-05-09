@@ -18,7 +18,7 @@
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/MLIRContext.h"
-#include "mlir/Parser.h"
+#include "mlir/Parser/Parser.h"
 #include "mlir/Support/FileUtilities.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/InitLLVM.h"
@@ -53,7 +53,7 @@ LogicalResult mlir::registerIRDL(StringRef irdlFile, MLIRContext *ctx) {
   ctx->disableMultithreading();
 
   // Parse the input file and reset the context threading state.
-  OwningOpRef<ModuleOp> module(parseSourceFile(sourceMgr, ctx));
+  auto module(parseSourceFile<ModuleOp>(sourceMgr, ctx));
   irdl::registerDialects(module.get());
   ctx->enableMultithreading(wasThreadingEnabled);
   return failure(!module);

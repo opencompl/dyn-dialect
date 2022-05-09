@@ -20,11 +20,34 @@
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/Metadata.h"
 
-#define GET_ATTRDEF_CLASSES
-#include "Dyn/Dialect/IRDL/IR/IRDLAttributes.cpp.inc"
+//===----------------------------------------------------------------------===//
+// TypeWrapper parameter
+//===----------------------------------------------------------------------===//
 
 using namespace mlir;
 using namespace irdl;
+namespace mlir {
+AsmPrinter &operator<<(AsmPrinter &printer, TypeWrapper *param) {
+  printer << param->getName();
+  return printer;
+}
+
+template <> struct FieldParser<TypeWrapper *> {
+  static FailureOr<TypeWrapper *> parse(AsmParser &parser) {
+    std::string name;
+    parser.parseOptionalKeywordOrString(&name);
+    auto *irdl = parser.getContext()->getOrLoadDialect<IRDLDialect>();
+    auto typeWrapper = irdl->getTypeWrapper(name);
+    if (!typeWrapper)
+      return parser.emitError(parser.getCurrentLocation(), "Type wrapper ")
+             << name << " was not registered in IRDL";
+    return typeWrapper;
+  }
+};
+} // namespace mlir
+
+#define GET_ATTRDEF_CLASSES
+#include "Dyn/Dialect/IRDL/IR/IRDLAttributes.cpp.inc"
 
 namespace mlir {
 namespace irdl {

@@ -47,9 +47,9 @@ int main(int argc, char **argv) {
 
   irdl->addTypeWrapper<ComplexTypeWrapper>();
 
-  // Register the standard dialect and the IRDL dialect in the MLIR context
+  // Register all dialects
   DialectRegistry registry;
-  registry.insert<StandardOpsDialect>();
+  registerAllDialects(registry);
   ctx.appendDialectRegistry(registry);
 
   return failed(mlir::MlirOptMain(argc, argv, "Dyn optimizer driver\n", ctx));

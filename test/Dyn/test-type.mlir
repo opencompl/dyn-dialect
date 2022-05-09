@@ -1,6 +1,6 @@
 // RUN: dyn-opt %s --irdl-file=%S/test-type.irdl -split-input-file -verify-diagnostics | FileCheck %s
 
-func @succeededTypeVerifier() {
+func.func @succeededTypeVerifier() {
     // CHECK: "testd.any"() : () -> !testd.singleton
     "testd.any"() : () -> !testd.singleton
 
@@ -15,21 +15,21 @@ func @succeededTypeVerifier() {
 
 // -----
 
-func @failedSingletonVerifier() {
+func.func @failedSingletonVerifier() {
      // expected-error@+1 {{expected 0 type arguments, but had 1}}
      "testd.any"() : () -> !testd.singleton<i32>
 }
 
 // -----
 
-func @failedParametrizedVerifierWrongNumOfArgs() {
+func.func @failedParametrizedVerifierWrongNumOfArgs() {
      // expected-error@+1 {{expected 2 type arguments, but had 1}}
      "testd.any"() : () -> !testd.parametrized<i32>
 }
 
 // -----
 
-func @failedParametrizedVerifierWrongArgument() {
+func.func @failedParametrizedVerifierWrongArgument() {
      // expected-error@+1 {{type 'i1' does not satisfy the constraint}}
      "testd.any"() : () -> !testd.parametrized<i32, i1>
 }

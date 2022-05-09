@@ -12,7 +12,7 @@ jobs:
           fetch-depth: 1
     - uses: DoozyX/clang-format-lint-action@v0.13
       with:
-        source: 'dyn-opt dyn-translate include lib'
+        source: 'dyn-opt include lib'
         exclude: 'test'
         clangFormatVersion: 11
         style: llvm
