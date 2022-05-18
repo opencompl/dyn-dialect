@@ -31,4 +31,4 @@ class TypeWrapper;
 #define GET_ATTRDEF_CLASSES
 #include "Dyn/Dialect/IRDL/IR/IRDLAttributes.h.inc"
 
-#endif // DYN_DIALECT_IRDL_IR_IRDL_H_
+#endif // DYN_DIALECT_IRDL_IR_IRDLATTRIBUTES_H_

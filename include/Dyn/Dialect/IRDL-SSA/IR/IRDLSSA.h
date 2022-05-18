@@ -10,10 +10,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef DYN_DIALECT_IRDL_IR_IRDL_H_
-#define DYN_DIALECT_IRDL_IR_IRDL_H_
+#ifndef DYN_DIALECT_IRDL_SSA_IR_IRDL_SSA_H_
+#define DYN_DIALECT_IRDL_SSA_IR_IRDL_SSA_H_
 
 #include "Dyn/Dialect/IRDL/IR/IRDLTraits.h"
+#include "Dyn/Dialect/IRDL/TypeWrapper.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/ExtensibleDialect.h"
@@ -23,29 +24,22 @@
 
 // Forward declaration.
 namespace mlir {
-namespace irdl {
+namespace irdlssa {
 class OpDef;
 class OpDefAttr;
-} // namespace irdl
+} // namespace irdlssa
 } // namespace mlir
 
 //===----------------------------------------------------------------------===//
-// IRDL Type Wrapper
+// IRDL-SSA Dialect
 //===----------------------------------------------------------------------===//
 
-#include "Dyn/Dialect/IRDL/TypeWrapper.h"
+#include "Dyn/Dialect/IRDL-SSA/IR/IRDLSSADialect.h.inc"
 
-//===----------------------------------------------------------------------===//
-// IRDL Dialect
-//===----------------------------------------------------------------------===//
-
-#include "Dyn/Dialect/IRDL/IR/IRDLDialect.h.inc"
-
-//===----------------------------------------------------------------------===//
-// IRDL Dialect Operations
-//===----------------------------------------------------------------------===//
+#define GET_TYPEDEF_CLASSES
+#include "Dyn/Dialect/IRDL-SSA/IR/IRDLSSATypesGen.h.inc"
 
 #define GET_OP_CLASSES
-#include "Dyn/Dialect/IRDL/IR/IRDLOps.h.inc"
+#include "Dyn/Dialect/IRDL-SSA/IR/IRDLSSAOps.h.inc"
 
-#endif // DYN_DIALECT_IRDL_IR_IRDL_H_
+#endif // DYN_DIALECT_IRDL_SSA_IR_IRDL_SSA_H_

@@ -1,0 +1,13 @@
+// RUN: dyn-opt %s | dyn-opt | FileCheck %s
+
+module {
+  irdlssa.dialect cmath {
+
+    irdlssa.type complex {
+        %0 = irdlssa.is_type : i32
+        %1 = irdlssa.is_type : i64
+        irdlssa.parameters(%0, %1)
+    }
+    
+  }
+}

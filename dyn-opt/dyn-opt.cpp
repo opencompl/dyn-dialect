@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Dyn/Dialect/IRDL/IR/IRDL.h"
+#include "Dyn/Dialect/IRDL-SSA/IR/IRDLSSA.h"
 #include "MlirOptMain.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Diagnostics.h"
@@ -44,8 +45,10 @@ int main(int argc, char **argv) {
 
   MLIRContext ctx;
   auto irdl = ctx.getOrLoadDialect<irdl::IRDLDialect>();
+  auto irdlssa = ctx.getOrLoadDialect<irdlssa::IRDLSSADialect>();
 
   irdl->addTypeWrapper<ComplexTypeWrapper>();
+  irdlssa->addTypeWrapper<ComplexTypeWrapper>();
 
   // Register all dialects
   DialectRegistry registry;
