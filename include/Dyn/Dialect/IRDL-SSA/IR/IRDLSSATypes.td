@@ -21,7 +21,7 @@ class IRDL_SSA_Type<string name, string typeMnemonic, list<Trait> traits = []>
   let mnemonic = typeMnemonic;
 }
 
-def IRDL_SSA_ContraintType : IRDL_SSA_Type<"Constraint", "constr"> {
+def IRDL_SSA_ConstraintType : IRDL_SSA_Type<"Constraint", "constr"> {
   let summary = "Type representing a type constraint";
   let description = [{
     The Constraint type is the type of type constraints when

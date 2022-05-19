@@ -75,7 +75,7 @@ def IRDL_SSA_ParametersOp : IRDL_SSA_Op<"parameters", [HasParent<"SSA_TypeOp">]>
     type has a single parameter that should be either `i32` or `i64`.
   }];
 
-  let arguments = (ins Variadic<IRDL_SSA_ContraintType>:$args);
+  let arguments = (ins Variadic<IRDL_SSA_ConstraintType>:$args);
   let assemblyFormat = [{ `(` $args `)` attr-dict }];
 }
 
@@ -120,14 +120,104 @@ def IRDL_SSA_TypeOp : IRDL_SSA_Op<"type", [HasParent<"SSA_DialectOp">, NoTermina
 }
 
 //===----------------------------------------------------------------------===//
+// IRDL-SSA Operation definition
+//===----------------------------------------------------------------------===//
+
+def IRDL_SSA_OperandsOp : IRDL_SSA_Op<"operands", [HasParent<"SSA_OperationOp">]> {
+  let summary = "Define the operands of an operation";
+  let description = [{
+    `irdlssa.operands` define the operands of the `irdlssa.operation` parent operation
+    definition.
+
+    Example:
+
+    ```mlir
+    irdlssa.dialect testd {
+      irdlssa.operation test_op {
+        %0 = irdlssa.is_type : i32
+        %1 = irdlssa.is_type : i64
+        %2 = irdlssa.any_of(%0, %1)
+        irdlssa.operands(%0, %2)
+      }
+    }
+    ```
+
+    The above program defines an operation `test_op` with two expected operands.
+    The first operand is expected to be of type `i32`, and the second operand is
+    expected to be either of type `i32` or `i64`.
+  }];
+
+  let arguments = (ins Variadic<IRDL_SSA_ConstraintType>:$args);
+  let assemblyFormat = [{ `(` $args `)` attr-dict }];
+}
+
+def IRDL_SSA_ResultsOp : IRDL_SSA_Op<"results", [HasParent<"SSA_OperationOp">]> {
+  let summary = "Define the results of an operation";
+  let description = [{
+    `irdlssa.results` define the results of the `irdlssa.operation` parent operation
+    definition.
+
+    Example:
+
+    ```mlir
+    irdlssa.dialect testd {
+      irdlssa.operation test_op {
+        %0 = irdlssa.is_type : i32
+        %1 = irdlssa.is_type : i64
+        %2 = irdlssa.any_of(%0, %1)
+        irdlssa.results(%0, %2)
+      }
+    }
+    ```
+
+    The above program defines an operation `test_op` with two expected results.
+    The first result is expected to be an `i32`, and the second result is
+    expected to be either an `i32` or an `i64`.
+  }];
+
+  let arguments = (ins Variadic<IRDL_SSA_ConstraintType>:$args);
+  let assemblyFormat = [{ `(` $args `)` attr-dict }];
+}
+
+def IRDL_SSA_OperationOp : IRDL_SSA_Op<"operation",
+    [HasParent<"SSA_DialectOp">, NoTerminator, NoRegionArguments,
+    AtMostOneChildOf<"SSA_OperandsOp, SSA_ResultsOp">]> {
+  let summary = "Define a new operation";
+  let description = [{
+    `irdlssa.operation` defines new operations belonging to the previously
+    defined dialect using `irdlssa.dialect`.
+
+    Those operations have no verifiers.
+
+    Example:
+
+    ```mlir
+    irdlssa.dialect "cmath" {
+      irdlssa.operation "mul"
+    }
+    ```
+    
+    The above program defines an operation `mul` inside the dialect `cmath`.
+  }];
+
+  let arguments = (ins StrAttr:$name);
+  let regions = (region SizedRegion<1>:$body);
+  let assemblyFormat = "custom<KeywordOrString>($name) attr-dict-with-keyword custom<SingleBlockRegion>($body)";
+
+  let extraClassDeclaration = [{
+    /// Get the parent dialect operation.
+    SSA_DialectOp getDialectOp() { return cast<SSA_DialectOp>(getOperation()->getParentOp()); };
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // IRDL-SSA Constraint operations
 //===----------------------------------------------------------------------===//
 
-def IRDL_SSA_IsType : IRDL_SSA_Op<"is_type"> { // TODO: Constrain parent
+def IRDL_SSA_IsType : IRDL_SSA_Op<"is_type", [ParentOneOf<["SSA_TypeOp", "SSA_OperationOp"]>]> {
   let summary = "Constraints to a specific type";
   let description = [{
-    `irdlssa.is_type` defines a constraint that only accepts an instance
-    of a specific type.
+    `irdlssa.is_type` defines a constraint that only accepts a specific type.
 
     Example:
 
@@ -144,11 +234,93 @@ def IRDL_SSA_IsType : IRDL_SSA_Op<"is_type"> { // TODO: Constrain parent
     can only have `i32` as its parameter.
   }];
 
-  let arguments = (ins TypeAttr:$type);
-  let results = (outs IRDL_SSA_ContraintType:$output);
+  let arguments = (ins AnyAttrOf<[TypeAttr, StrAttr]>:$type);
+  let results = (outs IRDL_SSA_ConstraintType:$output);
   let assemblyFormat = [{ `:` $type attr-dict }];
 }
 
+def IRDL_SSA_ParametricType : IRDL_SSA_Op<"parametric_type", [ParentOneOf<["SSA_TypeOp", "SSA_OperationOp"]>]> {
+  let summary = "Constraints to a specific instanciated type";
+  let description = [{
+    `irdlssa.parametric_type` defines a constraint that only accepts an instance
+    of a specific type. The parameters of the type are other type constraints.
 
+    Example:
+
+    ```mlir
+    irdlssa.dialect cmath {
+      // ...
+
+      irdlssa.operation norm {
+        %0 = irdlssa.any_type
+        %1 = irdlssa.parametric_type : "cmath.complex"<%0>
+        irdlssa.operands(%1)
+        irdlssa.results(%0)
+      }
+    }
+    ```
+
+    The above program defines an operation `norm` inside the dialect `cmath` that
+    for any `T` takes a `cmath.complex` with parameter `T` and returns a `T`.
+  }];
+
+  let arguments = (ins AnyAttrOf<[TypeAttr, StrAttr]>:$type, Variadic<IRDL_SSA_ConstraintType>:$args);
+  let results = (outs IRDL_SSA_ConstraintType:$output);
+  let assemblyFormat = [{ `:` $type `<` $args `>` attr-dict }];
+}
+
+def IRDL_SSA_AnyType : IRDL_SSA_Op<"any_type", [ParentOneOf<["SSA_TypeOp", "SSA_OperationOp"]>]> {
+  let summary = "Constraints to any type";
+  let description = [{
+    `irdlssa.any_type` defines a constraint that accepts any type.
+
+    Example:
+
+    ```mlir
+    irdlssa.dialect cmath {
+      irdlssa.type complex_flexible {
+        %0 = irdlssa.any_type
+        irdlssa.parameters(%0)
+      }
+    }
+    ```
+
+    The above program defines a type `complex_flexible` inside the dialect `cmath` that
+    has one type parameter that can be any type.
+  }];
+
+  let results = (outs IRDL_SSA_ConstraintType:$output);
+  let assemblyFormat = [{ attr-dict }];
+}
+
+def IRDL_SSA_AnyOf : IRDL_SSA_Op<"any_of", [ParentOneOf<["SSA_TypeOp", "SSA_OperationOp"]>]> {
+  let summary = "Constraints to any of the provided types";
+  let description = [{
+    `irdlssa.is_type` defines a constraint that accepts any type that
+    satisfies at least one of its provided type constraints.
+
+    Example:
+
+    ```mlir
+    irdlssa.dialect cmath {
+      irdlssa.type complex {
+        %0 = irdlssa.is_type : i32
+        %1 = irdlssa.is_type : i64
+        %2 = irdlssa.is_type : f32
+        %3 = irdlssa.is_type : f64
+        %4 = irdlssa.any_of(%0, %1, %2, %3)
+        irdlssa.parameters(%4)
+      }
+    }
+    ```
+
+    The above program defines a type `complex` inside the dialect `cmath` that
+    can has one type parameter that can be either `i32`, `i64`, `f32` or `f32`.
+  }];
+
+  let arguments = (ins Variadic<IRDL_SSA_ConstraintType>:$args);
+  let results = (outs IRDL_SSA_ConstraintType:$output);
+  let assemblyFormat = [{ `(` $args `)` attr-dict }];
+}
 
 #endif // DYN_DIALECT_IRDL_SSA_IR_IRDLSSAOPS

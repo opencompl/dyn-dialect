@@ -4,10 +4,27 @@ module {
   irdlssa.dialect cmath {
 
     irdlssa.type complex {
-        %0 = irdlssa.is_type : i32
-        %1 = irdlssa.is_type : i64
-        irdlssa.parameters(%0, %1)
+      %0 = irdlssa.is_type : f32
+      %1 = irdlssa.is_type : f64
+      %2 = irdlssa.any_of(%0, %1)
+      irdlssa.parameters(%2)
     }
-    
+
+    irdlssa.operation norm {
+      %0 = irdlssa.any_type
+      %1 = irdlssa.parametric_type : "cmath.complex"<%0>
+      irdlssa.operands(%1)
+      irdlssa.results(%0)
+    }
+
+    irdlssa.operation mul {
+      %0 = irdlssa.is_type : f32
+      %1 = irdlssa.is_type : f64
+      %2 = irdlssa.any_of(%0, %1)
+      %3 = irdlssa.parametric_type : "cmath.complex"<%2>
+      irdlssa.operands(%3, %3)
+      irdlssa.results(%3)
+    }
+
   }
 }
