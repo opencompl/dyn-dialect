@@ -231,6 +231,9 @@ LogicalResult mlir::MlirOptMain(int argc, char **argv, llvm::StringRef toolName,
   static cl::opt<std::string> irdlFile("irdl-file", cl::desc("IRDL file"),
                                        cl::value_desc("filename"));
 
+  static cl::opt<std::string> irdlssaFile(
+      "irdlssa-file", cl::desc("IRDL-SSA file"), cl::value_desc("filename"));
+
   InitLLVM y(argc, argv);
 
   // Register any command line options.
@@ -254,6 +257,9 @@ LogicalResult mlir::MlirOptMain(int argc, char **argv, llvm::StringRef toolName,
   cl::ParseCommandLineOptions(argc, argv, helpHeader);
 
   if (irdlFile != "" && failed(registerIRDL(irdlFile, &context)))
+    return failure();
+
+  if (irdlssaFile != "" && failed(registerIRDLSSA(irdlssaFile, &context)))
     return failure();
 
   if (showDialects) {

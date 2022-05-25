@@ -15,6 +15,7 @@
 
 include "IRDLSSA.td"
 include "IRDLSSATypes.td"
+include "IRDLSSAInterfaces.td"
 
 class IRDL_SSA_Op<string mnemonic, list<Trait> traits = []>
     : Op<IRDL_SSA_Dialect, mnemonic, traits> {
@@ -214,7 +215,11 @@ def IRDL_SSA_OperationOp : IRDL_SSA_Op<"operation",
 // IRDL-SSA Constraint operations
 //===----------------------------------------------------------------------===//
 
-def IRDL_SSA_IsType : IRDL_SSA_Op<"is_type", [ParentOneOf<["SSA_TypeOp", "SSA_OperationOp"]>]> {
+class IRDL_SSA_ConstraintOp<string mnemonic, list<Trait> traits = []>
+    : IRDL_SSA_Op<mnemonic, [VerifyConstraintInterface, DeclareOpInterfaceMethods<VerifyConstraintInterface>] # traits> {
+}
+
+def IRDL_SSA_IsType : IRDL_SSA_ConstraintOp<"is_type", [ParentOneOf<["SSA_TypeOp", "SSA_OperationOp"]>]> {
   let summary = "Constraints to a specific type";
   let description = [{
     `irdlssa.is_type` defines a constraint that only accepts a specific type.
@@ -234,12 +239,12 @@ def IRDL_SSA_IsType : IRDL_SSA_Op<"is_type", [ParentOneOf<["SSA_TypeOp", "SSA_Op
     can only have `i32` as its parameter.
   }];
 
-  let arguments = (ins AnyAttrOf<[TypeAttr, StrAttr]>:$type);
+  let arguments = (ins TypeAttr:$type);
   let results = (outs IRDL_SSA_ConstraintType:$output);
   let assemblyFormat = [{ `:` $type attr-dict }];
 }
 
-def IRDL_SSA_ParametricType : IRDL_SSA_Op<"parametric_type", [ParentOneOf<["SSA_TypeOp", "SSA_OperationOp"]>]> {
+def IRDL_SSA_ParametricType : IRDL_SSA_ConstraintOp<"parametric_type", [ParentOneOf<["SSA_TypeOp", "SSA_OperationOp"]>]> {
   let summary = "Constraints to a specific instanciated type";
   let description = [{
     `irdlssa.parametric_type` defines a constraint that only accepts an instance
@@ -264,12 +269,12 @@ def IRDL_SSA_ParametricType : IRDL_SSA_Op<"parametric_type", [ParentOneOf<["SSA_
     for any `T` takes a `cmath.complex` with parameter `T` and returns a `T`.
   }];
 
-  let arguments = (ins AnyAttrOf<[TypeAttr, StrAttr]>:$type, Variadic<IRDL_SSA_ConstraintType>:$args);
+  let arguments = (ins StrAttr:$type, Variadic<IRDL_SSA_ConstraintType>:$args);
   let results = (outs IRDL_SSA_ConstraintType:$output);
-  let assemblyFormat = [{ `:` $type `<` $args `>` attr-dict }];
+  let assemblyFormat = [{ `:` $type (`<` $args^ `>`)? attr-dict }];
 }
 
-def IRDL_SSA_AnyType : IRDL_SSA_Op<"any_type", [ParentOneOf<["SSA_TypeOp", "SSA_OperationOp"]>]> {
+def IRDL_SSA_AnyType : IRDL_SSA_ConstraintOp<"any_type", [ParentOneOf<["SSA_TypeOp", "SSA_OperationOp"]>]> {
   let summary = "Constraints to any type";
   let description = [{
     `irdlssa.any_type` defines a constraint that accepts any type.
@@ -293,7 +298,7 @@ def IRDL_SSA_AnyType : IRDL_SSA_Op<"any_type", [ParentOneOf<["SSA_TypeOp", "SSA_
   let assemblyFormat = [{ attr-dict }];
 }
 
-def IRDL_SSA_AnyOf : IRDL_SSA_Op<"any_of", [ParentOneOf<["SSA_TypeOp", "SSA_OperationOp"]>]> {
+def IRDL_SSA_AnyOf : IRDL_SSA_ConstraintOp<"any_of", [ParentOneOf<["SSA_TypeOp", "SSA_OperationOp"]>]> {
   let summary = "Constraints to any of the provided types";
   let description = [{
     `irdlssa.is_type` defines a constraint that accepts any type that

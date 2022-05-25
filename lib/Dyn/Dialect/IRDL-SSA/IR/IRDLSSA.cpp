@@ -6,20 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Dyn/Dialect/IRDL/TypeWrapper.h"
-#include "Dyn/Dialect/IRDL-SSA/IRDLSSARegistration.h"
 #include "Dyn/Dialect/IRDL-SSA/IR/IRDLSSA.h"
+#include "Dyn/Dialect/IRDL-SSA/IRDLSSARegistration.h"
+#include "Dyn/Dialect/IRDL/TypeWrapper.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/ExtensibleDialect.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/Casting.h"
-#include "mlir/IR/DialectImplementation.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/Support/Casting.h"
 
 using namespace mlir;
 using namespace mlir::irdlssa;
@@ -43,7 +43,7 @@ void IRDLSSADialect::initialize() {
 #define GET_TYPEDEF_LIST
 #include "Dyn/Dialect/IRDL-SSA/IR/IRDLSSATypesGen.cpp.inc"
       >();
-  //registerAttributes();
+  // registerAttributes();
 }
 
 void IRDLSSADialect::addTypeWrapper(std::unique_ptr<TypeWrapper> wrapper) {
@@ -99,13 +99,11 @@ static void printSingleBlockRegion(OpAsmPrinter &p, Operation *op,
   }
 }
 
-//===----------------------------------------------------------------------===//
-// irdl::DialectOp
-//===----------------------------------------------------------------------===//
-
 LogicalResult SSA_DialectOp::verify() {
   return success(Dialect::isValidNamespace(name()));
 }
+
+#include "Dyn/Dialect/IRDL-SSA/IR/IRDLSSAInterfaces.cpp.inc"
 
 #define GET_TYPEDEF_CLASSES
 #include "Dyn/Dialect/IRDL-SSA/IR/IRDLSSATypesGen.cpp.inc"

@@ -1,11 +1,11 @@
 add_mlir_dialect(IRDLSSA irdlssa)
 
-# Add IRDL-SSA attributes
-#set(LLVM_TARGET_DEFINITIONS IRDLSSAAttributes.td)
-#mlir_tablegen(IRDLSSAAttributes.h.inc -gen-attrdef-decls)
-#mlir_tablegen(IRDLSSAAttributes.cpp.inc -gen-attrdef-defs)
-#add_public_tablegen_target(MLIRIRDLSSAAttributesIncGen)
-#add_dependencies(mlir-generic-headers MLIRIRDLSSAAttributesIncGen)
+# Add IRDL-SSA interfaces
+set(LLVM_TARGET_DEFINITIONS IRDLSSAInterfaces.td)
+mlir_tablegen(IRDLSSAInterfaces.h.inc -gen-op-interface-decls)
+mlir_tablegen(IRDLSSAInterfaces.cpp.inc -gen-op-interface-defs)
+add_public_tablegen_target(MLIRIRDLSSAInterfacesIncGen)
+add_dependencies(mlir-generic-headers MLIRIRDLSSAInterfacesIncGen)
 
 # Add IRDL-SSA operations
 set(LLVM_TARGET_DEFINITIONS IRDLSSAOps.td)

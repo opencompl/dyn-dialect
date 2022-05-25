@@ -23,6 +23,9 @@ class MLIRContext;
 /// Register dialects defined in an IRDL file to a dynamic context.
 LogicalResult registerIRDL(StringRef irdlFile, MLIRContext *ctx);
 
+/// Register dialects defined in an IRDL-SSA file to a dynamic context.
+LogicalResult registerIRDLSSA(StringRef irdlssaFile, MLIRContext *ctx);
+
 } // namespace mlir
 
 #endif // DYNOPT_REGISTER_IRDL_H

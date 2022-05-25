@@ -15,11 +15,14 @@
 
 #include "Dyn/Dialect/IRDL/IR/IRDLTraits.h"
 #include "Dyn/Dialect/IRDL/TypeWrapper.h"
+#include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Dialect.h"
+#include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/ExtensibleDialect.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/SymbolTable.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include <memory>
 
 // Forward declaration.
@@ -35,6 +38,8 @@ class OpDefAttr;
 //===----------------------------------------------------------------------===//
 
 #include "Dyn/Dialect/IRDL-SSA/IR/IRDLSSADialect.h.inc"
+
+#include "IRDLSSAInterfaces.h"
 
 #define GET_TYPEDEF_CLASSES
 #include "Dyn/Dialect/IRDL-SSA/IR/IRDLSSATypesGen.h.inc"
