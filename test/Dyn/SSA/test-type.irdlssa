@@ -1,0 +1,33 @@
+// RUN: dyn-opt %s | dyn-opt | FileCheck %s
+
+module {
+  // CHECK-LABEL: irdlssa.dialect testd {
+  irdlssa.dialect testd {
+    // CHECK: irdlssa.type singleton
+    irdlssa.type singleton
+
+    // CHECK: irdlssa.type parametrized {
+    // CHECK:   %0 = irdlssa.any_type
+    // CHECK:   %1 = irdlssa.is_type : i32
+    // CHECK:   %2 = irdlssa.is_type : i64
+    // CHECK:   %3 = irdlssa.any_of(%1, %2)
+    // CHECK:   irdlssa.parameters(%0, %3)
+    // CHECK: }
+    irdlssa.type parametrized {
+      %0 = irdlssa.any_type
+      %1 = irdlssa.is_type : i32
+      %2 = irdlssa.is_type : i64
+      %3 = irdlssa.any_of(%1, %2)
+      irdlssa.parameters(%0, %3)
+    }
+
+    // CHECK: irdlssa.operation any {
+    // CHECK:   %0 = irdlssa.any_type
+    // CHECK:   irdlssa.results(%0)
+    // CHECK: }
+    irdlssa.operation any {
+      %0 = irdlssa.any_type
+      irdlssa.results(%0)
+    }
+  }
+}

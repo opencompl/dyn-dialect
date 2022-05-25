@@ -1,8 +1,15 @@
 // RUN: dyn-opt %s | dyn-opt | FileCheck %s
 
 module {
+  // CHECK-LABEL: irdlssa.dialect cmath {
   irdlssa.dialect cmath {
 
+    // CHECK: irdlssa.type complex {
+    // CHECK:   %0 = irdlssa.is_type : f32
+    // CHECK:   %1 = irdlssa.is_type : f64
+    // CHECK:   %2 = irdlssa.any_of(%0, %1)
+    // CHECK:   irdlssa.parameters(%2)
+    // CHECK: }
     irdlssa.type complex {
       %0 = irdlssa.is_type : f32
       %1 = irdlssa.is_type : f64
@@ -10,6 +17,12 @@ module {
       irdlssa.parameters(%2)
     }
 
+    // CHECK: irdlssa.operation norm {
+    // CHECK:   %0 = irdlssa.any_type
+    // CHECK:   %1 = irdlssa.parametric_type : "cmath.complex"<%0>
+    // CHECK:   irdlssa.operands(%1)
+    // CHECK:   irdlssa.results(%0)
+    // CHECK: }
     irdlssa.operation norm {
       %0 = irdlssa.any_type
       %1 = irdlssa.parametric_type : "cmath.complex"<%0>
@@ -17,6 +30,14 @@ module {
       irdlssa.results(%0)
     }
 
+    // CHECK: irdlssa.operation mul {
+    // CHECK:   %0 = irdlssa.is_type : f32
+    // CHECK:   %1 = irdlssa.is_type : f64
+    // CHECK:   %2 = irdlssa.any_of(%0, %1)
+    // CHECK:   %3 = irdlssa.parametric_type : "cmath.complex"<%2>
+    // CHECK:   irdlssa.operands(%3, %3)
+    // CHECK:   irdlssa.results(%3)
+    // CHECK: }
     irdlssa.operation mul {
       %0 = irdlssa.is_type : f32
       %1 = irdlssa.is_type : f64
