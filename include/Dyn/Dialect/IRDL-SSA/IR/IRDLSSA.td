@@ -60,8 +60,8 @@ def IRDL_SSA_Dialect : Dialect {
     a `mul` operation. Both express constraints over their parameters using
     SSA constraint operations. Informally, one can see those SSA values as
     constraint variables that evaluate to a single type at constraint
-    evaluation. For example, the result of an `irdlssa.any_of` (such as `%2`
-    in the `mul` operation) will collapse into either `f32` or `f64` for the
+    evaluation. For example, the result of the `irdlssa.any_of` stored in `%2`
+    in the `mul` operation will collapse into either `f32` or `f64` for the
     entirety of this instance of `mul` constraint evaluation. As such,
     both operands and the result of `mul` must be of equal type (and not just
     satisfy the same constraint).
