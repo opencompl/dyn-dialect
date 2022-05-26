@@ -107,7 +107,8 @@ LogicalResult verifyOpDefConstraints(
 namespace mlir {
 namespace irdlssa {
 /// Register an operation represented by a `irdl.operation` operation.
-void registerOperation(LogicalResult &res, ExtensibleDialect *dialect, SSA_OperationOp op) {
+void registerOperation(LogicalResult &res, ExtensibleDialect *dialect,
+                       SSA_OperationOp op) {
   // Resolve SSA values to verifier constraint slots
   SmallVector<Value> constrToValue;
   for (auto &op : op->getRegion(0).getOps()) {
@@ -187,7 +188,8 @@ void registerOperation(LogicalResult &res, ExtensibleDialect *dialect, SSA_Opera
 } // namespace irdlssa
 } // namespace mlir
 
-static void registerType(LogicalResult &res, ExtensibleDialect *dialect, SSA_TypeOp op) {
+static void registerType(LogicalResult &res, ExtensibleDialect *dialect,
+                         SSA_TypeOp op) {
   // Resolve SSA values to verifier constraint slots
   SmallVector<Value> constrToValue;
   for (auto &op : op->getRegion(0).getOps()) {
@@ -251,8 +253,9 @@ static void registerDialect(LogicalResult &res, SSA_DialectOp op) {
   assert(dialect && "extensible dialect should have been registered.");
 
   op.walk([&](SSA_TypeOp op) { registerType(res, dialect, op); });
-  if (failed(res)) return;
-  
+  if (failed(res))
+    return;
+
   op.walk([&](SSA_OperationOp op) { registerOperation(res, dialect, op); });
 }
 
