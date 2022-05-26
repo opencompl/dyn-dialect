@@ -107,7 +107,7 @@ LogicalResult verifyOpDefConstraints(
 namespace mlir {
 namespace irdlssa {
 /// Register an operation represented by a `irdl.operation` operation.
-void registerOperation(ExtensibleDialect *dialect, SSA_OperationOp op) {
+void registerOperation(LogicalResult &res, ExtensibleDialect *dialect, SSA_OperationOp op) {
   // Resolve SSA values to verifier constraint slots
   SmallVector<Value> constrToValue;
   for (auto &op : op->getRegion(0).getOps()) {
@@ -123,7 +123,12 @@ void registerOperation(ExtensibleDialect *dialect, SSA_OperationOp op) {
   for (Value v : constrToValue) {
     VerifyConstraintInterface op =
         llvm::cast<VerifyConstraintInterface>(v.getDefiningOp());
-    constraints.push_back(op.getVerifier(constrToValue));
+    auto verifier = op.getVerifier(constrToValue);
+    if (!verifier.hasValue()) {
+      res = failure();
+      return;
+    }
+    constraints.push_back(std::move(*verifier));
   }
 
   SmallVector<size_t> operandConstraints;
@@ -182,7 +187,7 @@ void registerOperation(ExtensibleDialect *dialect, SSA_OperationOp op) {
 } // namespace irdlssa
 } // namespace mlir
 
-static void registerType(ExtensibleDialect *dialect, SSA_TypeOp op) {
+static void registerType(LogicalResult &res, ExtensibleDialect *dialect, SSA_TypeOp op) {
   // Resolve SSA values to verifier constraint slots
   SmallVector<Value> constrToValue;
   for (auto &op : op->getRegion(0).getOps()) {
@@ -198,7 +203,12 @@ static void registerType(ExtensibleDialect *dialect, SSA_TypeOp op) {
   for (Value v : constrToValue) {
     VerifyConstraintInterface op =
         llvm::cast<VerifyConstraintInterface>(v.getDefiningOp());
-    constraints.push_back(op.getVerifier(constrToValue));
+    auto verifier = op.getVerifier(constrToValue);
+    if (!verifier.hasValue()) {
+      res = failure();
+      return;
+    }
+    constraints.push_back(std::move(*verifier));
   }
 
   // Gather which constraint slots correspond to parameter constraints
@@ -230,7 +240,7 @@ static void registerType(ExtensibleDialect *dialect, SSA_TypeOp op) {
   dialect->registerDynamicType(std::move(type));
 }
 
-static void registerDialect(SSA_DialectOp op) {
+static void registerDialect(LogicalResult &res, SSA_DialectOp op) {
   auto *ctx = op.getContext();
   auto dialectName = op.name();
 
@@ -240,14 +250,18 @@ static void registerDialect(SSA_DialectOp op) {
       llvm::dyn_cast<ExtensibleDialect>(ctx->getLoadedDialect(dialectName));
   assert(dialect && "extensible dialect should have been registered.");
 
-  op.walk([&](SSA_TypeOp op) { registerType(dialect, op); });
-  op.walk([&](SSA_OperationOp op) { registerOperation(dialect, op); });
+  op.walk([&](SSA_TypeOp op) { registerType(res, dialect, op); });
+  if (failed(res)) return;
+  
+  op.walk([&](SSA_OperationOp op) { registerOperation(res, dialect, op); });
 }
 
 namespace mlir {
 namespace irdlssa {
-void registerDialects(ModuleOp op) {
-  op.walk([](SSA_DialectOp dialect) { registerDialect(dialect); });
+LogicalResult registerDialects(ModuleOp op) {
+  LogicalResult res = success();
+  op.walk([&](SSA_DialectOp dialect) { registerDialect(res, dialect); });
+  return res;
 }
 } // namespace irdlssa
 } // namespace mlir

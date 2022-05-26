@@ -80,6 +80,7 @@ LogicalResult ParametricTypeConstraint::verifyType(
   auto params = this->expectedType->getParameters(type);
   // Since we do not have variadic parameters yet, we should have the
   // exact number of constraints.
+  // TODO: Handle this gracefully upstream
   assert(params.size() == this->constraints.size() &&
          "unexpected number of parameters in parameter type constraint");
   for (size_t i = 0; i < params.size(); i++) {
@@ -106,6 +107,7 @@ LogicalResult DynParametricTypeConstraint::verifyType(
 
   // Since we do not have variadic parameters yet, we should have the
   // exact number of constraints.
+  // TODO: Handle this gracefully upstream
   assert(dynType.getParams().size() == this->constraints.size() &&
          "unexpected number of parameters in parameter type constraint");
   auto params = dynType.getParams();

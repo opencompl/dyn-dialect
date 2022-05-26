@@ -13,9 +13,9 @@
 using namespace mlir;
 using namespace mlir::irdlssa;
 
-std::unique_ptr<TypeConstraint>
+llvm::Optional<std::unique_ptr<TypeConstraint>>
 SSA_IsType::getVerifier(SmallVector<Value> const &valueToConstr) {
-  return std::make_unique<IsTypeConstraint>(this->type());
+  return {std::make_unique<IsTypeConstraint>(this->type())};
 }
 
 DynamicTypeDefinition *findDynamicType(SSA_ParametricType &op, StringRef type) {
@@ -34,7 +34,7 @@ DynamicTypeDefinition *findDynamicType(SSA_ParametricType &op, StringRef type) {
   return extensibleDialect->lookupTypeDefinition(typeName);
 }
 
-std::unique_ptr<TypeConstraint>
+llvm::Optional<std::unique_ptr<TypeConstraint>>
 SSA_ParametricType::getVerifier(SmallVector<Value> const &valueToConstr) {
   SmallVector<size_t> constraints;
   for (Value arg : this->args()) {
@@ -48,8 +48,8 @@ SSA_ParametricType::getVerifier(SmallVector<Value> const &valueToConstr) {
 
   auto typeName = this->type();
   if (DynamicTypeDefinition *dynType = findDynamicType(*this, typeName)) {
-    return std::make_unique<DynParametricTypeConstraint>(
-        dynType, std::move(constraints));
+    return {std::make_unique<DynParametricTypeConstraint>(
+        dynType, std::move(constraints))};
   } else {
     Dialect *irdlssaDialect = this->getContext()->getLoadedDialect("irdlssa");
     assert(irdlssaDialect && "irdlssa is not registered");
@@ -59,12 +59,18 @@ SSA_ParametricType::getVerifier(SmallVector<Value> const &valueToConstr) {
 
     irdl::TypeWrapper *type = irdlssa->getTypeWrapper(typeName);
 
-    return std::make_unique<ParametricTypeConstraint>(type,
-                                                      std::move(constraints));
+    if (type == nullptr) {
+      this->emitError().append("type '", typeName,
+                               "' is not declared at that point");
+      return {};
+    }
+
+    return {std::make_unique<ParametricTypeConstraint>(type,
+                                                       std::move(constraints))};
   }
 }
 
-std::unique_ptr<TypeConstraint>
+llvm::Optional<std::unique_ptr<TypeConstraint>>
 SSA_AnyOf::getVerifier(SmallVector<Value> const &valueToConstr) {
   SmallVector<size_t> constraints;
   for (Value arg : this->args()) {
@@ -76,10 +82,10 @@ SSA_AnyOf::getVerifier(SmallVector<Value> const &valueToConstr) {
     }
   }
 
-  return std::make_unique<AnyOfTypeConstraint>(constraints);
+  return {std::make_unique<AnyOfTypeConstraint>(constraints)};
 }
 
-std::unique_ptr<TypeConstraint>
+llvm::Optional<std::unique_ptr<TypeConstraint>>
 SSA_AnyType::getVerifier(SmallVector<Value> const &valueToConstr) {
-  return std::make_unique<AnyTypeConstraint>();
+  return {std::make_unique<AnyTypeConstraint>()};
 }

@@ -21,7 +21,7 @@ namespace mlir {
 namespace irdlssa {
 
 /// Register all the dialects in a module.
-void registerDialects(ModuleOp op);
+LogicalResult registerDialects(ModuleOp op);
 
 } // namespace irdlssa
 } // namespace mlir

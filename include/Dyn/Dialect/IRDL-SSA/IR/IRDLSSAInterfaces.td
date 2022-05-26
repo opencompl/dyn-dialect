@@ -25,7 +25,7 @@ def VerifyConstraintInterface : OpInterface<"VerifyConstraintInterface"> {
   let methods = [
     InterfaceMethod<
       "Obtains an instance of a constraint verifier for the associated operation.",
-      "std::unique_ptr<::mlir::irdlssa::TypeConstraint>", "getVerifier",
+      "llvm::Optional<std::unique_ptr<::mlir::irdlssa::TypeConstraint>>", "getVerifier",
       (ins "mlir::SmallVector<Value> const&":$valueRes)
     >
   ];

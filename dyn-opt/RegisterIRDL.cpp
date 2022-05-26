@@ -88,7 +88,12 @@ LogicalResult mlir::registerIRDLSSA(StringRef irdlssaFile, MLIRContext *ctx) {
 
   // Parse the input file and reset the context threading state.
   auto module(parseSourceFile<ModuleOp>(sourceMgr, ctx));
-  irdlssa::registerDialects(module.get());
+  LogicalResult registrationResult = irdlssa::registerDialects(module.get());
   ctx->enableMultithreading(wasThreadingEnabled);
+
+  if (failed(registrationResult)) {
+    return failure();
+  }
+
   return failure(!module);
 }
