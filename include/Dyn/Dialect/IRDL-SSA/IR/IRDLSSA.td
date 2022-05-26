@@ -96,10 +96,6 @@ def IRDL_SSA_Dialect : Dialect {
     /// Add a type wrapper to IRDL.
     void addTypeWrapper(std::unique_ptr<::mlir::irdl::TypeWrapper> wrapper);
 
-    /// Register the attributes used by default by IRDL.
-    //void registerAttributes();
-    /// Register the attributes used by standard interfaces wrappers in IRDL.
-    //void registerStandardInterfaceAttributes();
     /// Wrapper around types that can be used in IRDL.
     llvm::StringMap<std::unique_ptr<::mlir::irdl::TypeWrapper>> typeWrappers;
   }];
