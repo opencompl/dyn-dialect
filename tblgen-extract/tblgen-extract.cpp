@@ -10,7 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Dyn/Dialect/IRDL/IR/IRDL.h"
 #include "mlir/IR/Attributes.h"
+#include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Dialect.h"
@@ -29,7 +31,7 @@
 
 using namespace llvm;
 using namespace mlir;
-using namespace mlir::tblgen;
+using namespace irdl;
 
 std::vector<Record *> getOpDefinitions(const RecordKeeper &recordKeeper) {
   return recordKeeper.getAllDerivedDefinitions("Op");
@@ -48,14 +50,45 @@ bool MlirTableGenStatsMain(raw_ostream &os, RecordKeeper &records) {
   std::vector<Record *> typeDefs = getTypeDefinitions(records);
   std::vector<Record *> attrDefs = getAttrDefinitions(records);
 
+  // Create the context, and the main module operation.
   MLIRContext ctx;
-  OwningOpRef<ModuleOp> module(ModuleOp::create(UnknownLoc::get(&ctx)));
+  ctx.getOrLoadDialect<IRDLDialect>();
+  auto unknownLoc = UnknownLoc::get(&ctx);
+  OwningOpRef<ModuleOp> module(ModuleOp::create(unknownLoc));
 
+  // Create the builder, and set its insertion point in the module.
+  OpBuilder builder(&ctx);
+  auto &moduleBlock = module->getRegion().getBlocks().front();
+  builder.setInsertionPoint(&moduleBlock, moduleBlock.begin());
+
+  // Retrieve the dialect name.
+  assert(opDefs.size() > 0);
+  auto dialectName = tblgen::Operator(opDefs[0]).getDialectName();
+
+  // Create the IDRL dialect operation, and set the insertion point in it.
+  auto dialect = builder.create<irdl::DialectOp>(
+      unknownLoc, StringAttr::get(&ctx, dialectName));
+  auto &dialectBlock = dialect.body().emplaceBlock();
+  builder.setInsertionPoint(&dialectBlock, dialectBlock.begin());
+
+  // Walk all TableGen operations, and create new IRDL operations.
   for (auto rec : opDefs) {
-    rec->dump();
+    // Create the operation using the TableGen name.
+    auto tblgenOp = tblgen::Operator(rec);
+    auto op = builder.create<irdl::OperationOp>(
+        unknownLoc, StringAttr::get(&ctx, tblgenOp.getOperationName()));
+
+    // Add the block in the region
+    auto &opBlock = op.body().emplaceBlock();
+    builder.setInsertionPoint(&opBlock, opBlock.begin());
+
+    // Put the insertion point after the created operation.
+    builder.setInsertionPointAfter(op);
+    assert(succeeded(op.verify()));
   }
 
-  module->dump();
+  module->print(llvm::errs());
+
   return false;
 }
 
