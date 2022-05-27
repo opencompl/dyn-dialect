@@ -10,6 +10,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/IR/Attributes.h"
+#include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/Diagnostics.h"
+#include "mlir/IR/Dialect.h"
+#include "mlir/IR/MLIRContext.h"
 #include "mlir/TableGen/AttrOrTypeDef.h"
 #include "mlir/TableGen/GenInfo.h"
 #include "mlir/TableGen/GenNameParser.h"
@@ -43,6 +48,14 @@ bool MlirTableGenStatsMain(raw_ostream &os, RecordKeeper &records) {
   std::vector<Record *> typeDefs = getTypeDefinitions(records);
   std::vector<Record *> attrDefs = getAttrDefinitions(records);
 
+  MLIRContext ctx;
+  OwningOpRef<ModuleOp> module(ModuleOp::create(UnknownLoc::get(&ctx)));
+
+  for (auto rec : opDefs) {
+    rec->dump();
+  }
+
+  module->dump();
   return false;
 }
 
