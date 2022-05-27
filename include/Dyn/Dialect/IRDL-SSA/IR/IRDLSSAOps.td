@@ -248,7 +248,7 @@ def IRDL_SSA_ParametricType : IRDL_SSA_ConstraintOp<"parametric_type", [ParentOn
   let summary = "Constraints to a specific instanciated type";
   let description = [{
     `irdlssa.parametric_type` defines a constraint that only accepts an instance
-    of a specific type. The parameters of the type are other type constraints.
+    of a specific type. The given operands are the type parameter constraints.
 
     Example:
 

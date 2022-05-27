@@ -10,12 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-//#include "Dyn/Dialect/IRDL/IRDLRegistration.h"
 #include "Dyn/Dialect/IRDL-SSA/IR/IRDLSSA.h"
 #include "Dyn/Dialect/IRDL-SSA/IR/IRDLSSAInterfaces.h"
-//#include "Dyn/Dialect/IRDL/IR/IRDLAttributes.h"
-//#include "Dyn/Dialect/IRDL/IR/IRDLInterfaces.h"
-//#include "Dyn/Dialect/IRDL/TypeConstraint.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/ExtensibleDialect.h"
 #include "mlir/Support/LogicalResult.h"

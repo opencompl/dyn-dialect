@@ -27,12 +27,7 @@ LogicalResult ConstraintVerifier::verifyType(
     Optional<function_ref<InFlightDiagnostic()>> emitError, Type type,
     size_t variable) {
 
-  if (variable >= this->constraints.size()) {
-    if (emitError)
-      return (*emitError)().append("invalid constraint variable ", variable);
-    else
-      return failure();
-  }
+  assert(variable < this->constraints.size() && "invalid constraint variable");
 
   if (this->assigned[variable].hasValue()) {
     if (type == this->assigned[variable].getValue())
@@ -42,8 +37,7 @@ LogicalResult ConstraintVerifier::verifyType(
         return (*emitError)().append("expected type ",
                                      this->assigned[variable].getValue(),
                                      " but got ", type);
-      else
-        return failure();
+      return failure();
     }
   }
 
