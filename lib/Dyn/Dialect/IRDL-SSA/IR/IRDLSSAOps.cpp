@@ -34,6 +34,16 @@ DynamicTypeDefinition *findDynamicType(SSA_ParametricType &op, StringRef type) {
   return extensibleDialect->lookupTypeDefinition(typeName);
 }
 
+irdl::TypeWrapper *findTypeWrapper(SSA_ParametricType &op, StringRef type) {
+  Dialect *irdlssaDialect = op.getContext()->getLoadedDialect("irdlssa");
+  assert(irdlssaDialect && "irdlssa is not registered");
+
+  IRDLSSADialect *irdlssa = dyn_cast<IRDLSSADialect>(irdlssaDialect);
+  assert(irdlssa && "irdlssa dialect is not IRDL-SSA");
+
+  return irdlssa->getTypeWrapper(type);
+}
+
 llvm::Optional<std::unique_ptr<TypeConstraint>>
 SSA_ParametricType::getVerifier(SmallVector<Value> const &valueToConstr) {
   SmallVector<size_t> constraints;
@@ -47,26 +57,16 @@ SSA_ParametricType::getVerifier(SmallVector<Value> const &valueToConstr) {
   }
 
   auto typeName = this->type();
-  if (DynamicTypeDefinition *dynType = findDynamicType(*this, typeName)) {
+  if (DynamicTypeDefinition *type = findDynamicType(*this, typeName)) {
     return {std::make_unique<DynParametricTypeConstraint>(
-        dynType, std::move(constraints))};
-  } else {
-    Dialect *irdlssaDialect = this->getContext()->getLoadedDialect("irdlssa");
-    assert(irdlssaDialect && "irdlssa is not registered");
-
-    IRDLSSADialect *irdlssa = dyn_cast<IRDLSSADialect>(irdlssaDialect);
-    assert(irdlssa && "irdlssa dialect is not IRDL-SSA");
-
-    irdl::TypeWrapper *type = irdlssa->getTypeWrapper(typeName);
-
-    if (type == nullptr) {
-      this->emitError().append("type '", typeName,
-                               "' is not declared at that point");
-      return {};
-    }
-
+        type, std::move(constraints))};
+  } else if (irdl::TypeWrapper *type = findTypeWrapper(*this, typeName)) {
     return {std::make_unique<ParametricTypeConstraint>(type,
                                                        std::move(constraints))};
+  } else {
+    this->emitError().append("type '", typeName,
+                             "' is not declared at that point");
+    return {};
   }
 }
 
