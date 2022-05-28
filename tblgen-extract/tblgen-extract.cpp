@@ -87,7 +87,7 @@ bool MlirTableGenStatsMain(raw_ostream &os, RecordKeeper &records) {
     assert(succeeded(op.verify()));
   }
 
-  module->print(llvm::errs());
+  module->print(os);
 
   return false;
 }
