@@ -247,8 +247,9 @@ def IRDL_SSA_IsType : IRDL_SSA_ConstraintOp<"is_type", [ParentOneOf<["SSA_TypeOp
 def IRDL_SSA_ParametricType : IRDL_SSA_ConstraintOp<"parametric_type", [ParentOneOf<["SSA_TypeOp", "SSA_OperationOp"]>]> {
   let summary = "Constraints to a specific instanciated type";
   let description = [{
-    `irdlssa.parametric_type` defines a constraint that only accepts an instance
-    of a specific type. The given operands are the type parameter constraints.
+    `irdlssa.parametric_type` defines a constraint that accepts either a type defined
+    in IRDL-SSA or a type wrapper. If the requested type is parametric, it will
+    additionally take as operands constraints on its type arguments.
 
     Example:
 
