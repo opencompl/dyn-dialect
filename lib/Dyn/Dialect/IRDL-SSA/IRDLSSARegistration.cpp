@@ -242,7 +242,7 @@ static void registerDialect(LogicalResult &res, SSA_DialectOp op) {
   auto *ctx = op.getContext();
   auto dialectName = op.name();
 
-  ctx->createDynamicDialect(dialectName);
+  ctx->getOrLoadDynamicDialect(dialectName, [](DynamicDialect *dialect) {});
 
   auto *dialect =
       llvm::dyn_cast<ExtensibleDialect>(ctx->getLoadedDialect(dialectName));
