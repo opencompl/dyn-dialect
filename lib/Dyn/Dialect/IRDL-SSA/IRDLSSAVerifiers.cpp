@@ -72,11 +72,14 @@ LogicalResult ParametricTypeConstraint::verifyType(
   }
 
   auto params = this->expectedType->getParameters(type);
-  // Since we do not have variadic parameters yet, we should have the
-  // exact number of constraints.
-  // TODO: Handle this gracefully upstream
-  assert(params.size() == this->constraints.size() &&
-         "unexpected number of parameters in parameter type constraint");
+  if (params.size() != this->constraints.size()) {
+    if (emitError)
+      (*emitError)().append("type '", this->expectedType->getName(),
+                            "' expects ", params.size(), " but got ",
+                            this->constraints.size());
+    return failure();
+  }
+
   for (size_t i = 0; i < params.size(); i++) {
     auto paramType = params[i].cast<TypeAttr>().getValue();
     if (failed(context.verifyType(emitError, paramType, this->constraints[i])))
@@ -99,12 +102,15 @@ LogicalResult DynParametricTypeConstraint::verifyType(
     return failure();
   }
 
-  // Since we do not have variadic parameters yet, we should have the
-  // exact number of constraints.
-  // TODO: Handle this gracefully upstream
-  assert(dynType.getParams().size() == this->constraints.size() &&
-         "unexpected number of parameters in parameter type constraint");
   auto params = dynType.getParams();
+  if (params.size() != this->constraints.size()) {
+    if (emitError)
+      (*emitError)().append("type '", this->expectedType->getName(),
+                            "' expects ", params.size(), " but got ",
+                            this->constraints.size());
+    return failure();
+  }
+
   for (size_t i = 0; i < params.size(); i++) {
     auto paramType = params[i].cast<TypeAttr>().getValue();
     if (failed(context.verifyType(emitError, paramType, this->constraints[i])))
