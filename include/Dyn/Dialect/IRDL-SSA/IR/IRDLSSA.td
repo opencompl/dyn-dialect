@@ -67,6 +67,8 @@ def IRDL_SSA_Dialect : Dialect {
     satisfy the same constraint).
   }];
 
+  let useDefaultTypePrinterParser = 1;
+
   let extraClassDeclaration = [{
   public:
     /// Register new attributes that can be used by IRDL.
@@ -84,13 +86,6 @@ def IRDL_SSA_Dialect : Dialect {
     /// Get a type wrapper with the given name.
     /// Returns nullptr if no type wrapper with that name is found.
     ::mlir::irdl::TypeWrapper* getTypeWrapper(StringRef typeName);
-
-    // TODO: Why are those declarations needed?
-    /// Parse a type registered to this dialect.
-    ::mlir::Type parseType(::mlir::DialectAsmParser &parser) const override;
-    /// Print a type registered to this dialect.
-    void printType(::mlir::Type type,
-                    ::mlir::DialectAsmPrinter &printer) const override;
 
   private:
     /// Add a type wrapper to IRDL.

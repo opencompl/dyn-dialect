@@ -32,6 +32,8 @@ using ArgDefs = ArrayRef<ArgDef>;
 // IRDL dialect.
 //===----------------------------------------------------------------------===//
 
+#include "Dyn/Dialect/IRDL-SSA/IR/IRDLSSA.cpp.inc"
+
 #include "Dyn/Dialect/IRDL-SSA/IR/IRDLSSADialect.cpp.inc"
 
 void IRDLSSADialect::initialize() {
