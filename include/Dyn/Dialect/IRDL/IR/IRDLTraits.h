@@ -11,6 +11,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef DYN_DIALECT_IRDL_IR_IRDLTRAITS_H_
+#define DYN_DIALECT_IRDL_IR_IRDLTRAITS_H_
+
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/Support/LogicalResult.h"
 #include "llvm/Support/Casting.h"
@@ -66,3 +69,5 @@ public:
 };
 } // namespace OpTrait
 } // namespace mlir
+
+#endif // DYN_DIALECT_IRDL_IR_IRDLTRAITS_H_

@@ -35,7 +35,7 @@ AsmPrinter &operator<<(AsmPrinter &printer, TypeWrapper *param) {
 template <> struct FieldParser<TypeWrapper *> {
   static FailureOr<TypeWrapper *> parse(AsmParser &parser) {
     std::string name;
-    parser.parseOptionalKeywordOrString(&name);
+    (void)parser.parseOptionalKeywordOrString(&name);
     auto *irdl = parser.getContext()->getOrLoadDialect<IRDLDialect>();
     auto typeWrapper = irdl->getTypeWrapper(name);
     if (!typeWrapper)
