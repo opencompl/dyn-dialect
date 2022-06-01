@@ -23,6 +23,7 @@
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/SymbolTable.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
 #include <memory>
 
 // Forward declaration.

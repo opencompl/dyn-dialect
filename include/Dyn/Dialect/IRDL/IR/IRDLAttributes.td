@@ -24,7 +24,7 @@ class IRDL_AttrDef<string name, string attrMnemonic, list<Trait> traits = []>
 }
 
 def EqTypeConstraintAttr : IRDL_AttrDef<"EqTypeConstraint", "eq_type_constraint",
-                                        [TypeConstraintAttrInterface]> {
+      [TypeConstraintAttrInterface, DeclareAttrInterfaceMethods<TypeConstraintAttrInterface>]> {
   let summary = "IRDL equality type constraint attribute";
   let description = [{
     Attribute representing the data of an equality type constraint.
@@ -33,30 +33,20 @@ def EqTypeConstraintAttr : IRDL_AttrDef<"EqTypeConstraint", "eq_type_constraint"
   }];
   let parameters = (ins "Type":$type);
   let assemblyFormat = "`<` $type `>`";
-
-  let extraClassDeclaration = [{
-    std::unique_ptr<TypeConstraint> getTypeConstraint(
-        SmallVector<std::pair<StringRef, std::unique_ptr<TypeConstraint>>> const& constr_vars);
-  }];
 }
 
 def AnyTypeConstraintAttr : IRDL_AttrDef<"AnyTypeConstraint", "any_type_constraint",
-                                         [TypeConstraintAttrInterface]> {
+      [TypeConstraintAttrInterface, DeclareAttrInterfaceMethods<TypeConstraintAttrInterface>]> {
   let summary = "Any type constraint attribute";
   let description = [{
     Attribute representing an Any type constraint.
     The associated type constraint is always satisfied.
   }];
   let parameters = (ins);
-
-  let extraClassDeclaration = [{
-    std::unique_ptr<TypeConstraint> getTypeConstraint(
-        SmallVector<std::pair<StringRef, std::unique_ptr<TypeConstraint>>> const& constr_vars);
-  }];
 }
 
 def AnyOfTypeConstraintAttr : IRDL_AttrDef<"AnyOfTypeConstraint", "any_of_type_constraint",
-                                           [TypeConstraintAttrInterface]> {
+      [TypeConstraintAttrInterface, DeclareAttrInterfaceMethods<TypeConstraintAttrInterface>]> {
   let summary = "AnyOf type constraint attribute";
   let description = [{
     Attribute representing an AnyOf type constraint.
@@ -65,15 +55,10 @@ def AnyOfTypeConstraintAttr : IRDL_AttrDef<"AnyOfTypeConstraint", "any_of_type_c
   }];
   let parameters = (ins ArrayRefParameter<"mlir::Attribute", "list of constraints">:$constrs);
   let assemblyFormat = "`<` $constrs `>`";
-
-  let extraClassDeclaration = [{
-    std::unique_ptr<TypeConstraint> getTypeConstraint(
-        SmallVector<std::pair<StringRef, std::unique_ptr<TypeConstraint>>> const& constr_vars);
-  }];
 }
 
 def VarTypeConstraintAttr : IRDL_AttrDef<"VarTypeConstraint", "var_type_constraint",
-                                         [TypeConstraintAttrInterface]> {
+      [TypeConstraintAttrInterface, DeclareAttrInterfaceMethods<TypeConstraintAttrInterface>]> {
   let summary = "Type constraint variable";
   let description = [{
     Attribute representing a type constraint variable.
@@ -82,15 +67,10 @@ def VarTypeConstraintAttr : IRDL_AttrDef<"VarTypeConstraint", "var_type_constrai
   }];
   let parameters = (ins StringRefParameter<>:$name);
   let assemblyFormat = "`<` $name `>`";
-
-  let extraClassDeclaration = [{
-    std::unique_ptr<TypeConstraint> getTypeConstraint(
-        SmallVector<std::pair<StringRef, std::unique_ptr<TypeConstraint>>> const& constr_vars);
-  }];
 }
 
 def DynTypeBaseConstraintAttr : IRDL_AttrDef<"DynTypeBaseConstraint", "dyn_type_base_constraint",
-                                               [TypeConstraintAttrInterface]> {
+      [TypeConstraintAttrInterface, DeclareAttrInterfaceMethods<TypeConstraintAttrInterface>]> {
   let summary = "constraint on the base of a dynamic type";
   let description = [{
     Attribute representing a constraint on dynamic type base type.
@@ -98,15 +78,10 @@ def DynTypeBaseConstraintAttr : IRDL_AttrDef<"DynTypeBaseConstraint", "dyn_type_
   }];
   let parameters = (ins StringRefParameter<>:$typeName);
   let assemblyFormat = "`<` $typeName `>`";
-
-  let extraClassDeclaration = [{
-    std::unique_ptr<TypeConstraint> getTypeConstraint(
-        SmallVector<std::pair<StringRef, std::unique_ptr<TypeConstraint>>> const& constr_vars);
-  }];
 }
 
 def DynTypeParamsConstraintAttr : IRDL_AttrDef<"DynTypeParamsConstraint", "dyn_type_params_constraint",
-                                               [TypeConstraintAttrInterface]> {
+      [TypeConstraintAttrInterface, DeclareAttrInterfaceMethods<TypeConstraintAttrInterface>]> {
   let summary = "constraint on dynamic type parameters";
   let description = [{
     Attribute representing a constraint on dynamic type parameters.
@@ -116,18 +91,13 @@ def DynTypeParamsConstraintAttr : IRDL_AttrDef<"DynTypeParamsConstraint", "dyn_t
   let parameters = (ins StringRefParameter<>:$typeName,
       ArrayRefParameter<"mlir::Attribute", "list of param constraints">:$paramConstraints);
   let assemblyFormat = "`<` $typeName `<` $paramConstraints `>` `>`";
-
-  let extraClassDeclaration = [{
-    std::unique_ptr<TypeConstraint> getTypeConstraint(
-        SmallVector<std::pair<StringRef, std::unique_ptr<TypeConstraint>>> const& constr_vars);
-  }];
 }
 
 class TypeWrapperParameter<string desc = ""> :
     AttrOrTypeParameter<"mlir::irdl::TypeWrapper*", desc> {}
 
 def TypeParamsConstraintAttr : IRDL_AttrDef<"TypeParamsConstraint", "type_params_constraint",
-                                            [TypeConstraintAttrInterface]> {
+      [TypeConstraintAttrInterface, DeclareAttrInterfaceMethods<TypeConstraintAttrInterface>]> {
   let summary = "constraint on C++ type parameters";
   let description = [{
     Attribute representing a constraint on C++ type parameters.
@@ -137,11 +107,6 @@ def TypeParamsConstraintAttr : IRDL_AttrDef<"TypeParamsConstraint", "type_params
   let parameters = (ins TypeWrapperParameter<>:$typeDef,
       ArrayRefParameter<"mlir::Attribute", "list of param constraints">:$paramConstraints);
   let assemblyFormat = "`<` $typeDef `<` $paramConstraints `>` `>`";
-
-  let extraClassDeclaration = [{
-    std::unique_ptr<TypeConstraint> getTypeConstraint(
-        SmallVector<std::pair<StringRef, std::unique_ptr<TypeConstraint>>> const& constr_vars);
-  }];
 }
 
 def TypeConstraintParameter :

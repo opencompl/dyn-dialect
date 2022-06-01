@@ -18,6 +18,7 @@
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/ExtensibleDialect.h"
 #include "mlir/IR/OpDefinition.h"
+#include "llvm/ADT/SmallString.h"
 
 namespace mlir {
 namespace irdl {
@@ -34,6 +35,9 @@ public:
 
   /// Returns the type name, including the dialect prefix.
   virtual llvm::StringRef getName() = 0;
+
+  /// Returns the amount of parameters the type expects.
+  virtual size_t getParameterAmount() = 0;
 };
 
 /// A wrapper around a concrete C++-defined type.
@@ -48,6 +52,34 @@ public:
 
   bool isCorrectType(mlir::Type type) override { return type.isa<T>(); }
 };
+
+/// A wrapper around a dynamic type.
+class DynamicTypeWrapper : public TypeWrapper {
+  DynamicTypeDefinition *dynType;
+  size_t parameterAmount;
+  SmallString<32> completeName;
+
+public:
+  DynamicTypeWrapper(SmallString<32> completeName, DynamicTypeDefinition *dynType,
+                     size_t parameterAmount)
+      : dynType(dynType), parameterAmount(parameterAmount),
+        completeName(completeName) {}
+
+  bool isCorrectType(mlir::Type t) override {
+    auto dynType = t.dyn_cast<DynamicType>();
+    return dynType && dynType.getTypeDef() == this->dynType;
+  }
+
+  llvm::SmallVector<mlir::Attribute> getParameters(mlir::Type t) override {
+    auto params = t.cast<DynamicType>().getParams();
+    return SmallVector<Attribute>(params.begin(), params.end());
+  }
+
+  llvm::StringRef getName() override { return this->completeName; }
+
+  size_t getParameterAmount() override { return this->parameterAmount; }
+};
+
 } // namespace irdl
 } // namespace mlir
 

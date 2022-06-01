@@ -15,6 +15,8 @@
 
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/OpImplementation.h"
+#include "mlir/Transforms/DialectConversion.h"
+#include "Dyn/Dialect/IRDL/IRDLContext.h"
 #include <memory>
 
 // Forward declaration.

@@ -16,6 +16,7 @@
 include "IRDLSSA.td"
 include "IRDLSSATypes.td"
 include "IRDLSSAInterfaces.td"
+include "mlir/Interfaces/SideEffectInterfaces.td"
 
 class IRDL_SSA_Op<string mnemonic, list<Trait> traits = []>
     : Op<IRDL_SSA_Dialect, mnemonic, traits> {
@@ -219,7 +220,7 @@ class IRDL_SSA_ConstraintOp<string mnemonic, list<Trait> traits = []>
     : IRDL_SSA_Op<mnemonic, [VerifyConstraintInterface, DeclareOpInterfaceMethods<VerifyConstraintInterface>] # traits> {
 }
 
-def IRDL_SSA_IsType : IRDL_SSA_ConstraintOp<"is_type", [ParentOneOf<["SSA_TypeOp", "SSA_OperationOp"]>]> {
+def IRDL_SSA_IsType : IRDL_SSA_ConstraintOp<"is_type", [ParentOneOf<["SSA_TypeOp", "SSA_OperationOp"]>, NoSideEffect]> {
   let summary = "Constraints to a specific type";
   let description = [{
     `irdlssa.is_type` defines a constraint that only accepts a specific type.
@@ -244,7 +245,7 @@ def IRDL_SSA_IsType : IRDL_SSA_ConstraintOp<"is_type", [ParentOneOf<["SSA_TypeOp
   let assemblyFormat = [{ `:` $type attr-dict }];
 }
 
-def IRDL_SSA_ParametricType : IRDL_SSA_ConstraintOp<"parametric_type", [ParentOneOf<["SSA_TypeOp", "SSA_OperationOp"]>]> {
+def IRDL_SSA_ParametricType : IRDL_SSA_ConstraintOp<"parametric_type", [ParentOneOf<["SSA_TypeOp", "SSA_OperationOp"]>, NoSideEffect]> {
   let summary = "Constraints to a specific instanciated type";
   let description = [{
     `irdlssa.parametric_type` defines a constraint that accepts either a type defined
@@ -302,7 +303,7 @@ def IRDL_SSA_AnyType : IRDL_SSA_ConstraintOp<"any_type", [ParentOneOf<["SSA_Type
 def IRDL_SSA_AnyOf : IRDL_SSA_ConstraintOp<"any_of", [ParentOneOf<["SSA_TypeOp", "SSA_OperationOp"]>]> {
   let summary = "Constraints to any of the provided types";
   let description = [{
-    `irdlssa.is_type` defines a constraint that accepts any type that
+    `irdlssa.any_of` defines a constraint that accepts any type that
     satisfies at least one of its provided type constraints.
 
     Example:

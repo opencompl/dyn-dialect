@@ -40,16 +40,11 @@ void IRDLDialect::initialize() {
 }
 
 void IRDLDialect::addTypeWrapper(std::unique_ptr<TypeWrapper> wrapper) {
-  auto emplaced =
-      typeWrappers.try_emplace(wrapper->getName(), std::move(wrapper)).second;
-  assert(emplaced && "a type wrapper with the same name already exists");
+  this->irdlContext.addTypeWrapper(std::move(wrapper));
 }
 
 TypeWrapper *IRDLDialect::getTypeWrapper(StringRef typeName) {
-  auto it = typeWrappers.find(typeName);
-  if (it == typeWrappers.end())
-    return nullptr;
-  return it->second.get();
+  return this->irdlContext.getTypeWrapper(typeName);
 }
 
 //===----------------------------------------------------------------------===//
