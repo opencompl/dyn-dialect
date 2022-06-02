@@ -20,6 +20,9 @@
 
 namespace irdl2ssa {
 
+/// Converts IRDL dialect definitions to IRDL-SSA dialect definitions.
+/// This pass takes a type context as parameter information on
+/// available types in the context.
 class IRDL2SSA
     : public mlir::PassWrapper<IRDL2SSA, mlir::OperationPass<mlir::ModuleOp>> {
   mlir::irdl::TypeContext typeCtx;

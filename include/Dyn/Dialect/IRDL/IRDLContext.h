@@ -13,13 +13,14 @@
 #ifndef DYN_DIALECT_IRDL_IRDL_CONTEXT_H_
 #define DYN_DIALECT_IRDL_IRDL_CONTEXT_H_
 
-#include "Dyn/Dialect/IRDL/TypeWrapper.h"
 #include "Dyn/Dialect/IRDL/IRDLContext.h"
+#include "Dyn/Dialect/IRDL/TypeWrapper.h"
 #include "llvm/ADT/StringMap.h"
 
 namespace mlir {
 namespace irdl {
 
+/// Context for the runtime registration of IRDL dialect definitions.
 class IRDLContext {
   llvm::StringMap<std::unique_ptr<TypeWrapper>> types;
 
@@ -34,6 +35,7 @@ public:
   }
 };
 
+/// Context for the analysis of IRDL dialect definitions.
 struct TypeContext {
   /// Utility constructor to load all type information from an IRDLContext.
   TypeContext(IRDLContext &ctx);

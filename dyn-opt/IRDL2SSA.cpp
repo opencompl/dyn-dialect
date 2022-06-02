@@ -161,6 +161,7 @@ void IRDL2SSA::runOnOperation() {
 
   ModuleOp op = this->getOperation();
 
+  // Add locally-declared dynamic types to the type context.
   op.walk([&](DialectOp d) {
     d.walk([&](TypeOp t) {
       t.walk([&](ParametersOp p) {
@@ -176,6 +177,7 @@ void IRDL2SSA::runOnOperation() {
     });
   });
 
+  // Apply the conversion
   RewritePatternSet patterns(&this->getContext());
   patterns.insert<LowerIRDLDialect>(&this->getContext(), this->typeCtx);
   patterns.insert<LowerIRDLType>(&this->getContext(), this->typeCtx);
