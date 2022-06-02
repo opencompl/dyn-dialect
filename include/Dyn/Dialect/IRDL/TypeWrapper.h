@@ -60,8 +60,8 @@ class DynamicTypeWrapper : public TypeWrapper {
   SmallString<32> completeName;
 
 public:
-  DynamicTypeWrapper(SmallString<32> completeName, DynamicTypeDefinition *dynType,
-                     size_t parameterAmount)
+  DynamicTypeWrapper(SmallString<32> completeName,
+                     DynamicTypeDefinition *dynType, size_t parameterAmount)
       : dynType(dynType), parameterAmount(parameterAmount),
         completeName(completeName) {}
 
