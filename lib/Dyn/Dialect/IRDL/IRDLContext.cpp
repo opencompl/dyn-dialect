@@ -11,6 +11,13 @@
 using namespace mlir;
 using namespace irdl;
 
+TypeContext::TypeContext(IRDLContext &ctx) {
+  for (auto &wrapper : ctx.getAllTypes()) {
+    this->types.insert(
+        {wrapper.getKey(), TypeInfo(wrapper.getValue()->getParameterAmount())});
+  }
+}
+
 void IRDLContext::addTypeWrapper(std::unique_ptr<TypeWrapper> wrapper) {
   auto emplaced =
       this->types.try_emplace(wrapper->getName(), std::move(wrapper)).second;

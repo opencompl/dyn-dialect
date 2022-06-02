@@ -75,7 +75,7 @@ std::unique_ptr<TypeConstraint> EqTypeConstraintAttr::getTypeConstraint(
 }
 
 mlir::Value EqTypeConstraintAttr::registerAsSSA(
-    mlir::ConversionPatternRewriter &rewriter,
+    TypeContext &typeCtx, mlir::ConversionPatternRewriter &rewriter,
     SmallVector<std::pair<StringRef, Value>> &vars,
     mlir::Location location) const {
   irdlssa::SSA_IsType op = rewriter.create<irdlssa::SSA_IsType>(
@@ -95,7 +95,7 @@ std::unique_ptr<TypeConstraint> AnyTypeConstraintAttr::getTypeConstraint(
 }
 
 mlir::Value AnyTypeConstraintAttr::registerAsSSA(
-    mlir::ConversionPatternRewriter &rewriter,
+    TypeContext &typeCtx, mlir::ConversionPatternRewriter &rewriter,
     SmallVector<std::pair<StringRef, Value>> &vars,
     mlir::Location location) const {
   irdlssa::SSA_AnyType op = rewriter.create<irdlssa::SSA_AnyType>(
@@ -121,14 +121,14 @@ std::unique_ptr<TypeConstraint> AnyOfTypeConstraintAttr::getTypeConstraint(
 }
 
 mlir::Value AnyOfTypeConstraintAttr::registerAsSSA(
-    mlir::ConversionPatternRewriter &rewriter,
+    TypeContext &typeCtx, mlir::ConversionPatternRewriter &rewriter,
     SmallVector<std::pair<StringRef, Value>> &vars,
     mlir::Location location) const {
   SmallVector<Value> constrs;
   for (auto constrAttr : this->getConstrs()) {
     constrs.push_back(
         constrAttr.cast<TypeConstraintAttrInterface>().registerAsSSA(
-            rewriter, vars, location));
+            typeCtx, rewriter, vars, location));
   }
 
   irdlssa::SSA_AnyOf op = rewriter.create<irdlssa::SSA_AnyOf>(
@@ -156,7 +156,7 @@ std::unique_ptr<TypeConstraint> VarTypeConstraintAttr::getTypeConstraint(
 }
 
 mlir::Value VarTypeConstraintAttr::registerAsSSA(
-    mlir::ConversionPatternRewriter &rewriter,
+    TypeContext &typeCtx, mlir::ConversionPatternRewriter &rewriter,
     SmallVector<std::pair<StringRef, Value>> &vars,
     mlir::Location location) const {
   for (auto var : vars) {
@@ -197,12 +197,22 @@ std::unique_ptr<TypeConstraint> DynTypeBaseConstraintAttr::getTypeConstraint(
 }
 
 mlir::Value DynTypeBaseConstraintAttr::registerAsSSA(
-    mlir::ConversionPatternRewriter &rewriter,
+    TypeContext &typeCtx, mlir::ConversionPatternRewriter &rewriter,
     SmallVector<std::pair<StringRef, Value>> &vars,
     mlir::Location location) const {
+
+  SmallVector<Value> constrs;
+  auto typeInfo = typeCtx.types.find(this->getTypeName());
+  if (typeInfo != typeCtx.types.end()) {
+    for (size_t i = 0; i < typeInfo->getValue().paramAmount; i++) {
+      constrs.push_back(rewriter.create<irdlssa::SSA_AnyType>(
+          location, rewriter.getType<irdlssa::ConstraintType>()));
+    }
+  }
+
   irdlssa::SSA_ParametricType op = rewriter.create<irdlssa::SSA_ParametricType>(
       location, rewriter.getType<irdlssa::ConstraintType>(),
-      this->getTypeName(), ArrayRef<Value>());
+      this->getTypeName(), constrs);
   return op.getResult();
 }
 
@@ -227,14 +237,14 @@ std::unique_ptr<TypeConstraint> DynTypeParamsConstraintAttr::getTypeConstraint(
 }
 
 mlir::Value DynTypeParamsConstraintAttr::registerAsSSA(
-    mlir::ConversionPatternRewriter &rewriter,
+    TypeContext &typeCtx, mlir::ConversionPatternRewriter &rewriter,
     SmallVector<std::pair<StringRef, Value>> &vars,
     mlir::Location location) const {
   SmallVector<Value> constrs;
   for (auto constrAttr : this->getParamConstraints()) {
     constrs.push_back(
         constrAttr.cast<TypeConstraintAttrInterface>().registerAsSSA(
-            rewriter, vars, location));
+            typeCtx, rewriter, vars, location));
   }
 
   irdlssa::SSA_ParametricType op = rewriter.create<irdlssa::SSA_ParametricType>(
@@ -262,14 +272,14 @@ std::unique_ptr<TypeConstraint> TypeParamsConstraintAttr::getTypeConstraint(
 }
 
 mlir::Value TypeParamsConstraintAttr::registerAsSSA(
-    mlir::ConversionPatternRewriter &rewriter,
+    TypeContext &typeCtx, mlir::ConversionPatternRewriter &rewriter,
     SmallVector<std::pair<StringRef, Value>> &vars,
     mlir::Location location) const {
   SmallVector<Value> constrs;
   for (auto constrAttr : this->getParamConstraints()) {
     constrs.push_back(
         constrAttr.cast<TypeConstraintAttrInterface>().registerAsSSA(
-            rewriter, vars, location));
+            typeCtx, rewriter, vars, location));
   }
 
   irdlssa::SSA_ParametricType op = rewriter.create<irdlssa::SSA_ParametricType>(

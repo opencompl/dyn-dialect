@@ -14,6 +14,7 @@
 #define DYN_DIALECT_IRDL_IRDL_CONTEXT_H_
 
 #include "Dyn/Dialect/IRDL/TypeWrapper.h"
+#include "Dyn/Dialect/IRDL/IRDLContext.h"
 #include "llvm/ADT/StringMap.h"
 
 namespace mlir {
@@ -27,6 +28,22 @@ public:
 
   void addTypeWrapper(std::unique_ptr<TypeWrapper> wrapper);
   TypeWrapper *getTypeWrapper(StringRef typeName);
+
+  llvm::StringMap<std::unique_ptr<TypeWrapper>> const &getAllTypes() {
+    return this->types;
+  }
+};
+
+struct TypeContext {
+  /// Utility constructor to load all type information from an IRDLContext.
+  TypeContext(IRDLContext &ctx);
+
+  struct TypeInfo {
+    size_t paramAmount;
+    TypeInfo(size_t paramAmount) : paramAmount(paramAmount) {}
+  };
+
+  llvm::StringMap<TypeInfo> types;
 };
 
 } // namespace irdl

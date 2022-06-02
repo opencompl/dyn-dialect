@@ -33,7 +33,8 @@ def TypeConstraintAttrInterface : AttrInterface<"TypeConstraintAttrInterface"> {
     InterfaceMethod<
       "Convert the constraint to SSA",
       "mlir::Value", "registerAsSSA",
-      (ins "mlir::ConversionPatternRewriter &":$rewriter,
+      (ins "mlir::irdl::TypeContext &":$ctx,
+           "mlir::ConversionPatternRewriter &":$rewriter,
            "mlir::SmallVector<std::pair<llvm::StringRef, mlir::Value>> &":$vars,
            "mlir::Location":$location)
     >

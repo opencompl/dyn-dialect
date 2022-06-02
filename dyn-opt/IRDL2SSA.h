@@ -13,20 +13,23 @@
 #ifndef DYNOPT_IRDL2SSA_H
 #define DYNOPT_IRDL2SSA_H
 
-#include "Dyn/Dialect/IRDL/IR/IRDL.h"
+#include "Dyn/Dialect/IRDL/IRDLContext.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/Pass/Pass.h"
 
 namespace irdl2ssa {
 
-class IRDL2SSA : public mlir::PassWrapper<IRDL2SSA, mlir::OperationPass<>> {
+class IRDL2SSA
+    : public mlir::PassWrapper<IRDL2SSA, mlir::OperationPass<mlir::ModuleOp>> {
+  mlir::irdl::TypeContext typeCtx;
+
 public:
+  IRDL2SSA(mlir::irdl::TypeContext ctx) : typeCtx(ctx) {}
+
   void runOnOperation() override;
 
-  mlir::StringRef getArgument() const final {
-    return "irdl2ssa";
-  }
-
+  mlir::StringRef getArgument() const final { return "irdl2ssa"; }
 };
 
 } // namespace irdl2ssa

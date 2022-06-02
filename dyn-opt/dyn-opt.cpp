@@ -45,16 +45,19 @@ class ComplexTypeWrapper : public ConcreteTypeWrapper<ComplexType> {
 int main(int argc, char **argv) {
   mlir::registerAllPasses();
 
-  mlir::registerPass([]() -> std::unique_ptr<::mlir::Pass> {
-    return std::make_unique<irdl2ssa::IRDL2SSA>();
-  });
-
   MLIRContext ctx;
   auto irdl = ctx.getOrLoadDialect<irdl::IRDLDialect>();
   auto irdlssa = ctx.getOrLoadDialect<irdlssa::IRDLSSADialect>();
 
   irdl->addTypeWrapper<ComplexTypeWrapper>();
   irdlssa->addTypeWrapper<ComplexTypeWrapper>();
+
+  TypeContext tyCtx(irdl->irdlContext);
+
+  mlir::registerPass(
+      [tyCtx{std::move(tyCtx)}]() -> std::unique_ptr<::mlir::Pass> {
+        return std::make_unique<irdl2ssa::IRDL2SSA>(tyCtx);
+      });
 
   // Register all dialects
   DialectRegistry registry;

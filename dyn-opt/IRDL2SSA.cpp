@@ -27,9 +27,11 @@ using namespace mlir::irdlssa;
 
 namespace irdl2ssa {
 
-// ./build/bin/dyn-opt test/Dyn/cmath.irdl --irdl2ssa
 struct LowerIRDLDialect : public mlir::OpConversionPattern<DialectOp> {
-  LowerIRDLDialect(MLIRContext *context) : OpConversionPattern(context) {}
+  TypeContext &typeContext;
+
+  LowerIRDLDialect(MLIRContext *context, TypeContext &typeContext)
+      : OpConversionPattern(context), typeContext(typeContext) {}
 
   LogicalResult
   matchAndRewrite(DialectOp op, OpAdaptor adaptor,
@@ -44,7 +46,10 @@ struct LowerIRDLDialect : public mlir::OpConversionPattern<DialectOp> {
 };
 
 struct LowerIRDLType : public mlir::OpConversionPattern<TypeOp> {
-  LowerIRDLType(MLIRContext *context) : OpConversionPattern(context) {}
+  TypeContext &typeContext;
+
+  LowerIRDLType(MLIRContext *context, TypeContext &typeContext)
+      : OpConversionPattern(context), typeContext(typeContext) {}
 
   LogicalResult match(TypeOp op) const override { return success(); }
 
@@ -59,7 +64,8 @@ struct LowerIRDLType : public mlir::OpConversionPattern<TypeOp> {
         auto var = arg.cast<NamedTypeConstraintAttr>();
         Value varVal = var.getConstraint()
                            .cast<TypeConstraintAttrInterface>()
-                           .registerAsSSA(rewriter, vars, constVars->getLoc());
+                           .registerAsSSA(this->typeContext, rewriter, vars,
+                                          constVars->getLoc());
         vars.push_back({var.getName(), varVal});
       }
       rewriter.eraseOp(constVars);
@@ -71,7 +77,8 @@ struct LowerIRDLType : public mlir::OpConversionPattern<TypeOp> {
         params.push_back(param.cast<NamedTypeConstraintAttr>()
                              .getConstraint()
                              .cast<TypeConstraintAttrInterface>()
-                             .registerAsSSA(rewriter, vars, paramOp->getLoc()));
+                             .registerAsSSA(this->typeContext, rewriter, vars,
+                                            paramOp->getLoc()));
       }
 
       rewriter.replaceOpWithNewOp<SSA_ParametersOp>(paramOp.getOperation(),
@@ -86,7 +93,10 @@ struct LowerIRDLType : public mlir::OpConversionPattern<TypeOp> {
 };
 
 struct LowerIRDLOp : public mlir::OpConversionPattern<OperationOp> {
-  LowerIRDLOp(MLIRContext *context) : OpConversionPattern(context) {}
+  TypeContext &typeContext;
+
+  LowerIRDLOp(MLIRContext *context, TypeContext &typeContext)
+      : OpConversionPattern(context), typeContext(typeContext) {}
 
   LogicalResult match(OperationOp op) const override { return success(); }
 
@@ -101,7 +111,8 @@ struct LowerIRDLOp : public mlir::OpConversionPattern<OperationOp> {
         auto var = arg.cast<NamedTypeConstraintAttr>();
         Value varVal = var.getConstraint()
                            .cast<TypeConstraintAttrInterface>()
-                           .registerAsSSA(rewriter, vars, constVars->getLoc());
+                           .registerAsSSA(this->typeContext, rewriter, vars,
+                                          constVars->getLoc());
         vars.push_back({var.getName(), varVal});
       }
       rewriter.eraseOp(constVars);
@@ -113,7 +124,8 @@ struct LowerIRDLOp : public mlir::OpConversionPattern<OperationOp> {
         params.push_back(param.cast<NamedTypeConstraintAttr>()
                              .getConstraint()
                              .cast<TypeConstraintAttrInterface>()
-                             .registerAsSSA(rewriter, vars, paramOp->getLoc()));
+                             .registerAsSSA(this->typeContext, rewriter, vars,
+                                            paramOp->getLoc()));
       }
 
       rewriter.replaceOpWithNewOp<SSA_OperandsOp>(paramOp.getOperation(),
@@ -123,11 +135,11 @@ struct LowerIRDLOp : public mlir::OpConversionPattern<OperationOp> {
     r.walk([&](ResultsOp resultOp) {
       SmallVector<Value> results;
       for (auto result : resultOp.params()) {
-        results.push_back(
-            result.cast<NamedTypeConstraintAttr>()
-                .getConstraint()
-                .cast<TypeConstraintAttrInterface>()
-                .registerAsSSA(rewriter, vars, resultOp->getLoc()));
+        results.push_back(result.cast<NamedTypeConstraintAttr>()
+                              .getConstraint()
+                              .cast<TypeConstraintAttrInterface>()
+                              .registerAsSSA(this->typeContext, rewriter, vars,
+                                             resultOp->getLoc()));
       }
 
       rewriter.replaceOpWithNewOp<SSA_ResultsOp>(resultOp.getOperation(),
@@ -147,14 +159,31 @@ void IRDL2SSA::runOnOperation() {
   target.addLegalDialect<IRDLSSADialect>();
   target.addIllegalDialect<IRDLDialect>();
 
+  ModuleOp op = this->getOperation();
+
+  op.walk([&](DialectOp d) {
+    d.walk([&](TypeOp t) {
+      t.walk([&](ParametersOp p) {
+        SmallString<32> name;
+        name.reserve(d.name().size() + 1 + t.name().size());
+        name += d.name();
+        name += '.';
+        name += t.name();
+
+        this->typeCtx.types.insert(
+            {std::move(name), TypeContext::TypeInfo(p.params().size())});
+      });
+    });
+  });
+
   RewritePatternSet patterns(&this->getContext());
-  patterns.insert<LowerIRDLDialect>(&this->getContext());
-  patterns.insert<LowerIRDLType>(&this->getContext());
-  patterns.insert<LowerIRDLOp>(&this->getContext());
+  patterns.insert<LowerIRDLDialect>(&this->getContext(), this->typeCtx);
+  patterns.insert<LowerIRDLType>(&this->getContext(), this->typeCtx);
+  patterns.insert<LowerIRDLOp>(&this->getContext(), this->typeCtx);
 
   mlir::DenseSet<mlir::Operation *> unconverted;
-  if (failed(mlir::applyPartialConversion(this->getOperation(), target,
-                                          std::move(patterns), &unconverted))) {
+  if (failed(mlir::applyPartialConversion(op, target, std::move(patterns),
+                                          &unconverted))) {
     this->signalPassFailure();
   }
 }
