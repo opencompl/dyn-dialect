@@ -33,15 +33,14 @@ struct LowerIRDLDialect : public mlir::OpConversionPattern<DialectOp> {
   LowerIRDLDialect(MLIRContext *context, TypeContext &typeContext)
       : OpConversionPattern(context), typeContext(typeContext) {}
 
-  LogicalResult
-  matchAndRewrite(DialectOp op, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
+  LogicalResult match(DialectOp op) const override { return success(); }
+
+  void rewrite(DialectOp op, OpAdaptor adaptor,
+               ConversionPatternRewriter &rewriter) const override {
     rewriter.setInsertionPoint(op);
     auto newOp = rewriter.create<SSA_DialectOp>(op.getLoc(), adaptor.name());
     rewriter.inlineRegionBefore(op.body(), newOp.body(), newOp.body().end());
     rewriter.eraseOp(op);
-
-    return success();
   }
 };
 
