@@ -54,7 +54,7 @@ struct LowerIRDLType : public mlir::OpConversionPattern<TypeOp> {
 
   void rewrite(TypeOp op, OpAdaptor adaptor,
                ConversionPatternRewriter &rewriter) const override {
-    auto &r = op.getRegion();
+    auto &r = op.body();
 
     SmallVector<std::pair<StringRef, Value>> vars;
     rewriter.setInsertionPointToStart(&r.front());
@@ -86,7 +86,7 @@ struct LowerIRDLType : public mlir::OpConversionPattern<TypeOp> {
 
     rewriter.setInsertionPoint(op);
     auto newOp = rewriter.create<SSA_TypeOp>(op.getLoc(), adaptor.name());
-    rewriter.inlineRegionBefore(op.body(), newOp.body(), newOp.body().end());
+    rewriter.inlineRegionBefore(r, newOp.body(), newOp.body().end());
     rewriter.eraseOp(op);
   }
 };
@@ -101,7 +101,7 @@ struct LowerIRDLOp : public mlir::OpConversionPattern<OperationOp> {
 
   void rewrite(OperationOp op, OpAdaptor adaptor,
                ConversionPatternRewriter &rewriter) const override {
-    auto &r = op.getRegion();
+    auto &r = op.body();
 
     SmallVector<std::pair<StringRef, Value>> vars;
     rewriter.setInsertionPointToStart(&r.front());
@@ -147,7 +147,7 @@ struct LowerIRDLOp : public mlir::OpConversionPattern<OperationOp> {
 
     rewriter.setInsertionPoint(op);
     auto newOp = rewriter.create<SSA_OperationOp>(op.getLoc(), adaptor.name());
-    rewriter.inlineRegionBefore(op.body(), newOp.body(), newOp.body().end());
+    rewriter.inlineRegionBefore(r, newOp.body(), newOp.body().end());
     rewriter.eraseOp(op);
   }
 };
