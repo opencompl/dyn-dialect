@@ -36,6 +36,6 @@ public:
   mlir::StringRef getArgument() const final { return "lower-irdl"; }
 };
 
-} // namespace irdl2ssa
+} // namespace lowerirdl
 
 #endif // DYNOPT_LOWERIRDL_H
