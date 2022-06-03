@@ -8,7 +8,7 @@
 
 #include "Dyn/Dialect/IRDL-SSA/IR/IRDLSSA.h"
 #include "Dyn/Dialect/IRDL/IR/IRDL.h"
-#include "IRDL2SSA.h"
+#include "LowerIRDL.h"
 #include "MlirOptMain.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Diagnostics.h"
@@ -56,7 +56,7 @@ int main(int argc, char **argv) {
 
   mlir::registerPass(
       [tyCtx{std::move(tyCtx)}]() -> std::unique_ptr<::mlir::Pass> {
-        return std::make_unique<irdl2ssa::IRDL2SSA>(tyCtx);
+        return std::make_unique<lowerirdl::LowerIRDL>(tyCtx);
       });
 
   // Register all dialects

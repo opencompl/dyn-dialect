@@ -1,4 +1,4 @@
-//===- IRDL2SSA.cpp - Register dialects defined in IRDL ---------*- C++ -*-===//
+//===- LowerIRDL.cpp - Translate IRDL to IRDL-SSA ---------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "IRDL2SSA.h"
+#include "LowerIRDL.h"
 
 #include "Dyn/Dialect/IRDL-SSA/IR/IRDLSSA.h"
 #include "Dyn/Dialect/IRDL/IR/IRDL.h"
@@ -25,7 +25,7 @@ using namespace mlir;
 using namespace mlir::irdl;
 using namespace mlir::irdlssa;
 
-namespace irdl2ssa {
+namespace lowerirdl {
 
 struct LowerIRDLDialect : public mlir::OpConversionPattern<DialectOp> {
   TypeContext &typeContext;
@@ -152,7 +152,7 @@ struct LowerIRDLOp : public mlir::OpConversionPattern<OperationOp> {
   }
 };
 
-void IRDL2SSA::runOnOperation() {
+void LowerIRDL::runOnOperation() {
   ConversionTarget target(this->getContext());
 
   target.addLegalDialect<IRDLSSADialect>();
@@ -160,7 +160,7 @@ void IRDL2SSA::runOnOperation() {
 
   ModuleOp op = this->getOperation();
 
-  // Add locally-declared dynamic types to the type context.
+  // Add locally-declared dynamic types to the type context
   op.walk([&](DialectOp d) {
     d.walk([&](TypeOp t) {
       t.walk([&](ParametersOp p) {
@@ -189,4 +189,4 @@ void IRDL2SSA::runOnOperation() {
   }
 }
 
-} // namespace irdl2ssa
+} // namespace lowerirdl
