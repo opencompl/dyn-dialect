@@ -98,12 +98,41 @@ Optional<std::pair<StringRef, StringRef>> separateOnOperator(StringRef str,
   return {};
 }
 
+Optional<StringRef> cppToIRDLTypeName(StringRef cppName) {
+  if (cppName == "::mlir::shape::SizeType")
+    return {"shape.shape"};
+  return {};
+}
+
+Attribute extractConstraint(MLIRContext *ctx, StringRef pred) {
+  pred = removeOuterParentheses(pred).trim();
+
+  // Any constraint
+  if (pred == "true")
+    return AnyTypeConstraintAttr::get(ctx);
+
+  // AnyOf constraint
+  if (auto orOperands = separateOnOperator(pred, "||")) {
+    auto lhs = extractConstraint(ctx, orOperands->first);
+    auto rhs = extractConstraint(ctx, orOperands->second);
+    return AnyOfTypeConstraintAttr::get(ctx, {lhs, rhs});
+  }
+
+  // BaseCppClass
+  // TODO: change this to a TypeWrapperBaseConstraint
+  if (pred.startswith("$_self.isa<") && pred.endswith(">()")) {
+    if (auto irdlName = cppToIRDLTypeName(pred.slice(11, pred.size() - 3)))
+      return DynTypeBaseConstraintAttr::get(ctx, *irdlName);
+  }
+
+  llvm::errs() << "Cannot resolve constraint: " << pred << "\n";
+  return AnyTypeConstraintAttr::get(ctx);
+}
+
 Attribute extractConstraint(MLIRContext *ctx,
                             const tblgen::Constraint &constraint) {
   std::string pred = constraint.getPredicate().getCondition();
-  StringRef simpPred = StringRef(pred).trim();
-  llvm::errs() << "Cannot resolve constraint:" << simpPred << "\n";
-  return AnyTypeConstraintAttr::get(ctx);
+  return extractConstraint(ctx, pred);
 }
 
 /// Extract an operation to IRDL.
