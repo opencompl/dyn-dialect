@@ -74,7 +74,7 @@ StringRef removeOuterParentheses(StringRef str) {
     return str;
   auto simplifiedStr = str.slice(1, str.size() - 1);
   if (hasBalancedParentheses(simplifiedStr))
-    return simplifiedStr;
+    return removeOuterParentheses(simplifiedStr);
   return str;
 }
 
