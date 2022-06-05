@@ -35,14 +35,20 @@ using namespace mlir;
 using namespace irdl;
 
 std::vector<Record *> getOpDefinitions(const RecordKeeper &recordKeeper) {
+  if (!recordKeeper.getClass("Op"))
+    return {};
   return recordKeeper.getAllDerivedDefinitions("Op");
 }
 
 std::vector<Record *> getTypeDefinitions(const RecordKeeper &recordKeeper) {
+  if (!recordKeeper.getClass("TypeDef"))
+    return {};
   return recordKeeper.getAllDerivedDefinitions("TypeDef");
 }
 
 std::vector<Record *> getAttrDefinitions(const RecordKeeper &recordKeeper) {
+  if (!recordKeeper.getClass("AttrDef"))
+    return {};
   return recordKeeper.getAllDerivedDefinitions("AttrDef");
 }
 
