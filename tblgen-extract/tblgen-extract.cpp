@@ -100,7 +100,11 @@ Optional<std::pair<StringRef, StringRef>> separateOnOperator(StringRef str,
 
 Optional<StringRef> cppToIRDLTypeName(StringRef cppName) {
   if (cppName == "::mlir::shape::SizeType")
+    return {"shape.size"};
+  if (cppName == "::mlir::shape::ShapeType")
     return {"shape.shape"};
+  if (cppName == "::mlir::IndexType")
+    return {"builtin.index"};
   return {};
 }
 
