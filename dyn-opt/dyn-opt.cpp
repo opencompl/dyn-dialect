@@ -56,7 +56,7 @@ int main(int argc, char **argv) {
 
   mlir::registerPass(
       [tyCtx{std::move(tyCtx)}]() -> std::unique_ptr<::mlir::Pass> {
-        return std::make_unique<lowerirdl::LowerIRDL>(tyCtx);
+        return std::make_unique<LowerIRDL>(tyCtx);
       });
 
   // Register all dialects

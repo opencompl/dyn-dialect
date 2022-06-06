@@ -200,7 +200,7 @@ static void registerType(IRDLContext &irdlCtx, ExtensibleDialect *dialect,
   auto type =
       DynamicTypeDefinition::get(op.name(), dialect, std::move(verifier));
 
-  SmallString<32> name;
+  std::string name;
   name.reserve(dialect->getNamespace().size() + 1 + op.name().size());
   name += dialect->getNamespace();
   name += ".";

@@ -21,11 +21,10 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
 
-using namespace mlir;
-using namespace mlir::irdl;
 using namespace mlir::irdlssa;
 
-namespace lowerirdl {
+namespace mlir {
+namespace irdl {
 
 struct LowerIRDLDialect : public mlir::OpConversionPattern<DialectOp> {
   TypeContext &typeContext;
@@ -85,7 +84,7 @@ struct LowerIRDLType : public mlir::OpConversionPattern<TypeOp> {
     });
 
     rewriter.setInsertionPoint(op);
-    auto newOp = rewriter.create<SSA_TypeOp>(op.getLoc(), adaptor.name());
+    auto newOp = rewriter.create<SSA_TypeOp>(op.getLoc(), op.name());
     rewriter.inlineRegionBefore(r, newOp.body(), newOp.body().end());
     rewriter.eraseOp(op);
   }
@@ -146,7 +145,7 @@ struct LowerIRDLOp : public mlir::OpConversionPattern<OperationOp> {
     });
 
     rewriter.setInsertionPoint(op);
-    auto newOp = rewriter.create<SSA_OperationOp>(op.getLoc(), adaptor.name());
+    auto newOp = rewriter.create<SSA_OperationOp>(op.getLoc(), op.name());
     rewriter.inlineRegionBefore(r, newOp.body(), newOp.body().end());
     rewriter.eraseOp(op);
   }
@@ -164,7 +163,7 @@ void LowerIRDL::runOnOperation() {
   op.walk([&](DialectOp d) {
     d.walk([&](TypeOp t) {
       t.walk([&](ParametersOp p) {
-        SmallString<32> name;
+        std::string name;
         name.reserve(d.name().size() + 1 + t.name().size());
         name += d.name();
         name += '.';
@@ -189,4 +188,5 @@ void LowerIRDL::runOnOperation() {
   }
 }
 
-} // namespace lowerirdl
+} // namespace irdl
+} // namespace mlir

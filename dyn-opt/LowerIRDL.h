@@ -18,7 +18,8 @@
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/Pass/Pass.h"
 
-namespace lowerirdl {
+namespace mlir {
+namespace irdl {
 
 /// Converts IRDL dialect definitions to IRDL-SSA dialect definitions.
 /// This pass takes a type context as parameter information on
@@ -33,9 +34,10 @@ public:
 
   void runOnOperation() override;
 
-  mlir::StringRef getArgument() const final { return "lower-irdl"; }
+  mlir::StringRef getArgument() const final { return "irdl-lowering"; }
 };
 
-} // namespace lowerirdl
+} // namespace irdl
+} // namespace mlir
 
 #endif // DYNOPT_LOWERIRDL_H

@@ -57,11 +57,11 @@ public:
 class DynamicTypeWrapper : public TypeWrapper {
   DynamicTypeDefinition *dynType;
   size_t parameterAmount;
-  SmallString<32> completeName;
+  std::string completeName;
 
 public:
-  DynamicTypeWrapper(SmallString<32> completeName,
-                     DynamicTypeDefinition *dynType, size_t parameterAmount)
+  DynamicTypeWrapper(std::string completeName, DynamicTypeDefinition *dynType,
+                     size_t parameterAmount)
       : dynType(dynType), parameterAmount(parameterAmount),
         completeName(completeName) {}
 
