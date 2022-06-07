@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Dyn/Dialect/IRDL/IR/IRDLAttributes.h"
+#include "Dyn/Dialect/IRDL-SSA/IR/IRDLSSA.h"
 #include "Dyn/Dialect/IRDL/IR/IRDL.h"
 #include "Dyn/Dialect/IRDL/IR/IRDLInterfaces.h"
 #include "Dyn/Dialect/IRDL/TypeConstraint.h"
@@ -67,9 +68,19 @@ void IRDLDialect::registerAttributes() {
 //===----------------------------------------------------------------------===//
 
 std::unique_ptr<TypeConstraint> EqTypeConstraintAttr::getTypeConstraint(
+    IRDLContext &irdlCtx,
     SmallVector<std::pair<StringRef, std::unique_ptr<TypeConstraint>>> const
-        &constrVars) {
+        &constrVars) const {
   return std::make_unique<EqTypeConstraint>(getType());
+}
+
+mlir::Value EqTypeConstraintAttr::registerAsSSA(
+    TypeContext &typeCtx, mlir::ConversionPatternRewriter &rewriter,
+    SmallVector<std::pair<StringRef, Value>> &vars,
+    mlir::Location location) const {
+  irdlssa::SSA_IsType op = rewriter.create<irdlssa::SSA_IsType>(
+      location, rewriter.getType<irdlssa::ConstraintType>(), this->getType());
+  return op.getResult();
 }
 
 //===----------------------------------------------------------------------===//
@@ -77,9 +88,19 @@ std::unique_ptr<TypeConstraint> EqTypeConstraintAttr::getTypeConstraint(
 //===----------------------------------------------------------------------===//
 
 std::unique_ptr<TypeConstraint> AnyTypeConstraintAttr::getTypeConstraint(
+    IRDLContext &irdlCtx,
     SmallVector<std::pair<StringRef, std::unique_ptr<TypeConstraint>>> const
-        &constrVars) {
+        &constrVars) const {
   return std::make_unique<AnyTypeConstraint>();
+}
+
+mlir::Value AnyTypeConstraintAttr::registerAsSSA(
+    TypeContext &typeCtx, mlir::ConversionPatternRewriter &rewriter,
+    SmallVector<std::pair<StringRef, Value>> &vars,
+    mlir::Location location) const {
+  irdlssa::SSA_AnyType op = rewriter.create<irdlssa::SSA_AnyType>(
+      location, rewriter.getType<irdlssa::ConstraintType>());
+  return op.getResult();
 }
 
 //===----------------------------------------------------------------------===//
@@ -87,15 +108,32 @@ std::unique_ptr<TypeConstraint> AnyTypeConstraintAttr::getTypeConstraint(
 //===----------------------------------------------------------------------===//
 
 std::unique_ptr<TypeConstraint> AnyOfTypeConstraintAttr::getTypeConstraint(
+    IRDLContext &irdlCtx,
     SmallVector<std::pair<StringRef, std::unique_ptr<TypeConstraint>>> const
-        &constrVars) {
+        &constrVars) const {
   SmallVector<std::unique_ptr<TypeConstraint>> constraints;
   auto constraintAttrs = getConstrs();
   for (auto constrAttr : constraintAttrs)
     constraints.push_back(
         constrAttr.cast<TypeConstraintAttrInterface>().getTypeConstraint(
-            constrVars));
+            irdlCtx, constrVars));
   return std::make_unique<AnyOfTypeConstraint>(std::move(constraints));
+}
+
+mlir::Value AnyOfTypeConstraintAttr::registerAsSSA(
+    TypeContext &typeCtx, mlir::ConversionPatternRewriter &rewriter,
+    SmallVector<std::pair<StringRef, Value>> &vars,
+    mlir::Location location) const {
+  SmallVector<Value> constrs;
+  for (auto constrAttr : this->getConstrs()) {
+    constrs.push_back(
+        constrAttr.cast<TypeConstraintAttrInterface>().registerAsSSA(
+            typeCtx, rewriter, vars, location));
+  }
+
+  irdlssa::SSA_AnyOf op = rewriter.create<irdlssa::SSA_AnyOf>(
+      location, rewriter.getType<irdlssa::ConstraintType>(), constrs);
+  return op.getResult();
 }
 
 //===----------------------------------------------------------------------===//
@@ -103,8 +141,9 @@ std::unique_ptr<TypeConstraint> AnyOfTypeConstraintAttr::getTypeConstraint(
 //===----------------------------------------------------------------------===//
 
 std::unique_ptr<TypeConstraint> VarTypeConstraintAttr::getTypeConstraint(
+    IRDLContext &irdlCtx,
     SmallVector<std::pair<StringRef, std::unique_ptr<TypeConstraint>>> const
-        &constrVars) {
+        &constrVars) const {
   auto name = getName();
   // Iterate in reverse to match the latest defined variable.
   for (int i = constrVars.size() - 1; i >= 0; i--) {
@@ -116,25 +155,65 @@ std::unique_ptr<TypeConstraint> VarTypeConstraintAttr::getTypeConstraint(
   assert(false && "Unknown type constraint variable");
 }
 
+mlir::Value VarTypeConstraintAttr::registerAsSSA(
+    TypeContext &typeCtx, mlir::ConversionPatternRewriter &rewriter,
+    SmallVector<std::pair<StringRef, Value>> &vars,
+    mlir::Location location) const {
+  for (auto var : vars) {
+    if (var.first == this->getName()) {
+      return var.second;
+    }
+  }
+  // TODO: Make this an error
+  assert(false && "Unknown type constraint variable");
+}
+
 //===----------------------------------------------------------------------===//
 // Attribute for constraint on dynamic type base type
 //===----------------------------------------------------------------------===//
 
-std::unique_ptr<TypeConstraint> DynTypeBaseConstraintAttr::getTypeConstraint(
-    SmallVector<std::pair<StringRef, std::unique_ptr<TypeConstraint>>> const
-        &constrVars) {
-  auto splittedTypeName = getTypeName().split('.');
+DynamicTypeDefinition *resolveDynamicTypeDefinition(MLIRContext *ctx,
+                                                    StringRef type) {
+  auto splittedTypeName = type.split('.');
   auto dialectName = splittedTypeName.first;
   auto typeName = splittedTypeName.second;
 
-  auto dialect = getContext()->getOrLoadDialect(dialectName);
+  auto dialect = ctx->getOrLoadDialect(dialectName);
   assert(dialect && "dialect is not registered");
   auto extensibleDialect = llvm::dyn_cast<ExtensibleDialect>(dialect);
   assert(extensibleDialect && "dialect is not extensible");
 
-  auto *typeDef = extensibleDialect->lookupTypeDefinition(typeName);
+  return extensibleDialect->lookupTypeDefinition(typeName);
+}
+
+std::unique_ptr<TypeConstraint> DynTypeBaseConstraintAttr::getTypeConstraint(
+    IRDLContext &irdlCtx,
+    SmallVector<std::pair<StringRef, std::unique_ptr<TypeConstraint>>> const
+        &constrVars) const {
+  auto *typeDef =
+      resolveDynamicTypeDefinition(this->getContext(), this->getTypeName());
 
   return std::make_unique<DynTypeBaseConstraint>(typeDef);
+}
+
+mlir::Value DynTypeBaseConstraintAttr::registerAsSSA(
+    TypeContext &typeCtx, mlir::ConversionPatternRewriter &rewriter,
+    SmallVector<std::pair<StringRef, Value>> &vars,
+    mlir::Location location) const {
+
+  SmallVector<Value> constrs;
+  auto typeInfo = typeCtx.types.find(this->getTypeName());
+  if (typeInfo != typeCtx.types.end()) {
+    for (size_t i = 0; i < typeInfo->getValue().paramAmount; i++) {
+      constrs.push_back(rewriter.create<irdlssa::SSA_AnyType>(
+          location, rewriter.getType<irdlssa::ConstraintType>()));
+    }
+  }
+
+  irdlssa::SSA_ParametricType op = rewriter.create<irdlssa::SSA_ParametricType>(
+      location, rewriter.getType<irdlssa::ConstraintType>(),
+      this->getTypeName(), constrs);
+  return op.getResult();
 }
 
 //===----------------------------------------------------------------------===//
@@ -142,27 +221,36 @@ std::unique_ptr<TypeConstraint> DynTypeBaseConstraintAttr::getTypeConstraint(
 //===----------------------------------------------------------------------===//
 
 std::unique_ptr<TypeConstraint> DynTypeParamsConstraintAttr::getTypeConstraint(
+    IRDLContext &irdlCtx,
     SmallVector<std::pair<StringRef, std::unique_ptr<TypeConstraint>>> const
-        &constrVars) {
+        &constrVars) const {
   SmallVector<std::unique_ptr<TypeConstraint>> paramConstraints;
   for (auto paramConstraintAttr : getParamConstraints())
     paramConstraints.push_back(
         paramConstraintAttr.cast<TypeConstraintAttrInterface>()
-            .getTypeConstraint(constrVars));
+            .getTypeConstraint(irdlCtx, constrVars));
 
-  auto splittedTypeName = getTypeName().split('.');
-  auto dialectName = splittedTypeName.first;
-  auto typeName = splittedTypeName.second;
-
-  auto dialect = getContext()->getOrLoadDialect(dialectName);
-  assert(dialect && "dialect is not registered");
-  auto extensibleDialect = llvm::dyn_cast<ExtensibleDialect>(dialect);
-  assert(extensibleDialect && "dialect is not extensible");
-
-  auto *typeDef = extensibleDialect->lookupTypeDefinition(typeName);
-
+  auto *typeDef =
+      resolveDynamicTypeDefinition(this->getContext(), this->getTypeName());
   return std::make_unique<DynTypeParamsConstraint>(typeDef,
                                                    std::move(paramConstraints));
+}
+
+mlir::Value DynTypeParamsConstraintAttr::registerAsSSA(
+    TypeContext &typeCtx, mlir::ConversionPatternRewriter &rewriter,
+    SmallVector<std::pair<StringRef, Value>> &vars,
+    mlir::Location location) const {
+  SmallVector<Value> constrs;
+  for (auto constrAttr : this->getParamConstraints()) {
+    constrs.push_back(
+        constrAttr.cast<TypeConstraintAttrInterface>().registerAsSSA(
+            typeCtx, rewriter, vars, location));
+  }
+
+  irdlssa::SSA_ParametricType op = rewriter.create<irdlssa::SSA_ParametricType>(
+      location, rewriter.getType<irdlssa::ConstraintType>(),
+      this->getTypeName(), constrs);
+  return op.getResult();
 }
 
 //===----------------------------------------------------------------------===//
@@ -170,14 +258,32 @@ std::unique_ptr<TypeConstraint> DynTypeParamsConstraintAttr::getTypeConstraint(
 //===----------------------------------------------------------------------===//
 
 std::unique_ptr<TypeConstraint> TypeParamsConstraintAttr::getTypeConstraint(
+    IRDLContext &irdlCtx,
     SmallVector<std::pair<StringRef, std::unique_ptr<TypeConstraint>>> const
-        &constrVars) {
+        &constrVars) const {
   SmallVector<std::unique_ptr<TypeConstraint>> paramConstraints;
   for (auto paramConstraintAttr : getParamConstraints())
     paramConstraints.push_back(
         paramConstraintAttr.cast<TypeConstraintAttrInterface>()
-            .getTypeConstraint(constrVars));
+            .getTypeConstraint(irdlCtx, constrVars));
 
   return std::make_unique<TypeParamsConstraint>(getTypeDef(),
                                                 std::move(paramConstraints));
+}
+
+mlir::Value TypeParamsConstraintAttr::registerAsSSA(
+    TypeContext &typeCtx, mlir::ConversionPatternRewriter &rewriter,
+    SmallVector<std::pair<StringRef, Value>> &vars,
+    mlir::Location location) const {
+  SmallVector<Value> constrs;
+  for (auto constrAttr : this->getParamConstraints()) {
+    constrs.push_back(
+        constrAttr.cast<TypeConstraintAttrInterface>().registerAsSSA(
+            typeCtx, rewriter, vars, location));
+  }
+
+  irdlssa::SSA_ParametricType op = rewriter.create<irdlssa::SSA_ParametricType>(
+      location, rewriter.getType<irdlssa::ConstraintType>(),
+      this->getTypeDef()->getName(), constrs);
+  return op.getResult();
 }

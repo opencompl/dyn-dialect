@@ -13,8 +13,10 @@
 #ifndef DYN_DIALECT_IRDL_IR_IRDLINTERFACES_H_
 #define DYN_DIALECT_IRDL_IR_IRDLINTERFACES_H_
 
+#include "Dyn/Dialect/IRDL/IRDLContext.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/OpImplementation.h"
+#include "mlir/Transforms/DialectConversion.h"
 #include <memory>
 
 // Forward declaration.

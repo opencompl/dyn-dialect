@@ -82,7 +82,8 @@ def IRDL_ParametersOp : IRDL_Op<"parameters", [HasParent<"TypeOp">]> {
 // IRDL Type definition
 //===----------------------------------------------------------------------===//
 
-def IRDL_TypeOp : IRDL_Op<"type", [HasParent<"DialectOp">, NoTerminator, NoRegionArguments, AtMostOneChildOf<"ParametersOp">]> {
+def IRDL_TypeOp : IRDL_Op<"type", [HasParent<"DialectOp">, NoTerminator, NoRegionArguments,
+                                   AtMostOneChildOf<"ParametersOp, ConstraintVarsOp">]> {
   let summary = "Define a new type";
   let description = [{
     `irdl.type` defines new types belonging to the previously defined dialect

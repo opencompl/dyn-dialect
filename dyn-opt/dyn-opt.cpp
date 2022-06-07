@@ -8,6 +8,7 @@
 
 #include "Dyn/Dialect/IRDL-SSA/IR/IRDLSSA.h"
 #include "Dyn/Dialect/IRDL/IR/IRDL.h"
+#include "LowerIRDL.h"
 #include "MlirOptMain.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Diagnostics.h"
@@ -37,11 +38,12 @@ class ComplexTypeWrapper : public ConcreteTypeWrapper<ComplexType> {
   SmallVector<Attribute> getParameters(ComplexType type) override {
     return {TypeAttr::get(type.getElementType())};
   }
+
+  size_t getParameterAmount() override { return 1; }
 };
 
 int main(int argc, char **argv) {
   mlir::registerAllPasses();
-  // TODO: Register passes here.
 
   MLIRContext ctx;
   auto irdl = ctx.getOrLoadDialect<irdl::IRDLDialect>();
@@ -49,6 +51,13 @@ int main(int argc, char **argv) {
 
   irdl->addTypeWrapper<ComplexTypeWrapper>();
   irdlssa->addTypeWrapper<ComplexTypeWrapper>();
+
+  TypeContext tyCtx(irdl->irdlContext);
+
+  mlir::registerPass(
+      [tyCtx{std::move(tyCtx)}]() -> std::unique_ptr<::mlir::Pass> {
+        return std::make_unique<LowerIRDL>(tyCtx);
+      });
 
   // Register all dialects
   DialectRegistry registry;

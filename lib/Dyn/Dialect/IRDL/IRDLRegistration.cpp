@@ -1,4 +1,4 @@
-//===- IRDLRegistration.h - IRDL registration -------------------*- C++ -*-===//
+//===- IRDLRegistration.cpp - IRDL registration -----------------*- C++ -*-===//
 //
 // This file is licensed under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -101,7 +101,8 @@ LogicalResult verifyOpDefConstraints(
 namespace mlir {
 namespace irdl {
 /// Register an operation represented by a `irdl.operation` operation.
-void registerOperation(ExtensibleDialect *dialect, OperationOp op) {
+void registerOperation(IRDLContext &irdlCtx, ExtensibleDialect *dialect,
+                       OperationOp op) {
   SmallVector<std::pair<StringRef, std::unique_ptr<TypeConstraint>>>
       constraintVars;
   SmallVector<std::unique_ptr<TypeConstraint>> operandConstraints;
@@ -114,7 +115,7 @@ void registerOperation(ExtensibleDialect *dialect, OperationOp op) {
       auto constraintAttr = constraint.cast<NamedTypeConstraintAttr>();
       auto constraintConstr = constraintAttr.getConstraint()
                                   .cast<TypeConstraintAttrInterface>()
-                                  .getTypeConstraint(constraintVars);
+                                  .getTypeConstraint(irdlCtx, constraintVars);
       constraintVars.emplace_back(
           make_pair(constraintAttr.getName(), std::move(constraintConstr)));
     }
@@ -128,7 +129,7 @@ void registerOperation(ExtensibleDialect *dialect, OperationOp op) {
       auto operandAttr = operand.cast<NamedTypeConstraintAttr>();
       auto constraint = operandAttr.getConstraint()
                             .cast<TypeConstraintAttrInterface>()
-                            .getTypeConstraint(constraintVars);
+                            .getTypeConstraint(irdlCtx, constraintVars);
       operandConstraints.emplace_back(std::move(constraint));
     }
   }
@@ -141,7 +142,7 @@ void registerOperation(ExtensibleDialect *dialect, OperationOp op) {
       auto resultAttr = result.cast<NamedTypeConstraintAttr>();
       auto constraint = resultAttr.getConstraint()
                             .cast<TypeConstraintAttrInterface>()
-                            .getTypeConstraint(constraintVars);
+                            .getTypeConstraint(irdlCtx, constraintVars);
       resultConstraints.emplace_back(std::move(constraint));
     }
   }
@@ -176,7 +177,8 @@ void registerOperation(ExtensibleDialect *dialect, OperationOp op) {
 } // namespace irdl
 } // namespace mlir
 
-static void registerType(ExtensibleDialect *dialect, TypeOp op) {
+static void registerType(IRDLContext &irdlCtx, ExtensibleDialect *dialect,
+                         TypeOp op) {
   auto params = op.getOp<ParametersOp>();
 
   SmallVector<std::unique_ptr<TypeConstraint>> paramConstraints;
@@ -185,7 +187,7 @@ static void registerType(ExtensibleDialect *dialect, TypeOp op) {
       paramConstraints.push_back(param.cast<NamedTypeConstraintAttr>()
                                      .getConstraint()
                                      .cast<TypeConstraintAttrInterface>()
-                                     .getTypeConstraint({}));
+                                     .getTypeConstraint(irdlCtx, {}));
     }
   }
 
@@ -198,10 +200,18 @@ static void registerType(ExtensibleDialect *dialect, TypeOp op) {
   auto type =
       DynamicTypeDefinition::get(op.name(), dialect, std::move(verifier));
 
+  std::string name;
+  name.reserve(dialect->getNamespace().size() + 1 + op.name().size());
+  name += dialect->getNamespace();
+  name += ".";
+  name += op.name();
+  irdlCtx.addTypeWrapper(std::make_unique<DynamicTypeWrapper>(
+      std::move(name), type.get(), paramConstraints.size()));
+
   dialect->registerDynamicType(std::move(type));
 }
 
-static void registerDialect(DialectOp op) {
+static void registerDialect(IRDLContext &irdlCtx, DialectOp op) {
   auto *ctx = op.getContext();
   auto dialectName = op.name();
 
@@ -211,14 +221,17 @@ static void registerDialect(DialectOp op) {
       llvm::dyn_cast<ExtensibleDialect>(ctx->getLoadedDialect(dialectName));
   assert(dialect && "extensible dialect should have been registered.");
 
-  op.walk([&](TypeOp op) { registerType(dialect, op); });
-  op.walk([&](OperationOp op) { registerOperation(dialect, op); });
+  op.walk([&](TypeOp op) { registerType(irdlCtx, dialect, op); });
+  op.walk([&](OperationOp op) { registerOperation(irdlCtx, dialect, op); });
 }
 
 namespace mlir {
 namespace irdl {
 void registerDialects(ModuleOp op) {
-  op.walk([](DialectOp dialect) { registerDialect(dialect); });
+  IRDLContext &irdlCtx =
+      llvm::cast<IRDLDialect>(op.getContext()->getOrLoadDialect("irdl"))
+          ->irdlContext;
+  op.walk([&](DialectOp dialect) { registerDialect(irdlCtx, dialect); });
 }
 } // namespace irdl
 } // namespace mlir
