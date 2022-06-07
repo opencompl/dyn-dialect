@@ -16,6 +16,7 @@
 include "IRDLSSA.td"
 include "IRDLSSATypes.td"
 include "IRDLSSAInterfaces.td"
+include "IRDLSSAAttributes.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
 class IRDL_SSA_Op<string mnemonic, list<Trait> traits = []>
@@ -238,9 +239,30 @@ def IRDL_SSA_IsType : IRDL_SSA_ConstraintOp<"is_type", [ParentOneOf<["SSA_TypeOp
 
     The above program defines a type `complex_restrictive` inside the dialect `cmath` that
     can only have `i32` as its parameter.
+
+    `irdlssa.is_type` also accepts completely instanciated parametric types,
+    such as `std.complex<f32>`. It does not however allow expressing asbtract
+    types, such as `std.complex<T>` where `T` is a type constraint. See
+    `irdlssa.parametric_type` instead for this use case.
+
+    Example:
+
+    ```mlir
+    irdlssa.dialect cmath {
+      irdlssa.operation extract_f32 {
+        %0 = irdlssa.is_type : "std.complex"<f32>
+        %1 = irdlssa.is_type : f32
+        irdlssa.parameters(%0)
+        irdlssa.results(%1)
+      }
+    }
+    ```
+
+    The above programe defines an operation `extract_f32` inside the dialect `cmath` that
+    takes as parameter exactly `std.complex<f32>` and returns an `f32`.
   }];
 
-  let arguments = (ins TypeAttr:$type);
+  let arguments = (ins ParamTypeAttrOrAnyAttr:$type);
   let results = (outs IRDL_SSA_ConstraintType:$output);
   let assemblyFormat = [{ `:` $type attr-dict }];
 }

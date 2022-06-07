@@ -68,6 +68,7 @@ def IRDL_SSA_Dialect : Dialect {
   }];
 
   let useDefaultTypePrinterParser = 1;
+  let useDefaultAttributePrinterParser = 1;
 
   let extraClassDeclaration = [{
   public:

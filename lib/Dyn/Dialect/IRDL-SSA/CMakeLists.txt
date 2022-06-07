@@ -1,5 +1,6 @@
 add_mlir_dialect_library(MLIRIRDLSSA
         IR/IRDLSSA.cpp
+        IR/IRDLSSAAttributes.cpp
         IR/IRDLSSAOps.cpp
         IRDLSSARegistration.cpp
         IRDLSSAVerifiers.cpp

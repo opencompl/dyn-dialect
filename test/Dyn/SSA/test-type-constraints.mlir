@@ -20,6 +20,46 @@ func.func @failedEqConstraint() {
 
 // -----
 
+func.func @succeededEqParamConstraint() {
+  // CHECK: "testd.eq_param"() : () -> !testd.parametric<i32>
+  "testd.eq_param"() : () -> !testd.parametric<i32>
+  return
+}
+
+// -----
+
+func.func @failedEqParamConstraint1() {
+  // expected-error@+1 {{expected type '!testd.parametric<i32>' but got type 'i64'}}
+  "testd.eq_param"() : () -> i64
+  return
+}
+
+// -----
+
+func.func @failedEqParamConstraint2() {
+  // expected-error@+1 {{expected type '!testd.parametric<i32>' but got type '!testd.parametric<i64>'}}
+  "testd.eq_param"() : () -> !testd.parametric<i64>
+  return
+}
+
+// -----
+
+func.func @failedEqParamConstraint3() {
+  // expected-error@+1 {{expected type '!testd.parametric<i32>' but got type '!testd.parametric<!testd.parametric<i32>>'}}
+  "testd.eq_param"() : () -> !testd.parametric<!testd.parametric<i32>>
+  return
+}
+
+// -----
+
+func.func @failedEqParamConstraint4() {
+  // expected-error@+1 {{only type attribute type parameters are currently supported}}
+  "testd.eq_param"() : () -> !testd.parametric<0xBAD>
+  return
+}
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // AnyOf constraint
 //===----------------------------------------------------------------------===//

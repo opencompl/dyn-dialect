@@ -40,6 +40,12 @@ irdlssaTypeVerifier(function_ref<InFlightDiagnostic()> emitError,
   ConstraintVerifier verifier(constraints);
 
   for (size_t i = 0; i < params.size(); i++) {
+    if (!params[i].isa<TypeAttr>()) {
+      emitError().append(
+          "only type attribute type parameters are currently supported");
+      return failure();
+    }
+
     if (failed(verifier.verifyType(emitError,
                                    params[i].cast<TypeAttr>().getValue(),
                                    paramConstraints[i]))) {
