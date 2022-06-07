@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "Dyn/Dialect/IRDL/IR/IRDL.h"
-#include "Dyn/Dialect/IRDL/IR/IRDLAttributes.h"
-#include "Dyn/Dialect/IRDL-SSA/TypeWrapper.h"
 #include "Dyn/Dialect/IRDL-SSA/IR/IRDLSSA.h"
+#include "Dyn/Dialect/IRDL-SSA/TypeWrapper.h"
+#include "Dyn/Dialect/IRDL/IR/IRDLAttributes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/ExtensibleDialect.h"
@@ -21,8 +21,8 @@
 
 using namespace mlir;
 using namespace mlir::irdl;
-using mlir::irdlssa::TypeWrapper;
 using mlir::irdlssa::IRDLSSADialect;
+using mlir::irdlssa::TypeWrapper;
 
 using ArgDef = std::pair<StringRef, Attribute>;
 using ArgDefs = ArrayRef<ArgDef>;

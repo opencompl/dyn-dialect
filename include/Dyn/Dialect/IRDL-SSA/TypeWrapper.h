@@ -53,7 +53,7 @@ public:
   bool isCorrectType(mlir::Type type) override { return type.isa<T>(); }
 };
 
-} // namespace irdl
+} // namespace irdlssa
 } // namespace mlir
 
 #endif // DYN_DIALECT_IRDL_SSA_TYPEWRAPPER_H_

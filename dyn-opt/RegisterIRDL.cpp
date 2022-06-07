@@ -12,10 +12,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "RegisterIRDL.h"
-#include "LowerIRDL.h"
 #include "Dyn/Dialect/IRDL-SSA/IR/IRDLSSA.h"
 #include "Dyn/Dialect/IRDL-SSA/IRDLSSARegistration.h"
 #include "Dyn/Dialect/IRDL/IR/IRDL.h"
+#include "LowerIRDL.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Dialect.h"
@@ -60,7 +60,7 @@ LogicalResult mlir::registerIRDL(StringRef irdlFile, MLIRContext *ctx) {
 
   // Parse the input file.
   auto module(parseSourceFile<ModuleOp>(sourceMgr, ctx));
-  
+
   // Translate to IRDL-SSA.
   PassManager pm(ctx);
   pm.addPass(std::make_unique<irdl::LowerIRDL>(irdlssa->irdlssaContext));
