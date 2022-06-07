@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef DYN_DIALECT_IRDL_IR_TYPEWRAPPER_H_
-#define DYN_DIALECT_IRDL_IR_TYPEWRAPPER_H_
+#ifndef DYN_DIALECT_IRDL_SSA_TYPEWRAPPER_H_
+#define DYN_DIALECT_IRDL_SSA_TYPEWRAPPER_H_
 
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Dialect.h"
@@ -21,7 +21,7 @@
 #include "llvm/ADT/SmallString.h"
 
 namespace mlir {
-namespace irdl {
+namespace irdlssa {
 /// A wrapper around a C++-defined type to extract type parameters.
 /// For most cases, TypeWrapper should be used instead.
 class TypeWrapper {
@@ -53,34 +53,7 @@ public:
   bool isCorrectType(mlir::Type type) override { return type.isa<T>(); }
 };
 
-/// A wrapper around a dynamic type.
-class DynamicTypeWrapper : public TypeWrapper {
-  DynamicTypeDefinition *dynType;
-  size_t parameterAmount;
-  std::string completeName;
-
-public:
-  DynamicTypeWrapper(std::string completeName, DynamicTypeDefinition *dynType,
-                     size_t parameterAmount)
-      : dynType(dynType), parameterAmount(parameterAmount),
-        completeName(completeName) {}
-
-  bool isCorrectType(mlir::Type t) override {
-    auto dynType = t.dyn_cast<DynamicType>();
-    return dynType && dynType.getTypeDef() == this->dynType;
-  }
-
-  llvm::SmallVector<mlir::Attribute> getParameters(mlir::Type t) override {
-    auto params = t.cast<DynamicType>().getParams();
-    return SmallVector<Attribute>(params.begin(), params.end());
-  }
-
-  llvm::StringRef getName() override { return this->completeName; }
-
-  size_t getParameterAmount() override { return this->parameterAmount; }
-};
-
 } // namespace irdl
 } // namespace mlir
 
-#endif // DYN_DIALECT_IRDL_IR_TYPEWRAPPER_H_
+#endif // DYN_DIALECT_IRDL_SSA_TYPEWRAPPER_H_

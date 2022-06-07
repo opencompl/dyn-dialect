@@ -31,6 +31,7 @@
 
 using namespace mlir;
 using namespace irdl;
+using namespace irdlssa;
 
 class ComplexTypeWrapper : public ConcreteTypeWrapper<ComplexType> {
   StringRef getName() override { return "std.complex"; }
@@ -46,13 +47,12 @@ int main(int argc, char **argv) {
   mlir::registerAllPasses();
 
   MLIRContext ctx;
-  auto irdl = ctx.getOrLoadDialect<irdl::IRDLDialect>();
+  ctx.getOrLoadDialect<irdl::IRDLDialect>();
   auto irdlssa = ctx.getOrLoadDialect<irdlssa::IRDLSSADialect>();
 
-  irdl->addTypeWrapper<ComplexTypeWrapper>();
   irdlssa->addTypeWrapper<ComplexTypeWrapper>();
 
-  TypeContext tyCtx(irdl->irdlContext);
+  TypeContext tyCtx(irdlssa->irdlssaContext);
 
   mlir::registerPass(
       [tyCtx{std::move(tyCtx)}]() -> std::unique_ptr<::mlir::Pass> {
