@@ -34,7 +34,7 @@ DynamicTypeDefinition *findDynamicType(SSA_ParametricType &op, StringRef type) {
   return extensibleDialect->lookupTypeDefinition(typeName);
 }
 
-irdl::TypeWrapper *findTypeWrapper(SSA_ParametricType &op, StringRef type) {
+TypeWrapper *findTypeWrapper(SSA_ParametricType &op, StringRef type) {
   Dialect *irdlssaDialect = op.getContext()->getLoadedDialect("irdlssa");
   assert(irdlssaDialect && "irdlssa is not registered");
 
@@ -60,7 +60,7 @@ SSA_ParametricType::getVerifier(SmallVector<Value> const &valueToConstr) {
   if (DynamicTypeDefinition *type = findDynamicType(*this, typeName)) {
     return {std::make_unique<DynParametricTypeConstraint>(
         type, std::move(constraints))};
-  } else if (irdl::TypeWrapper *type = findTypeWrapper(*this, typeName)) {
+  } else if (TypeWrapper *type = findTypeWrapper(*this, typeName)) {
     return {std::make_unique<ParametricTypeConstraint>(type,
                                                        std::move(constraints))};
   } else {

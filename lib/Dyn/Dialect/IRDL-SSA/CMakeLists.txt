@@ -3,6 +3,7 @@ add_mlir_dialect_library(MLIRIRDLSSA
         IR/IRDLSSAOps.cpp
         IRDLSSARegistration.cpp
         IRDLSSAVerifiers.cpp
+        IRDLSSAContext.cpp
 
         ADDITIONAL_HEADER_DIRS
         ${PROJECT_SOURCE_DIR}/include/Dyn/Dialect/IRDL-SSA

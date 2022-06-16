@@ -161,7 +161,7 @@ func.func @succeededConstraintVars2() {
 // -----
 
 func.func @failedConstraintVars() {
-  // expected-error@+1 {{expected 'i64' but got 'i32'}}
+  // expected-error@+1 {{expected type 'i64' but got 'i32'}}
   "testd.constraint_vars"() : () -> (i64, i32)
   return
 }

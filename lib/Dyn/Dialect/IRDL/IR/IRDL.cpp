@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "Dyn/Dialect/IRDL/IR/IRDL.h"
+#include "Dyn/Dialect/IRDL-SSA/IR/IRDLSSA.h"
+#include "Dyn/Dialect/IRDL-SSA/TypeWrapper.h"
 #include "Dyn/Dialect/IRDL/IR/IRDLAttributes.h"
-#include "Dyn/Dialect/IRDL/IRDLRegistration.h"
-#include "Dyn/Dialect/IRDL/TypeConstraint.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/ExtensibleDialect.h"
@@ -21,6 +21,8 @@
 
 using namespace mlir;
 using namespace mlir::irdl;
+using mlir::irdlssa::IRDLSSADialect;
+using mlir::irdlssa::TypeWrapper;
 
 using ArgDef = std::pair<StringRef, Attribute>;
 using ArgDefs = ArrayRef<ArgDef>;
@@ -37,14 +39,6 @@ void IRDLDialect::initialize() {
 #include "Dyn/Dialect/IRDL/IR/IRDLOps.cpp.inc"
       >();
   registerAttributes();
-}
-
-void IRDLDialect::addTypeWrapper(std::unique_ptr<TypeWrapper> wrapper) {
-  this->irdlContext.addTypeWrapper(std::move(wrapper));
-}
-
-TypeWrapper *IRDLDialect::getTypeWrapper(StringRef typeName) {
-  return this->irdlContext.getTypeWrapper(typeName);
 }
 
 //===----------------------------------------------------------------------===//
@@ -320,8 +314,8 @@ ParseResult parseTypeConstraint(OpAsmParser &p, Attribute *typeConstraint) {
   StringRef keyword;
   if (succeeded(p.parseOptionalKeyword(&keyword))) {
     // Parse a non-dynamic type parameter constraint.
-    auto irdl = ctx->getOrLoadDialect<IRDLDialect>();
-    auto typeWrapper = irdl->getTypeWrapper(keyword);
+    auto irdlssa = ctx->getOrLoadDialect<IRDLSSADialect>();
+    auto typeWrapper = irdlssa->getTypeWrapper(keyword);
     if (typeWrapper)
       return parseTypeParamsConstraint(p, typeWrapper, typeConstraint);
 

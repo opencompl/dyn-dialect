@@ -24,8 +24,10 @@
 namespace mlir {
 namespace irdl {
 class OperationOp;
-class TypeWrapper;
 } // namespace irdl
+namespace irdlssa {
+class TypeWrapper;
+}
 } // namespace mlir
 
 #define GET_ATTRDEF_CLASSES

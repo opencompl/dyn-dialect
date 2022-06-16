@@ -85,14 +85,13 @@ def IRDL_SSA_Dialect : Dialect {
 
     /// Get a type wrapper with the given name.
     /// Returns nullptr if no type wrapper with that name is found.
-    ::mlir::irdl::TypeWrapper* getTypeWrapper(StringRef typeName);
+    ::mlir::irdlssa::TypeWrapper* getTypeWrapper(StringRef typeName);
 
+    /// IRDL-SSA context.
+    ::mlir::irdlssa::IRDLSSAContext irdlssaContext;
   private:
     /// Add a type wrapper to IRDL.
-    void addTypeWrapper(std::unique_ptr<::mlir::irdl::TypeWrapper> wrapper);
-
-    /// Wrapper around types that can be used in IRDL.
-    llvm::StringMap<std::unique_ptr<::mlir::irdl::TypeWrapper>> typeWrappers;
+    void addTypeWrapper(std::unique_ptr<::mlir::irdlssa::TypeWrapper> wrapper);
   }];
 
   let name = "irdlssa";
