@@ -20,3 +20,10 @@ mlir_tablegen(IRDLSSATypesGen.h.inc -gen-typedef-decls) # TODO: Explain why this
 mlir_tablegen(IRDLSSATypesGen.cpp.inc -gen-typedef-defs)
 add_public_tablegen_target(MLIRIRDLSSATypesIncGen)
 add_dependencies(mlir-generic-headers MLIRIRDLSSATypesIncGen)
+
+# Add IRDL-SSA attributes
+set(LLVM_TARGET_DEFINITIONS IRDLSSAAttributes.td)
+mlir_tablegen(IRDLSSAAttributes.h.inc -gen-attrdef-decls)
+mlir_tablegen(IRDLSSAAttributes.cpp.inc -gen-attrdef-defs)
+add_public_tablegen_target(MLIRIRDLSSAAttributesIncGen)
+add_dependencies(mlir-generic-headers MLIRIRDLSSAAttributesIncGen)

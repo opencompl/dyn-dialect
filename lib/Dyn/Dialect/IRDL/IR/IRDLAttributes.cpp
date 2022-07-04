@@ -12,6 +12,7 @@
 
 #include "Dyn/Dialect/IRDL/IR/IRDLAttributes.h"
 #include "Dyn/Dialect/IRDL-SSA/IR/IRDLSSA.h"
+#include "Dyn/Dialect/IRDL-SSA/IR/IRDLSSAAttributes.h"
 #include "Dyn/Dialect/IRDL-SSA/IRDLSSAContext.h"
 #include "Dyn/Dialect/IRDL-SSA/TypeWrapper.h"
 #include "Dyn/Dialect/IRDL/IR/IRDL.h"
@@ -29,6 +30,7 @@
 using namespace mlir;
 using namespace irdl;
 using mlir::irdlssa::IRDLSSADialect;
+using mlir::irdlssa::ParamTypeAttrOrAnyAttr;
 using mlir::irdlssa::TypeContext;
 using mlir::irdlssa::TypeWrapper;
 
@@ -77,7 +79,9 @@ mlir::Value EqTypeConstraintAttr::registerAsSSA(
     SmallVector<std::pair<StringRef, Value>> &vars,
     mlir::Location location) const {
   irdlssa::SSA_IsType op = rewriter.create<irdlssa::SSA_IsType>(
-      location, rewriter.getType<irdlssa::ConstraintType>(), this->getType());
+      location, rewriter.getType<irdlssa::ConstraintType>(),
+      ParamTypeAttrOrAnyAttr::get(rewriter.getContext(),
+                                  TypeAttr::get(this->getType())));
   return op.getResult();
 }
 

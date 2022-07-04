@@ -13,6 +13,7 @@
 #ifndef DYN_DIALECT_IRDL_SSA_IR_IRDL_SSA_H_
 #define DYN_DIALECT_IRDL_SSA_IR_IRDL_SSA_H_
 
+#include "Dyn/Dialect/IRDL-SSA/IR/IRDLSSAAttributes.h"
 #include "Dyn/Dialect/IRDL-SSA/IRDLSSAContext.h"
 #include "Dyn/Dialect/IRDL-SSA/TypeWrapper.h"
 #include "Dyn/Dialect/IRDL/IR/IRDLTraits.h"

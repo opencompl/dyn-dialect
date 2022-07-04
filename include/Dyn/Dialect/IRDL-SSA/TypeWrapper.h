@@ -36,6 +36,10 @@ public:
   /// Returns the type name, including the dialect prefix.
   virtual llvm::StringRef getName() = 0;
 
+  /// Instanciates the type from parameters.
+  virtual Type instanciate(llvm::function_ref<InFlightDiagnostic()> emitError,
+                           llvm::ArrayRef<Attribute> parameters) = 0;
+
   /// Returns the amount of parameters the type expects.
   virtual size_t getParameterAmount() = 0;
 };

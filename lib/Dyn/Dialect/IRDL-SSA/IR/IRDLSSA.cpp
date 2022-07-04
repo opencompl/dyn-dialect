@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Dyn/Dialect/IRDL-SSA/IR/IRDLSSA.h"
+#include "Dyn/Dialect/IRDL-SSA/IR/IRDLSSAAttributes.h"
 #include "Dyn/Dialect/IRDL-SSA/IRDLSSARegistration.h"
 #include "Dyn/Dialect/IRDL-SSA/TypeWrapper.h"
 #include "mlir/IR/Builders.h"
@@ -35,6 +36,9 @@ using ArgDefs = ArrayRef<ArgDef>;
 
 #include "Dyn/Dialect/IRDL-SSA/IR/IRDLSSADialect.cpp.inc"
 
+#define GET_ATTRDEF_CLASSES
+#include "Dyn/Dialect/IRDL-SSA/IR/IRDLSSAAttributes.cpp.inc"
+
 void IRDLSSADialect::initialize() {
   addOperations<
 #define GET_OP_LIST
@@ -44,7 +48,10 @@ void IRDLSSADialect::initialize() {
 #define GET_TYPEDEF_LIST
 #include "Dyn/Dialect/IRDL-SSA/IR/IRDLSSATypesGen.cpp.inc"
       >();
-  // registerAttributes();
+  addAttributes<
+#define GET_ATTRDEF_LIST
+#include "Dyn/Dialect/IRDL-SSA/IR/IRDLSSAAttributes.cpp.inc"
+      >();
 }
 
 void IRDLSSADialect::addTypeWrapper(std::unique_ptr<TypeWrapper> wrapper) {

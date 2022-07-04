@@ -19,6 +19,15 @@ irdlssa.dialect testd {
     irdlssa.results(%0)
   }
 
+  // CHECK: irdlssa.operation eq_param {
+  // CHECK:   %[[v0:[^ ]*]] = irdlssa.is_type : "testd.parametric"<i32>
+  // CHECK:   irdlssa.results(%[[v0]])
+  // CHECK: }
+  irdlssa.operation eq_param {
+    %0 = irdlssa.is_type : "testd.parametric"<i32>
+    irdlssa.results(%0)
+  }
+
   // CHECK: irdlssa.operation anyof {
   // CHECK:   %[[v0:[^ ]*]] = irdlssa.is_type : i32
   // CHECK:   %[[v1:[^ ]*]] = irdlssa.is_type : i64
