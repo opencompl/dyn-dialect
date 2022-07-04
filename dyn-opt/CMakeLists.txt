@@ -5,7 +5,7 @@ set(LIBS
         ${conversion_libs}
         MLIROptLib
         )
-add_llvm_executable(dyn-opt dyn-opt.cpp MlirOptMain.cpp RegisterIRDL.cpp LowerIRDL.cpp)
+add_llvm_executable(dyn-opt dyn-opt.cpp MlirOptMain.cpp RegisterIRDL.cpp LowerIRDL.cpp GenEval.cpp)
 
 llvm_update_compile_flags(dyn-opt)
 target_link_libraries(dyn-opt PRIVATE ${LIBS})

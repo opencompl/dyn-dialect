@@ -15,7 +15,7 @@
 
 include "mlir/IR/OpBase.td"
 include "mlir/IR/AttrTypeBase.td"
-include "IRDLSSA.td"
+include "Dyn/Dialect/IRDL-SSA/IR/IRDLSSA.td"
 
 class IRDL_SSA_AttrDef<string name, string attrMnemonic, list<Trait> traits = []>
   : AttrDef<IRDL_SSA_Dialect, name, traits, "::mlir::Attribute"> {
@@ -39,6 +39,12 @@ def ParamTypeAttrOrAnyAttr : IRDL_SSA_AttrDef<"ParamTypeAttrOrAny", "param_type_
   }];
   let parameters = (ins "::mlir::Attribute":$attr);
   let hasCustomAssemblyFormat = 1;
+
+  let extraClassDeclaration = [{
+    public:
+    Attribute instanciateParamType(llvm::function_ref<InFlightDiagnostic()> emitError,
+                                   MLIRContext &ctx);
+  }];
 }
 
 #endif // DYN_DIALECT_IRDL_SSA_IR_IRDLSSAATTRIBUTES

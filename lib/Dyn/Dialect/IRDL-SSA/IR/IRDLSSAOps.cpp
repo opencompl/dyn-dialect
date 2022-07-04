@@ -15,34 +15,6 @@ using namespace mlir;
 using namespace mlir::irdlssa;
 using mlir::irdl::TypeWrapper;
 
-// Utils
-
-DynamicTypeDefinition *findDynamicType(MLIRContext &ctx, StringRef type) {
-  auto splitted = type.split('.');
-  auto dialectName = splitted.first;
-  auto typeName = splitted.second;
-
-  auto dialect = ctx.getOrLoadDialect(dialectName);
-  if (!dialect)
-    return nullptr;
-
-  auto extensibleDialect = llvm::dyn_cast<ExtensibleDialect>(dialect);
-  if (!extensibleDialect)
-    return nullptr;
-
-  return extensibleDialect->lookupTypeDefinition(typeName);
-}
-
-TypeWrapper *findTypeWrapper(MLIRContext &ctx, StringRef type) {
-  Dialect *irdlssaDialect = ctx.getLoadedDialect("irdlssa");
-  assert(irdlssaDialect && "irdlssa is not registered");
-
-  IRDLSSADialect *irdlssa = dyn_cast<IRDLSSADialect>(irdlssaDialect);
-  assert(irdlssa && "irdlssa dialect is not IRDL-SSA");
-
-  return irdlssa->getTypeWrapper(type);
-}
-
 // Verifier instantiation
 Attribute
 instanciateParamType(llvm::function_ref<InFlightDiagnostic()> emitError,

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Dyn/Dialect/IRDL-SSA/IR/IRDLSSAAttributes.h"
+#include "Dyn/Dialect/IRDL-SSA/TypeWrapper.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -74,6 +75,43 @@ void ParamTypeAttrOrAnyAttr::print(AsmPrinter &odsPrinter) const {
     attr.print(odsPrinter);
   } else {
     odsPrinter << this->getAttr();
+  }
+}
+
+Attribute ParamTypeAttrOrAnyAttr::instanciateParamType(
+    llvm::function_ref<InFlightDiagnostic()> emitError, MLIRContext &ctx) {
+  if (ParamTypeInstanceAttr typeDesc =
+          this->getAttr().dyn_cast<ParamTypeInstanceAttr>()) {
+    auto typeName = typeDesc.getBase();
+
+    SmallVector<Attribute> params;
+    for (ParamTypeAttrOrAnyAttr param : typeDesc.getParams()) {
+      auto result = param.instanciateParamType(emitError, ctx);
+      if (!result) {
+        return Attribute();
+      }
+      params.push_back(result);
+    }
+
+    if (DynamicTypeDefinition *type = findDynamicType(ctx, typeName)) {
+      DynamicType instanciated =
+          DynamicType::getChecked(emitError, type, params);
+      if (instanciated)
+        return TypeAttr::get(instanciated);
+      else
+        return Attribute();
+    } else if (TypeWrapper *type = findTypeWrapper(ctx, typeName)) {
+      Type instanciated = type->instanciate(emitError, params);
+      if (instanciated)
+        return TypeAttr::get(instanciated);
+      else
+        return Attribute();
+    } else {
+      emitError().append("type ", typeName, " is not declared at that point");
+      return {};
+    }
+  } else {
+    return this->getAttr();
   }
 }
 
