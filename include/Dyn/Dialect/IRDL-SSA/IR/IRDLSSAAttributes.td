@@ -29,14 +29,13 @@ def ParamTypeInstanceAttr : IRDL_SSA_AttrDef<"ParamTypeInstance", "param_type_in
   }];
   let parameters = (ins "::mlir::StringAttr":$base, ArrayRefParameter<"::mlir::irdlssa::ParamTypeAttrOrAnyAttr">:$params);
   let hasCustomAssemblyFormat = 1;
-  let genVerifyDecl = 1;
 }
 
 def ParamTypeAttrOrAnyAttr : IRDL_SSA_AttrDef<"ParamTypeAttrOrAny", "param_type_or_any"> {
   let summary = "Attribute representing either a parametric type instance or any attribute";
   let description = [{
     Attribute representing either a parametric type instance or any attribute.
-    This is used by `irdlssa.istype` to support more than just built-in types.
+    This is used by `irdlssa.is_type` to support more than just built-in types.
   }];
   let parameters = (ins "::mlir::Attribute":$attr);
   let hasCustomAssemblyFormat = 1;

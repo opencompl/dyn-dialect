@@ -1,12 +1,8 @@
-//===- IRDLSSAAttributes.h - Attributes definition for IRDL-SSA -*- C++ -*-===//
+//===- IRDLSSAAttributes.cpp - Attributes for IRDL-SSA ----------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//===----------------------------------------------------------------------===//
-//
-// This file declares the attributes used in the IRDL-SSA dialect.
 //
 //===----------------------------------------------------------------------===//
 
@@ -55,12 +51,6 @@ void ParamTypeInstanceAttr::print(AsmPrinter &odsPrinter) const {
         [&odsPrinter](ParamTypeAttrOrAnyAttr a) { a.print(odsPrinter); });
     odsPrinter << '>';
   }
-}
-
-LogicalResult ParamTypeInstanceAttr::verify(
-    llvm::function_ref<::mlir::InFlightDiagnostic()> emitError, StringAttr base,
-    ArrayRef<ParamTypeAttrOrAnyAttr> params) {
-  return success();
 }
 
 Attribute ParamTypeAttrOrAnyAttr::parse(AsmParser &odsParser, Type odsType) {

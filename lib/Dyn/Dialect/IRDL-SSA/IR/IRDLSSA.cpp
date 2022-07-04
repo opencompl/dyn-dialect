@@ -49,7 +49,6 @@ void IRDLSSADialect::initialize() {
 #include "Dyn/Dialect/IRDL-SSA/IR/IRDLSSATypesGen.cpp.inc"
       >();
   addAttributes<
-#undef GET_ATTRDEF_CLASSES
 #define GET_ATTRDEF_LIST
 #include "Dyn/Dialect/IRDL-SSA/IR/IRDLSSAAttributes.cpp.inc"
       >();
