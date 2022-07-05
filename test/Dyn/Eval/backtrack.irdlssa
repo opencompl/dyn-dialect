@@ -1,0 +1,88 @@
+// RUN: dyn-opt %s | dyn-opt | FileCheck %s
+
+module {
+  // CHECK-LABEL: irdlssa.dialect backtrack {
+  irdlssa.dialect backtrack {
+    // CHECK-LABEL: irdlssa.type parametric {
+    irdlssa.type parametric {
+      %0 = irdlssa.any_type
+      irdlssa.parameters(%0)
+
+      irdleval.verifier {
+      ^bb0(%arg0: !irdleval.eval_type):
+        %1 = irdleval.alloca
+        irdleval.assign(%1, %arg0)
+        irdleval.success
+      }
+    }
+
+    // CHECK-LABEL: irdlssa.type foo {
+    irdlssa.type foo {
+      %0 = irdlssa.is_type : f32
+      %1 = irdlssa.is_type : "backtrack.parametric"<f32>
+      %2 = irdlssa.any_of(%0, %1)
+      %3 = irdlssa.parametric_type : "backtrack.parametric"<%2>
+      %4 = irdlssa.any_of(%2, %3)
+      irdlssa.parameters(%4, %2)
+
+      irdleval.verifier {
+      ^bb0(%arg0: !irdleval.eval_type, %arg1: !irdleval.eval_type):
+        %5 = irdleval.alloca
+        %6 = irdleval.alloca
+        %7 = irdleval.alloca
+        %8 = irdleval.alloca
+        %9 = irdleval.alloca
+        irdleval.assign(%9, %arg0)
+        irdleval.assign(%7, %arg0)
+        irdleval.check_type(%arg0, f32, ^bb3, ^bb6)
+      ^bb1:  // 4 preds: ^bb3, ^bb4, ^bb5, ^bb10
+        irdleval.success
+      ^bb2:  // 2 preds: ^bb8, ^bb12
+        irdleval.failure
+      ^bb3:  // pred: ^bb0
+        irdleval.match_type(%7, %arg1, ^bb1, ^bb6)
+      ^bb4:  // pred: ^bb9
+        irdleval.match_type(%7, %arg1, ^bb1, ^bb11)
+      ^bb5:  // pred: ^bb6
+        irdleval.match_type(%7, %arg1, ^bb1, ^bb7)
+      ^bb6:  // 2 preds: ^bb0, ^bb3
+        irdleval.check_type(%arg0, "backtrack.parametric"<f32>, ^bb5, ^bb7)
+      ^bb7:  // 2 preds: ^bb5, ^bb6
+        irdleval.clear(%7)
+        irdleval.check_parametric(%arg0, "backtrack.parametric", ^bb9, ^bb8)
+      ^bb8:  // pred: ^bb7
+        irdleval.clear(%9)
+        cf.br ^bb2
+      ^bb9(%10: !irdleval.eval_type):  // pred: ^bb7
+        irdleval.assign(%8, %arg0)
+        irdleval.assign(%7, %10)
+        irdleval.check_type(%10, f32, ^bb4, ^bb11)
+      ^bb10:  // pred: ^bb11
+        irdleval.match_type(%7, %arg1, ^bb1, ^bb12)
+      ^bb11:  // 2 preds: ^bb4, ^bb9
+        irdleval.check_type(%10, "backtrack.parametric"<f32>, ^bb10, ^bb12)
+      ^bb12:  // 2 preds: ^bb10, ^bb11
+        irdleval.clear(%9)
+        irdleval.clear(%8)
+        irdleval.clear(%7)
+        cf.br ^bb2
+      }
+    }
+
+    // CHECK-LABEL: irdlssa.operation const {
+    irdlssa.operation const {
+      %0 = irdlssa.is_type : f32
+      irdlssa.results(%0)
+      
+      irdleval.verifier {
+      ^bb0(%arg0: !irdleval.eval_type):
+        %1 = irdleval.alloca
+        irdleval.check_type(%arg0, f32, ^bb1, ^bb2)
+      ^bb1:  // pred: ^bb0
+        irdleval.success
+      ^bb2:  // pred: ^bb0
+        irdleval.failure
+      }
+    }
+  }
+}

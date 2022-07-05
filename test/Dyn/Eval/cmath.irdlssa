@@ -8,6 +8,7 @@ module {
       %1 = irdlssa.is_type : f64
       %2 = irdlssa.any_of(%0, %1)
       irdlssa.parameters(%2)
+
       irdleval.verifier {
       ^bb0(%arg0: !irdleval.eval_type):
         %3 = irdleval.alloca
@@ -24,11 +25,13 @@ module {
         irdleval.failure
       }
     }
+
     irdlssa.operation norm {
       %0 = irdlssa.any_type
       %1 = irdlssa.parametric_type : "cmath.complex"<%0>
       irdlssa.operands(%1)
       irdlssa.results(%0)
+
       irdleval.verifier {
       ^bb0(%arg0: !irdleval.eval_type, %arg1: !irdleval.eval_type):
         %2 = irdleval.alloca
@@ -50,6 +53,7 @@ module {
         cf.br ^bb2
       }
     }
+    
     irdlssa.operation mul {
       %0 = irdlssa.is_type : f32
       %1 = irdlssa.is_type : f64
@@ -57,6 +61,7 @@ module {
       %3 = irdlssa.parametric_type : "cmath.complex"<%2>
       irdlssa.operands(%3, %3)
       irdlssa.results(%3)
+
       irdleval.verifier {
       ^bb0(%arg0: !irdleval.eval_type, %arg1: !irdleval.eval_type, %arg2: !irdleval.eval_type):
         %4 = irdleval.alloca

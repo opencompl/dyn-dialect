@@ -9,6 +9,7 @@ module {
         irdleval.success
       }
     }
+    
     // CHECK-LABEL: irdlssa.type parametrized {
     irdlssa.type parametrized {
       %0 = irdlssa.any_type
@@ -16,6 +17,7 @@ module {
       %2 = irdlssa.is_type : i64
       %3 = irdlssa.any_of(%1, %2)
       irdlssa.parameters(%0, %3)
+
       irdleval.verifier {
       ^bb0(%arg0: !irdleval.eval_type, %arg1: !irdleval.eval_type):
         %4 = irdleval.alloca
@@ -35,10 +37,12 @@ module {
         irdleval.failure
       }
     }
+
     // CHECK-LABEL: irdlssa.operation any {
     irdlssa.operation any {
       %0 = irdlssa.any_type
       irdlssa.results(%0)
+
       // CHECK: irdleval.verifier {
       // CHECK: ^[[bb0:[^\(]*]](%[[arg0:[^:]*]]: !irdleval.eval_type):
       // CHECK:   %[[v1:[^ ]*]] = irdleval.alloca
