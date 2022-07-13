@@ -47,7 +47,7 @@ struct TypeContext {
   llvm::StringMap<TypeInfo> types;
 };
 
-} // namespace irdlssa
+} // namespace irdl
 } // namespace mlir
 
 #endif // DYN_DIALECT_IRDL_IRDL_CONTEXT_H_
