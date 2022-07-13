@@ -94,7 +94,7 @@ def DynTypeParamsConstraintAttr : IRDL_AttrDef<"DynTypeParamsConstraint", "dyn_t
 }
 
 class TypeWrapperParameter<string desc = ""> :
-    AttrOrTypeParameter<"mlir::irdlssa::TypeWrapper*", desc> {}
+    AttrOrTypeParameter<"mlir::irdl::TypeWrapper*", desc> {}
 
 def TypeParamsConstraintAttr : IRDL_AttrDef<"TypeParamsConstraint", "type_params_constraint",
       [TypeConstraintAttrInterface, DeclareAttrInterfaceMethods<TypeConstraintAttrInterface>]> {

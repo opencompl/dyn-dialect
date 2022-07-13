@@ -13,7 +13,7 @@
 #ifndef DYN_IRDL_SSA_IR_IRDLSSAREGISTRATION_H
 #define DYN_IRDL_SSA_IR_IRDLSSAREGISTRATION_H
 
-#include "Dyn/Dialect/IRDL-SSA/TypeWrapper.h"
+#include "Dyn/Dialect/IRDL/TypeWrapper.h"
 #include "mlir/IR/ExtensibleDialect.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Support/LogicalResult.h"
@@ -61,11 +61,11 @@ public:
 };
 
 class ParametricTypeConstraint : public TypeConstraint {
-  ::mlir::irdlssa::TypeWrapper *expectedType;
+  ::mlir::irdl::TypeWrapper *expectedType;
   SmallVector<size_t> constraints;
 
 public:
-  ParametricTypeConstraint(::mlir::irdlssa::TypeWrapper *expectedType,
+  ParametricTypeConstraint(::mlir::irdl::TypeWrapper *expectedType,
                            SmallVector<size_t> constraints)
       : expectedType(expectedType), constraints(std::move(constraints)) {}
 

@@ -25,9 +25,15 @@ def TypeConstraintAttrInterface : AttrInterface<"TypeConstraintAttrInterface"> {
 
   let methods = [
     InterfaceMethod<
+      "Get the type constraint",
+      "std::unique_ptr<mlir::irdl::TypeConstraint>", "getTypeConstraint",
+      (ins "mlir::irdl::IRDLContext &":$ctx,
+           "mlir::SmallVector<std::pair<llvm::StringRef, std::unique_ptr<mlir::irdl::TypeConstraint>>> const&":$constr_vars)
+    >,
+    InterfaceMethod<
       "Convert the constraint to SSA",
       "mlir::Value", "registerAsSSA",
-      (ins "mlir::irdlssa::TypeContext &":$ctx,
+      (ins "mlir::irdl::TypeContext &":$ctx,
            "mlir::ConversionPatternRewriter &":$rewriter,
            "mlir::SmallVector<std::pair<llvm::StringRef, mlir::Value>> &":$vars,
            "mlir::Location":$location)

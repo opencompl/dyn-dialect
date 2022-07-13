@@ -14,6 +14,7 @@
 #define DYN_DIALECT_IRDL_IR_IRDLATTRIBUTES_H_
 
 #include "Dyn/Dialect/IRDL/IR/IRDLInterfaces.h"
+#include "Dyn/Dialect/IRDL/TypeWrapper.h"
 #include "mlir/IR/AttributeSupport.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/ExtensibleDialect.h"
@@ -25,9 +26,6 @@ namespace mlir {
 namespace irdl {
 class OperationOp;
 } // namespace irdl
-namespace irdlssa {
-class TypeWrapper;
-}
 } // namespace mlir
 
 #define GET_ATTRDEF_CLASSES

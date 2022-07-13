@@ -13,6 +13,7 @@
 
 using namespace mlir;
 using namespace mlir::irdlssa;
+using mlir::irdl::TypeWrapper;
 
 // Utils
 
