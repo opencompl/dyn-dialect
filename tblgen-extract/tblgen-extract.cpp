@@ -34,6 +34,11 @@ using namespace llvm;
 using namespace mlir;
 using namespace irdl;
 
+static cl::opt<bool> emitWarningMessages(
+    "emit-warning-messages",
+    cl::desc("Output warning messages on unknown constraints."),
+    cl::init(false));
+
 std::vector<Record *> getOpDefinitions(const RecordKeeper &recordKeeper) {
   if (!recordKeeper.getClass("Op"))
     return {};
@@ -129,7 +134,8 @@ Attribute extractConstraint(MLIRContext *ctx, StringRef pred) {
       return DynTypeBaseConstraintAttr::get(ctx, *irdlName);
   }
 
-  llvm::errs() << "Cannot resolve constraint: " << pred << "\n";
+  if (emitWarningMessages)
+    llvm::errs() << "Cannot resolve constraint: " << pred << "\n";
   return AnyTypeConstraintAttr::get(ctx);
 }
 
