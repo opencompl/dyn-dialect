@@ -1,5 +1,6 @@
 // RUN: dyn-opt %s | dyn-opt | FileCheck %s
 
+// CHECK: module {
 module {
   // CHECK-LABEL: irdlssa.dialect testd {
   irdlssa.dialect testd {
@@ -19,7 +20,7 @@ module {
       irdlssa.parameters(%0, %3)
 
       irdleval.verifier {
-      ^bb0(%arg0: !irdleval.eval_type, %arg1: !irdleval.eval_type):
+      ^bb0(%arg0: !irdleval.type, %arg1: !irdleval.type):
         %4 = irdleval.alloca
         %5 = irdleval.alloca
         %6 = irdleval.alloca
@@ -44,13 +45,13 @@ module {
       irdlssa.results(%0)
 
       // CHECK: irdleval.verifier {
-      // CHECK: ^[[bb0:[^\(]*]](%[[arg0:[^:]*]]: !irdleval.eval_type):
+      // CHECK: ^[[bb0:[^\(]*]](%[[arg0:[^:]*]]: !irdleval.type):
       // CHECK:   %[[v1:[^ ]*]] = irdleval.alloca
       // CHECK:   irdleval.assign(%[[v1]], %[[arg0]])
       // CHECK:   irdleval.success
       // CHECK: }
       irdleval.verifier {
-      ^bb0(%arg0: !irdleval.eval_type):
+      ^bb0(%arg0: !irdleval.type):
         %1 = irdleval.alloca
         irdleval.assign(%1, %arg0)
         irdleval.success

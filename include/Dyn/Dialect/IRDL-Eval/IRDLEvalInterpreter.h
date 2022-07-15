@@ -21,21 +21,20 @@
 namespace mlir {
 namespace irdleval {
 
-struct IRDLEvalInterpreter {
+class IRDLEvalInterpreter {
+  IRDLEvalInterpreter() {}
+
+public:
   struct ExecutionResult {
     bool completed;
     bool succeeded;
 
-    static ExecutionResult progress() { return {.completed = false}; }
-    static ExecutionResult success() {
-      return {.completed = true, .succeeded = true};
-    }
-    static ExecutionResult failure() {
-      return {.completed = true, .succeeded = false};
-    }
+    static ExecutionResult progress() { return {false, false}; }
+    static ExecutionResult success() { return {true, true}; }
+    static ExecutionResult failure() { return {true, false}; }
   };
 
-  struct Verifier {
+  struct InterpreterVerifier {
     IRDLEvalInterpreter const &interpreter;
 
     size_t currentBlock;
@@ -48,13 +47,15 @@ struct IRDLEvalInterpreter {
   };
 
   struct Instruction {
-    virtual ExecutionResult interpret(Verifier &verifier) = 0;
+    virtual ExecutionResult interpret(InterpreterVerifier &verifier) = 0;
   };
 
-  LogicalResult compile(llvm::function_ref<InFlightDiagnostic()> emitError,
-                        MLIRContext *ctx, Eval_Verifier op);
-  Verifier getVerifier() const;
+  static Optional<IRDLEvalInterpreter>
+  compile(llvm::function_ref<InFlightDiagnostic()> emitError, MLIRContext *ctx,
+          Verifier op);
+  InterpreterVerifier getVerifier() const;
 
+private:
   DenseMap<size_t, SmallVector<std::unique_ptr<Instruction>>> program;
   SmallVector<size_t> argTypeVariables;
 };

@@ -240,7 +240,7 @@ def IRDL_SSA_IsType : IRDL_SSA_ConstraintOp<"is_type", [ParentOneOf<["SSA_TypeOp
     The above program defines a type `complex_restrictive` inside the dialect `cmath` that
     can only have `i32` as its parameter.
 
-    `irdlssa.is_type` also accepts completely instanciated parametric types,
+    `irdlssa.is_type` also accepts completely instantiated parametric types,
     such as `std.complex<f32>`. It does not however allow expressing asbtract
     types, such as `std.complex<T>` where `T` is a type constraint. See
     `irdlssa.parametric_type` instead for this use case.
@@ -268,7 +268,7 @@ def IRDL_SSA_IsType : IRDL_SSA_ConstraintOp<"is_type", [ParentOneOf<["SSA_TypeOp
 }
 
 def IRDL_SSA_ParametricType : IRDL_SSA_ConstraintOp<"parametric_type", [ParentOneOf<["SSA_TypeOp", "SSA_OperationOp"]>, NoSideEffect]> {
-  let summary = "Constraints to a specific instanciated type";
+  let summary = "Constraints to a specific instantiated type";
   let description = [{
     `irdlssa.parametric_type` defines a constraint that accepts either a type defined
     in IRDL-SSA or a type wrapper. If the requested type is parametric, it will

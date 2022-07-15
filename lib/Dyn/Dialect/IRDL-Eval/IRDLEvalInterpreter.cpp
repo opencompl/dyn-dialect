@@ -18,7 +18,8 @@ using Instruction = IRDLEvalInterpreter::Instruction;
 using ExecutionResult = IRDLEvalInterpreter::ExecutionResult;
 
 struct GotoInstruction : public Instruction {
-  ExecutionResult interpret(IRDLEvalInterpreter::Verifier &verifier) override {
+  ExecutionResult
+  interpret(IRDLEvalInterpreter::InterpreterVerifier &verifier) override {
     verifier.currentBlock = gotoBlock;
     verifier.instructionPointer = 0;
     return ExecutionResult::progress();
@@ -30,19 +31,22 @@ struct GotoInstruction : public Instruction {
 };
 
 struct SuccessInstruction : public Instruction {
-  ExecutionResult interpret(IRDLEvalInterpreter::Verifier &verifier) override {
+  ExecutionResult
+  interpret(IRDLEvalInterpreter::InterpreterVerifier &verifier) override {
     return ExecutionResult::success();
   }
 };
 
 struct FailureInstruction : public Instruction {
-  ExecutionResult interpret(IRDLEvalInterpreter::Verifier &verifier) override {
+  ExecutionResult
+  interpret(IRDLEvalInterpreter::InterpreterVerifier &verifier) override {
     return ExecutionResult::failure();
   }
 };
 
 struct CheckTypeInstruction : public Instruction {
-  ExecutionResult interpret(IRDLEvalInterpreter::Verifier &verifier) override {
+  ExecutionResult
+  interpret(IRDLEvalInterpreter::InterpreterVerifier &verifier) override {
     auto typeVar = verifier.typeVariables.find(toCheck);
     assert(typeVar != verifier.typeVariables.end() &&
            "type variable is not initialized");
@@ -69,7 +73,8 @@ struct CheckTypeInstruction : public Instruction {
 };
 
 struct CheckDynParametricInstruction : public Instruction {
-  ExecutionResult interpret(IRDLEvalInterpreter::Verifier &verifier) override {
+  ExecutionResult
+  interpret(IRDLEvalInterpreter::InterpreterVerifier &verifier) override {
     auto typeVar = verifier.typeVariables.find(toCheck);
     assert(typeVar != verifier.typeVariables.end() &&
            "type variable is not initialized");
@@ -111,7 +116,8 @@ struct CheckDynParametricInstruction : public Instruction {
 };
 
 struct CheckParametricInstruction : public Instruction {
-  ExecutionResult interpret(IRDLEvalInterpreter::Verifier &verifier) override {
+  ExecutionResult
+  interpret(IRDLEvalInterpreter::InterpreterVerifier &verifier) override {
     auto typeVar = verifier.typeVariables.find(toCheck);
     assert(typeVar != verifier.typeVariables.end() &&
            "type variable is not initialized");
@@ -152,7 +158,8 @@ struct CheckParametricInstruction : public Instruction {
 };
 
 struct MatchTypeInstruction : public Instruction {
-  ExecutionResult interpret(IRDLEvalInterpreter::Verifier &verifier) override {
+  ExecutionResult
+  interpret(IRDLEvalInterpreter::InterpreterVerifier &verifier) override {
     auto typeVar = verifier.typeVariables.find(toCheck);
     assert(typeVar != verifier.typeVariables.end() &&
            "type variable is not initialized");
@@ -183,7 +190,8 @@ struct MatchTypeInstruction : public Instruction {
 };
 
 struct AssignTypeInstruction : public Instruction {
-  ExecutionResult interpret(IRDLEvalInterpreter::Verifier &verifier) override {
+  ExecutionResult
+  interpret(IRDLEvalInterpreter::InterpreterVerifier &verifier) override {
     auto typeVar = verifier.typeVariables.find(toAssign);
     assert(typeVar != verifier.typeVariables.end() &&
            "type variable is not initialized");
@@ -201,7 +209,8 @@ struct AssignTypeInstruction : public Instruction {
 };
 
 struct ClearTypeInstruction : public Instruction {
-  ExecutionResult interpret(IRDLEvalInterpreter::Verifier &verifier) override {
+  ExecutionResult
+  interpret(IRDLEvalInterpreter::InterpreterVerifier &verifier) override {
     verifier.slotTable.erase(slot);
     return ExecutionResult::progress();
   }
@@ -211,20 +220,22 @@ struct ClearTypeInstruction : public Instruction {
   size_t slot;
 };
 
-IRDLEvalInterpreter::Verifier IRDLEvalInterpreter::getVerifier() const {
+IRDLEvalInterpreter::InterpreterVerifier
+IRDLEvalInterpreter::getVerifier() const {
   DenseMap<size_t, Type> slotTable;
   DenseMap<size_t, Type> typeVariables;
-  return IRDLEvalInterpreter::Verifier{.interpreter = *this,
-                                       .slotTable = slotTable,
-                                       .typeVariables = typeVariables};
+  return IRDLEvalInterpreter::InterpreterVerifier{*this, 0, 0, slotTable,
+                                                  typeVariables};
 }
 
-LogicalResult
+Optional<IRDLEvalInterpreter>
 IRDLEvalInterpreter::compile(llvm::function_ref<InFlightDiagnostic()> emitError,
-                             MLIRContext *ctx, Eval_Verifier op) {
+                             MLIRContext *ctx, Verifier op) {
+  IRDLEvalInterpreter interpreter;
+
   DenseMap<Value, size_t> slotToId;
   size_t id = 0;
-  op.walk([&](Eval_Alloca alloca) {
+  op.walk([&](Alloca alloca) {
     slotToId.insert({alloca.getResult(), id});
     id++;
   });
@@ -246,7 +257,7 @@ IRDLEvalInterpreter::compile(llvm::function_ref<InFlightDiagnostic()> emitError,
   }
 
   for (Value arg : op.getRegion().getArguments()) {
-    this->argTypeVariables.push_back(typeVarToId[arg]);
+    interpreter.argTypeVariables.push_back(typeVarToId[arg]);
   }
 
   for (Block &block : op.getRegion().getBlocks()) {
@@ -255,32 +266,28 @@ IRDLEvalInterpreter::compile(llvm::function_ref<InFlightDiagnostic()> emitError,
     for (Operation &op : block.getOperations()) {
       bool fatal = false;
       TypeSwitch<Operation *>(&op)
-          .Case([&](Eval_Goto op) {
-            instructions.push_back(
-                std::make_unique<GotoInstruction>(blockToId[op.to()]));
-          })
           .Case([&](cf::BranchOp op) {
             instructions.push_back(
                 std::make_unique<GotoInstruction>(blockToId[op.getDest()]));
           })
-          .Case([&](Eval_Success op) {
+          .Case([&](Success op) {
             instructions.push_back(std::make_unique<SuccessInstruction>());
           })
-          .Case([&](Eval_Failure op) {
+          .Case([&](Failure op) {
             instructions.push_back(std::make_unique<FailureInstruction>());
           })
-          .Case([&](Eval_CheckType op) {
-            Attribute instanciatedParam =
-                op.expected().instanciateParamType(emitError, *ctx);
+          .Case([&](CheckType op) {
+            Attribute instantiatedParam =
+                op.expected().instantiateParamType(emitError, *ctx);
 
-            if (!instanciatedParam) {
+            if (!instantiatedParam) {
               emitError().append("invalid attribute ", op.expected());
               fatal = true;
               return;
             }
 
             Type type;
-            if (TypeAttr typeAttr = instanciatedParam.dyn_cast<TypeAttr>()) {
+            if (TypeAttr typeAttr = instantiatedParam.dyn_cast<TypeAttr>()) {
               type = typeAttr.getValue();
             } else {
               emitError().append("attribute ", op.expected(), " is not a type");
@@ -292,7 +299,7 @@ IRDLEvalInterpreter::compile(llvm::function_ref<InFlightDiagnostic()> emitError,
                 typeVarToId[op.typeVar()], type, blockToId[op.success()],
                 blockToId[op.failure()]));
           })
-          .Case([&](Eval_CheckParametric op) {
+          .Case([&](CheckParametric op) {
             SmallVector<size_t> typeVarsToDefine;
             for (Value arg : op.success()->getArguments()) {
               typeVarsToDefine.push_back(typeVarToId[arg]);
@@ -316,37 +323,37 @@ IRDLEvalInterpreter::compile(llvm::function_ref<InFlightDiagnostic()> emitError,
               fatal = true;
             }
           })
-          .Case([&](Eval_MatchType op) {
+          .Case([&](MatchType op) {
             instructions.push_back(std::make_unique<MatchTypeInstruction>(
                 typeVarToId[op.typeVar()], slotToId[op.slot()],
                 blockToId[op.success()], blockToId[op.failure()]));
           })
-          .Case([&](Eval_AssignType op) {
+          .Case([&](AssignType op) {
             instructions.push_back(std::make_unique<AssignTypeInstruction>(
                 typeVarToId[op.typeVar()], slotToId[op.slot()]));
           })
-          .Case([&](Eval_ClearType op) {
+          .Case([&](ClearType op) {
             instructions.push_back(
                 std::make_unique<ClearTypeInstruction>(slotToId[op.slot()]));
           })
-          .Case([&](Eval_Alloca op) {})
+          .Case([&](Alloca op) {})
           .Default([&](Operation *op) {
             emitError().append("unsupported instruction ", op, " in verifier");
             fatal = true;
           });
 
       if (fatal) {
-        return LogicalResult::failure();
+        return {};
       }
     }
 
-    this->program.insert({blockToId[&block], std::move(instructions)});
+    interpreter.program.insert({blockToId[&block], std::move(instructions)});
   }
 
-  return LogicalResult::success();
+  return {std::move(interpreter)};
 }
 
-LogicalResult IRDLEvalInterpreter::Verifier::verify(
+LogicalResult IRDLEvalInterpreter::InterpreterVerifier::verify(
     llvm::function_ref<InFlightDiagnostic()> emitError, ArrayRef<Type> args) {
   if (args.size() != this->interpreter.argTypeVariables.size()) {
     return emitError().append("invalid amount of types, expected ",

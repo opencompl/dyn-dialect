@@ -14,7 +14,7 @@ using namespace mlir;
 using namespace irdlssa;
 using namespace irdleval;
 
-LogicalResult Eval_Verifier::verify() {
+LogicalResult Verifier::verify() {
   Operation *parent = this->getOperation()->getParentOp();
   assert(parent && "verifier operation has no parent");
 
@@ -48,17 +48,7 @@ LogicalResult Eval_Verifier::verify() {
   return LogicalResult::success();
 }
 
-LogicalResult Eval_Goto::verify() {
-  if (this->to()->getArguments().size() != 0) {
-    return this->emitError().append(
-        "success block expected to have 0 arguments, has ",
-        this->to()->getArguments().size());
-  }
-
-  return LogicalResult::success();
-}
-
-LogicalResult Eval_MatchType::verify() {
+LogicalResult MatchType::verify() {
   if (this->success()->getArguments().size() != 0) {
     return this->emitError().append(
         "success block expected to have 0 arguments, has ",
@@ -74,7 +64,7 @@ LogicalResult Eval_MatchType::verify() {
   return LogicalResult::success();
 }
 
-LogicalResult Eval_CheckType::verify() {
+LogicalResult CheckType::verify() {
   if (this->success()->getArguments().size() != 0) {
     return this->emitError().append(
         "success block expected to have 0 arguments, has ",
@@ -90,7 +80,7 @@ LogicalResult Eval_CheckType::verify() {
   return LogicalResult::success();
 }
 
-LogicalResult Eval_CheckParametric::verify() {
+LogicalResult CheckParametric::verify() {
   auto args = this->success()->getArguments();
   for (size_t i = 0; i < args.size(); i++) {
     if (!args[i].getType().isa<EvalTypeType>()) {

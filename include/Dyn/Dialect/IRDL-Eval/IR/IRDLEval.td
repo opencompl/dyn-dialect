@@ -15,7 +15,7 @@
 
 include "mlir/IR/OpBase.td"
 
-def IRDL_Eval_Dialect : Dialect {
+def IRDLEval_Dialect : Dialect {
   let summary = "IR Definition Language Eval Dialect";
   let description = [{
       IRDL-Eval is a dialect to represent automata checking type constraints.

@@ -37,7 +37,7 @@ public:
   virtual llvm::StringRef getName() = 0;
 
   /// Instanciates the type from parameters.
-  virtual Type instanciate(llvm::function_ref<InFlightDiagnostic()> emitError,
+  virtual Type instantiate(llvm::function_ref<InFlightDiagnostic()> emitError,
                            llvm::ArrayRef<Attribute> parameters) = 0;
 
   /// Returns the amount of parameters the type expects.

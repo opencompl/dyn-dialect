@@ -17,7 +17,7 @@ using mlir::irdl::TypeWrapper;
 
 // Verifier instantiation
 Attribute
-instanciateParamType(llvm::function_ref<InFlightDiagnostic()> emitError,
+instantiateParamType(llvm::function_ref<InFlightDiagnostic()> emitError,
                      MLIRContext &ctx, ParamTypeAttrOrAnyAttr attr) {
   if (ParamTypeInstanceAttr typeDesc =
           attr.getAttr().dyn_cast<ParamTypeInstanceAttr>()) {
@@ -25,7 +25,7 @@ instanciateParamType(llvm::function_ref<InFlightDiagnostic()> emitError,
 
     SmallVector<Attribute> params;
     for (ParamTypeAttrOrAnyAttr param : typeDesc.getParams()) {
-      auto result = instanciateParamType(emitError, ctx, param);
+      auto result = instantiateParamType(emitError, ctx, param);
       if (!result) {
         return Attribute();
       }
@@ -33,16 +33,16 @@ instanciateParamType(llvm::function_ref<InFlightDiagnostic()> emitError,
     }
 
     if (DynamicTypeDefinition *type = findDynamicType(ctx, typeName)) {
-      DynamicType instanciated =
+      DynamicType instantiated =
           DynamicType::getChecked(emitError, type, params);
-      if (instanciated)
-        return TypeAttr::get(instanciated);
+      if (instantiated)
+        return TypeAttr::get(instantiated);
       else
         return Attribute();
     } else if (TypeWrapper *type = findTypeWrapper(ctx, typeName)) {
-      Type instanciated = type->instanciate(emitError, params);
-      if (instanciated)
-        return TypeAttr::get(instanciated);
+      Type instantiated = type->instantiate(emitError, params);
+      if (instantiated)
+        return TypeAttr::get(instantiated);
       else
         return Attribute();
     } else {
@@ -56,7 +56,7 @@ instanciateParamType(llvm::function_ref<InFlightDiagnostic()> emitError,
 
 llvm::Optional<std::unique_ptr<TypeConstraint>>
 SSA_IsType::getVerifier(SmallVector<Value> const &valueToConstr) {
-  auto attr = instanciateParamType([&]() { return this->emitError(); },
+  auto attr = instantiateParamType([&]() { return this->emitError(); },
                                    *this->getContext(), this->type());
 
   if (!attr)

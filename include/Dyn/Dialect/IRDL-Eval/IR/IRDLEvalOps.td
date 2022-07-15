@@ -1,4 +1,4 @@
-//===- IRDLEvalOps.td - IR Definition Language Dialect ------*- tablegen -*-===//
+//===- IRDLEvalOps.td - IRDL Eval Dialect ------------------*- tablegen -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -20,11 +20,11 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/BuiltinAttributes.td"
 include "Dyn/Dialect/IRDL-SSA/IR/IRDLSSAAttributes.td"
 
-class IRDL_Eval_Op<string mnemonic, list<Trait> traits = []>
-    : Op<IRDL_Eval_Dialect, mnemonic, traits> {
+class IRDLEval_Op<string mnemonic, list<Trait> traits = []>
+    : Op<IRDLEval_Dialect, mnemonic, traits> {
 }
 
-def IRDL_Eval_Verifier : IRDL_Eval_Op<"verifier", [ParentOneOf<["mlir::irdlssa::SSA_TypeOp", "mlir::irdlssa::SSA_OperationOp"]>]> {
+def IRDLEval_Verifier : IRDLEval_Op<"verifier", [ParentOneOf<["mlir::irdlssa::SSA_TypeOp", "mlir::irdlssa::SSA_OperationOp"]>]> {
   let summary = "Defines the verification procedure associated to this op";
   let description = [{
     `irdleval.verifier` represents a specific type-checking automata.
@@ -82,31 +82,7 @@ def IRDL_Eval_Verifier : IRDL_Eval_Op<"verifier", [ParentOneOf<["mlir::irdlssa::
   let hasVerifier = 1;
 }
 
-def IRDL_Eval_Goto : IRDL_Eval_Op<"goto", [Terminator]> {
-  let summary = "Goes to a block";
-  let description = [{
-    `irdleval.goto` redirects control-flow to the specified block.
-
-    Example:
-
-    ```
-    irdleval.verifier {
-    ^bb0:
-      irdleval.goto(^bb1)
-    ^bb1:
-      irdleval.success
-    ```
-
-    This verifier first jumps to `^bb1`, then suceeds.
-  }];
-
-  let arguments = (ins);
-  let successors = (successor AnySuccessor:$to);
-  let assemblyFormat = [{ `(` $to `)` attr-dict }];
-  let hasVerifier = 1;
-}
-
-def IRDL_Eval_Success : IRDL_Eval_Op<"success", [Terminator, ReturnLike]> {
+def IRDLEval_Success : IRDLEval_Op<"success", [Terminator, ReturnLike]> {
   let summary = "Marks the verification as successful";
   let description = [{
     `irdleval.success` marks successful verification for the entire
@@ -129,7 +105,7 @@ def IRDL_Eval_Success : IRDL_Eval_Op<"success", [Terminator, ReturnLike]> {
   let assemblyFormat = [{ attr-dict }];
 }
 
-def IRDL_Eval_Failure : IRDL_Eval_Op<"failure", [Terminator, ReturnLike]> {
+def IRDLEval_Failure : IRDLEval_Op<"failure", [Terminator, ReturnLike]> {
   let summary = "Marks the verification as failed";
   let description = [{
     `irdleval.failure` marks verification failure for the entire
@@ -152,7 +128,7 @@ def IRDL_Eval_Failure : IRDL_Eval_Op<"failure", [Terminator, ReturnLike]> {
   let assemblyFormat = [{ attr-dict }];
 }
 
-def IRDL_Eval_CheckType : IRDL_Eval_Op<"check_type", [Terminator]> {
+def IRDLEval_CheckType : IRDLEval_Op<"check_type", [Terminator]> {
   let summary = "Checks whether the provided type is equal to the specified type";
   let description = [{
     `irdleval.check_type` checks whether the
@@ -181,16 +157,16 @@ def IRDL_Eval_CheckType : IRDL_Eval_Op<"check_type", [Terminator]> {
     the type `cmath.complex<f32>`, failing otherwise.
   }];
 
-  let arguments = (ins IRDL_Eval_EvalType:$typeVar, ParamTypeAttrOrAnyAttr:$expected);
+  let arguments = (ins IRDLEval_EvalType:$typeVar, ParamTypeAttrOrAnyAttr:$expected);
   let successors = (successor AnySuccessor:$success, AnySuccessor:$failure);
   let assemblyFormat = [{ `(` $typeVar `,` $expected `,` $success `,` $failure `)` attr-dict }];
   let hasVerifier = 1;
 }
 
-def IRDL_Eval_CheckParametric : IRDL_Eval_Op<"check_parametric", [Terminator]> {
+def IRDLEval_CheckParametric : IRDLEval_Op<"check_parametric", [Terminator]> {
   let summary = "Checks whether a type's base type corresponds to the expected type";
   let description = [{
-    `irdleval.check_type` checks whether the
+    `irdleval.check_parametric` checks whether the
     type contained in the provided variable matches the parametric
     structure of the type described by the associated base identifier.
 
@@ -205,7 +181,7 @@ def IRDL_Eval_CheckParametric : IRDL_Eval_Op<"check_parametric", [Terminator]> {
     ```
     irdleval.verifier {
     ^bb0(%arg: !irdleval.eval_type):
-      irdleval.check_type(%arg, "cmath.complex", ^bb1, ^bb2)
+      irdleval.check_parametric(%arg, "cmath.complex", ^bb1, ^bb2)
     ^bb1:
       irdleval.success
     ^bb2:
@@ -217,7 +193,7 @@ def IRDL_Eval_CheckParametric : IRDL_Eval_Op<"check_parametric", [Terminator]> {
     but does not check anything with respect to the validity of its type parameters.
   }];
 
-  let arguments = (ins IRDL_Eval_EvalType:$typeVar, StrAttr:$base);
+  let arguments = (ins IRDLEval_EvalType:$typeVar, StrAttr:$base);
   let successors = (successor AnySuccessor:$success, AnySuccessor:$invalidBase);
   let assemblyFormat = [{ `(` $typeVar `,` $base `,` $success `,` $invalidBase `)` attr-dict }];
   let hasVerifier = 1;
@@ -227,7 +203,7 @@ def IRDL_Eval_CheckParametric : IRDL_Eval_Op<"check_parametric", [Terminator]> {
 // IRDL-Eval Slot operations
 //===----------------------------------------------------------------------===//
 
-def IRDL_Eval_MatchType : IRDL_Eval_Op<"match_type", [Terminator]> {
+def IRDLEval_MatchType : IRDLEval_Op<"match_type", [Terminator]> {
   let summary = "Checks whether a type matches the type assigned to a constraint identifier";
   let description = [{
     `irdleval.match_type` checks that the provided slots contains
@@ -256,13 +232,13 @@ def IRDL_Eval_MatchType : IRDL_Eval_Op<"match_type", [Terminator]> {
     the type in `%arg1`, failing if they are not equal.
   }];
 
-  let arguments = (ins IRDL_Eval_SlotType:$slot, IRDL_Eval_EvalType:$typeVar);
+  let arguments = (ins IRDLEval_SlotType:$slot, IRDLEval_EvalType:$typeVar);
   let successors = (successor AnySuccessor:$success, AnySuccessor:$failure);
   let assemblyFormat = [{ `(` $slot `,` $typeVar `,` $success `,` $failure `)` attr-dict }];
   let hasVerifier = 1;
 }
 
-def IRDL_Eval_AssignType : IRDL_Eval_Op<"assign"> {
+def IRDLEval_AssignType : IRDLEval_Op<"assign"> {
   let summary = "Assigns a type to a constraint identifier";
   let description = [{
     `irdleval.assign` assigns a type to a slot in the slot
@@ -289,11 +265,11 @@ def IRDL_Eval_AssignType : IRDL_Eval_Op<"assign"> {
     the type in `%arg1`, failing if they are not equal.
   }];
 
-  let arguments = (ins IRDL_Eval_SlotType:$slot, IRDL_Eval_EvalType:$typeVar);
+  let arguments = (ins IRDLEval_SlotType:$slot, IRDLEval_EvalType:$typeVar);
   let assemblyFormat = [{ `(` $slot `,` $typeVar `)` attr-dict }];
 }
 
-def IRDL_Eval_ClearType : IRDL_Eval_Op<"clear"> {
+def IRDLEval_ClearType : IRDLEval_Op<"clear"> {
   let summary = "Clears the type associated to a constraint variable";
   let description = [{
     `irdleval.clear` clears the content of a slot. This is notably useful
@@ -321,11 +297,11 @@ def IRDL_Eval_ClearType : IRDL_Eval_Op<"clear"> {
     If this fails, it clears slot `%0` and tries again with the type in `%arg1`.
   }];
 
-  let arguments = (ins IRDL_Eval_SlotType:$slot);
+  let arguments = (ins IRDLEval_SlotType:$slot);
   let assemblyFormat = [{ `(` $slot `)` attr-dict }];
 }
 
-def IRDL_Eval_Alloca : IRDL_Eval_Op<"alloca"> {
+def IRDLEval_Alloca : IRDLEval_Op<"alloca"> {
   let summary = "Allocates a slot to store types";
   let description = [{
     `irdleval.alloca` allocates a slot in the slot table for use.
@@ -352,7 +328,7 @@ def IRDL_Eval_Alloca : IRDL_Eval_Op<"alloca"> {
   }];
 
   let arguments = (ins);
-  let results = (outs IRDL_Eval_SlotType:$output);
+  let results = (outs IRDLEval_SlotType:$output);
   let assemblyFormat = [{ attr-dict }];
 }
 

@@ -45,7 +45,7 @@ class ComplexTypeWrapper : public ConcreteTypeWrapper<ComplexType> {
 
   size_t getParameterAmount() override { return 1; }
 
-  Type instanciate(llvm::function_ref<InFlightDiagnostic()> emitError,
+  Type instantiate(llvm::function_ref<InFlightDiagnostic()> emitError,
                    ArrayRef<Attribute> parameters) override {
     if (parameters.size() != this->getParameterAmount()) {
       emitError().append("invalid number of type parameters ",

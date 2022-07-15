@@ -42,7 +42,7 @@ def ParamTypeAttrOrAnyAttr : IRDL_SSA_AttrDef<"ParamTypeAttrOrAny", "param_type_
 
   let extraClassDeclaration = [{
     public:
-    Attribute instanciateParamType(llvm::function_ref<InFlightDiagnostic()> emitError,
+    Attribute instantiateParamType(llvm::function_ref<InFlightDiagnostic()> emitError,
                                    MLIRContext &ctx);
   }];
 }

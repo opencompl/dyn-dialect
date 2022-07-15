@@ -115,12 +115,13 @@ void registerOperation(LogicalResult &res, ExtensibleDialect *dialect,
                        SSA_OperationOp op) {
   // If an IRDL-Eval verifier is registered, use it.
   for (Operation &childOp : op.getOps()) {
-    using irdleval::Eval_Verifier;
-    if (Eval_Verifier opVerifier = llvm::dyn_cast<Eval_Verifier>(childOp)) {
-      irdleval::IRDLEvalInterpreter interpreter;
+    using irdleval::Verifier;
+    if (Verifier opVerifier = llvm::dyn_cast<Verifier>(childOp)) {
+      auto interpreter = irdleval::IRDLEvalInterpreter::compile(
+          [&]() { return opVerifier.emitError(); }, opVerifier.getContext(),
+          opVerifier);
 
-      if (failed(interpreter.compile([&]() { return opVerifier.emitError(); },
-                                     opVerifier.getContext(), opVerifier))) {
+      if (!interpreter.hasValue()) {
         res = failure();
         return;
       }
@@ -161,7 +162,7 @@ void registerOperation(LogicalResult &res, ExtensibleDialect *dialect,
           args.push_back(result.getType());
         }
 
-        return interpreter.getVerifier().verify(
+        return interpreter->getVerifier().verify(
             [&]() { return op->emitError(); }, args);
       };
 
@@ -269,12 +270,13 @@ static void registerType(LogicalResult &res, ExtensibleDialect *dialect,
                          SSA_TypeOp op) {
   // If an IRDL-Eval verifier is registered, use it.
   for (Operation &childOp : op.getOps()) {
-    using irdleval::Eval_Verifier;
-    if (Eval_Verifier opVerifier = llvm::dyn_cast<Eval_Verifier>(childOp)) {
-      irdleval::IRDLEvalInterpreter interpreter;
+    using irdleval::Verifier;
+    if (Verifier opVerifier = llvm::dyn_cast<Verifier>(childOp)) {
+      auto interpreter = irdleval::IRDLEvalInterpreter::compile(
+          [&]() { return opVerifier.emitError(); }, opVerifier.getContext(),
+          opVerifier);
 
-      if (failed(interpreter.compile([&]() { return opVerifier.emitError(); },
-                                     opVerifier.getContext(), opVerifier))) {
+      if (!interpreter.hasValue()) {
         res = failure();
         return;
       }
@@ -292,7 +294,7 @@ static void registerType(LogicalResult &res, ExtensibleDialect *dialect,
                                       attr);
           }
         }
-        return interpreter.getVerifier().verify(emitError, args);
+        return interpreter->getVerifier().verify(emitError, args);
       };
 
       auto type =

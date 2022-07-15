@@ -16,12 +16,12 @@
 include "mlir/IR/AttrTypeBase.td"
 include "IRDLEval.td"
 
-class IRDL_Eval_Type<string name, string typeMnemonic, list<Trait> traits = []>
-    : TypeDef<IRDL_Eval_Dialect, name, traits> {
+class IRDLEval_Type<string name, string typeMnemonic, list<Trait> traits = []>
+    : TypeDef<IRDLEval_Dialect, name, traits> {
   let mnemonic = typeMnemonic;
 }
 
-def IRDL_Eval_EvalType : IRDL_Eval_Type<"EvalType", "eval_type"> {
+def IRDLEval_EvalType : IRDLEval_Type<"EvalType", "type"> {
   let summary = "Type representing a type";
   let description = [{
     `irdleval.eval_type` is the type of types when stored
@@ -29,7 +29,7 @@ def IRDL_Eval_EvalType : IRDL_Eval_Type<"EvalType", "eval_type"> {
   }];
 }
 
-def IRDL_Eval_SlotType : IRDL_Eval_Type<"Slot", "slot"> {
+def IRDLEval_SlotType : IRDLEval_Type<"Slot", "slot"> {
   let summary = "Type representing a slot to hold a type mapped to a constraint";
   let description = [{
     `irdleval.slot` is the type of slots once allocated with
