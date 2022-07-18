@@ -155,7 +155,7 @@ void printAnyOfTypeConstraint(OpAsmPrinter &p,
 }
 
 /// Parse an And constraint if there is one.
-/// It has the format 'AnyOf<type (, type)*>'
+/// It has the format 'And<type (, type)*>'.
 OptionalParseResult parseOptionalAndTypeConstraint(OpAsmParser &p,
                                                    Attribute *typeConstraint) {
   if (p.parseOptionalKeyword("And"))
