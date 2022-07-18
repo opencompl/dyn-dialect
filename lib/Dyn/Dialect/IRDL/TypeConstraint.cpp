@@ -52,6 +52,22 @@ LogicalResult AnyOfTypeConstraint::verifyType(
   return failure();
 }
 
+LogicalResult AndTypeConstraint::verifyType(
+    Optional<function_ref<InFlightDiagnostic()>> emitError, Type type,
+    ArrayRef<std::unique_ptr<TypeConstraint>> typeConstraintVars,
+    MutableArrayRef<Type> varsValue) {
+  for (auto &constr : constrs) {
+    if (failed(constr->verifyType({}, type, typeConstraintVars, varsValue))) {
+      if (emitError)
+        return (*emitError)().append("type ", type,
+                                     " does not satisfy the constraint ");
+      return failure();
+    }
+  }
+
+  return success();
+}
+
 LogicalResult VarTypeConstraint::verifyType(
     Optional<function_ref<InFlightDiagnostic()>> emitError, Type type,
     ArrayRef<std::unique_ptr<TypeConstraint>> typeConstraintVars,

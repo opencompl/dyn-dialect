@@ -154,6 +154,54 @@ void printAnyOfTypeConstraint(OpAsmPrinter &p,
   p << ">";
 }
 
+/// Parse an And constraint if there is one.
+/// It has the format 'AnyOf<type (, type)*>'
+OptionalParseResult parseOptionalAndTypeConstraint(OpAsmParser &p,
+                                                   Attribute *typeConstraint) {
+  if (p.parseOptionalKeyword("And"))
+    return {};
+
+  if (p.parseLess())
+    return {failure()};
+
+  SmallVector<Attribute> constraints;
+
+  {
+    Attribute constraint;
+    if (parseTypeConstraint(p, &constraint))
+      return {failure()};
+    constraints.push_back(constraint);
+  }
+
+  while (p.parseOptionalGreater()) {
+    if (p.parseComma())
+      return {failure()};
+
+    Attribute constraint;
+    if (parseTypeConstraint(p, &constraint))
+      return {failure()};
+    constraints.push_back(constraint);
+  }
+
+  *typeConstraint =
+      AndTypeConstraintAttr::get(p.getBuilder().getContext(), constraints);
+  return {success()};
+}
+
+/// Print an And type constraint.
+/// It has the format 'AnyOf<type, (, type)*>'.
+void printAndTypeConstraint(OpAsmPrinter &p, AndTypeConstraintAttr andConstr) {
+  auto constrs = andConstr.getConstrs();
+
+  p << "And<";
+  for (size_t i = 0; i + 1 < constrs.size(); i++) {
+    printTypeConstraint(p, constrs[i]);
+    p << ", ";
+  }
+  printTypeConstraint(p, constrs.back());
+  p << ">";
+}
+
 /// Parse a type parameters constraint.
 /// It has the format 'dialectname.typename<(typeConstraint ,)*>'
 ParseResult parseTypeParamsConstraint(OpAsmParser &p, TypeWrapper *wrapper,
@@ -294,6 +342,11 @@ ParseResult parseTypeConstraint(OpAsmParser &p, Attribute *typeConstraint) {
   if (anyOfRes.hasValue())
     return *anyOfRes;
 
+  // Parse an And constraint.
+  auto andRes = parseOptionalAndTypeConstraint(p, typeConstraint);
+  if (andRes.hasValue())
+    return *andRes;
+
   auto ctx = p.getBuilder().getContext();
 
   // Type equality constraint.
@@ -357,6 +410,9 @@ void printTypeConstraint(OpAsmPrinter &p, Attribute typeConstraint) {
   } else if (auto anyOfConstr =
                  typeConstraint.dyn_cast<AnyOfTypeConstraintAttr>()) {
     printAnyOfTypeConstraint(p, anyOfConstr);
+  } else if (auto andConstr =
+                 typeConstraint.dyn_cast<AndTypeConstraintAttr>()) {
+    printAndTypeConstraint(p, andConstr);
   } else if (auto typeParamsConstr =
                  typeConstraint.dyn_cast<TypeParamsConstraintAttr>()) {
     printTypeParamsConstraint(p, typeParamsConstr);

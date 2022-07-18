@@ -135,6 +135,21 @@ LogicalResult AnyOfTypeConstraint::verifyType(
   return failure();
 }
 
+LogicalResult AndTypeConstraint::verifyType(
+    Optional<function_ref<InFlightDiagnostic()>> emitError, Type type,
+    ConstraintVerifier &context) const {
+  for (size_t constr : this->constraints) {
+    if (failed(context.verifyType({}, type, constr))) {
+      if (emitError)
+        return (*emitError)().append("type ", type,
+                                     " does not satisfy the constraint");
+      return failure();
+    }
+  }
+
+  return success();
+}
+
 LogicalResult AnyTypeConstraint::verifyType(
     Optional<function_ref<InFlightDiagnostic()>> emitError, Type type,
     ConstraintVerifier &context) const {

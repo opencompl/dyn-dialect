@@ -144,6 +144,39 @@ mlir::Value AnyOfTypeConstraintAttr::registerAsSSA(
 }
 
 //===----------------------------------------------------------------------===//
+// IRDL And type constraint attribute
+//===----------------------------------------------------------------------===//
+
+std::unique_ptr<TypeConstraint> AndTypeConstraintAttr::getTypeConstraint(
+    IRDLContext &irdlCtx,
+    SmallVector<std::pair<StringRef, std::unique_ptr<TypeConstraint>>> const
+        &constrVars) const {
+  SmallVector<std::unique_ptr<TypeConstraint>> constraints;
+  auto constraintAttrs = getConstrs();
+  for (auto constrAttr : constraintAttrs)
+    constraints.push_back(
+        constrAttr.cast<TypeConstraintAttrInterface>().getTypeConstraint(
+            irdlCtx, constrVars));
+  return std::make_unique<AndTypeConstraint>(std::move(constraints));
+}
+
+mlir::Value AndTypeConstraintAttr::registerAsSSA(
+    TypeContext &typeCtx, mlir::ConversionPatternRewriter &rewriter,
+    SmallVector<std::pair<StringRef, Value>> &vars,
+    mlir::Location location) const {
+  SmallVector<Value> constrs;
+  for (auto constrAttr : this->getConstrs()) {
+    constrs.push_back(
+        constrAttr.cast<TypeConstraintAttrInterface>().registerAsSSA(
+            typeCtx, rewriter, vars, location));
+  }
+
+  irdlssa::SSA_And op = rewriter.create<irdlssa::SSA_And>(
+      location, rewriter.getType<irdlssa::ConstraintType>(), constrs);
+  return op.getResult();
+}
+
+//===----------------------------------------------------------------------===//
 // Type constraint variable
 //===----------------------------------------------------------------------===//
 

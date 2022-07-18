@@ -100,6 +100,18 @@ public:
              ConstraintVerifier &context) const override;
 };
 
+class AndTypeConstraint : public TypeConstraint {
+  SmallVector<size_t> constraints;
+
+public:
+  AndTypeConstraint(SmallVector<size_t> constraints)
+      : constraints(std::move(constraints)) {}
+
+  LogicalResult
+  verifyType(Optional<function_ref<InFlightDiagnostic()>> emitError, Type type,
+             ConstraintVerifier &context) const override;
+};
+
 class AnyTypeConstraint : public TypeConstraint {
 public:
   LogicalResult

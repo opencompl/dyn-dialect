@@ -78,6 +78,26 @@ private:
 };
 
 //===----------------------------------------------------------------------===//
+// And type constraint
+//===----------------------------------------------------------------------===//
+
+/// And type constraint.
+/// A type satisfies this constraint if it satisfies a set of constraints.
+class AndTypeConstraint : public TypeConstraint {
+public:
+  AndTypeConstraint(SmallVector<std::unique_ptr<TypeConstraint>> constrs)
+      : constrs(std::move(constrs)) {}
+
+  virtual LogicalResult
+  verifyType(Optional<function_ref<InFlightDiagnostic()>> emitError, Type type,
+             ArrayRef<std::unique_ptr<TypeConstraint>> typeConstraintVars,
+             MutableArrayRef<Type> varsValue) override;
+
+private:
+  llvm::SmallVector<std::unique_ptr<TypeConstraint>> constrs;
+};
+
+//===----------------------------------------------------------------------===//
 // Always true type constraint
 //===----------------------------------------------------------------------===//
 

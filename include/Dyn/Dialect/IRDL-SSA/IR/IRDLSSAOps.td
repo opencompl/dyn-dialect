@@ -323,7 +323,7 @@ def IRDL_SSA_AnyType : IRDL_SSA_ConstraintOp<"any_type", [ParentOneOf<["SSA_Type
 }
 
 def IRDL_SSA_AnyOf : IRDL_SSA_ConstraintOp<"any_of", [ParentOneOf<["SSA_TypeOp", "SSA_OperationOp"]>]> {
-  let summary = "Constraints to any of the provided types";
+  let summary = "Constraints to any of the provided constraints";
   let description = [{
     `irdlssa.any_of` defines a constraint that accepts any type that
     satisfies at least one of its provided type constraints.
@@ -345,6 +345,41 @@ def IRDL_SSA_AnyOf : IRDL_SSA_ConstraintOp<"any_of", [ParentOneOf<["SSA_TypeOp",
 
     The above program defines a type `complex` inside the dialect `cmath` that
     can has one type parameter that can be either `i32`, `i64`, `f32` or `f32`.
+  }];
+
+  let arguments = (ins Variadic<IRDL_SSA_ConstraintType>:$args);
+  let results = (outs IRDL_SSA_ConstraintType:$output);
+  let assemblyFormat = [{ `(` $args `)` attr-dict }];
+}
+
+def IRDL_SSA_And : IRDL_SSA_ConstraintOp<"and", [ParentOneOf<["SSA_TypeOp", "SSA_OperationOp"]>]> {
+  let summary = "Constraints to all the provided types";
+  let description = [{
+    `irdlssa.and` defines a constraint that accepts any type that
+    satisfies all of its provided type constraints.
+
+    Example:
+
+    ```mlir
+    irdlssa.dialect cmath {
+      irdlssa.type complex_f32 {
+        %0 = irdlssa.is_type : i32
+        %1 = irdlssa.is_type : f32
+        %2 = irdlssa.any_of(%0, %1) // is 32-bit
+
+        %3 = irdlssa.is_type : f32
+        %4 = irdlssa.is_type : f64
+        %5 = irdlssa.any_of(%3, %4) // is a float
+
+        %6 = irdlssa.and(%2, %5) // is a 32-bit float
+        irdlssa.parameters(%6)
+      }
+    }
+    ```
+
+    The above program defines a type `complex` inside the dialect `cmath` that
+    can has one type parameter that must be 32-bit long and a float (in other
+    words, that must be `f32`).
   }];
 
   let arguments = (ins Variadic<IRDL_SSA_ConstraintType>:$args);

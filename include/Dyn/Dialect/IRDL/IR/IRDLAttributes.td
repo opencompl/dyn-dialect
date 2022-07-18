@@ -57,6 +57,18 @@ def AnyOfTypeConstraintAttr : IRDL_AttrDef<"AnyOfTypeConstraint", "any_of_type_c
   let assemblyFormat = "`<` $constrs `>`";
 }
 
+def AndTypeConstraintAttr : IRDL_AttrDef<"AndTypeConstraint", "and_type_constraint",
+      [TypeConstraintAttrInterface, DeclareAttrInterfaceMethods<TypeConstraintAttrInterface>]> {
+  let summary = "And type constraint attribute";
+  let description = [{
+    Attribute representing an And type constraint.
+    It contains a set of constraints.
+    The associated type constraint is satisfied when all of the constraints are satisfied. 
+  }];
+  let parameters = (ins ArrayRefParameter<"mlir::Attribute", "list of constraints">:$constrs);
+  let assemblyFormat = "`<` $constrs `>`";
+}
+
 def VarTypeConstraintAttr : IRDL_AttrDef<"VarTypeConstraint", "var_type_constraint",
       [TypeConstraintAttrInterface, DeclareAttrInterfaceMethods<TypeConstraintAttrInterface>]> {
   let summary = "Type constraint variable";

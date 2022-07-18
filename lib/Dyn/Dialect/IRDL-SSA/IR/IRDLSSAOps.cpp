@@ -142,6 +142,21 @@ SSA_AnyOf::getVerifier(SmallVector<Value> const &valueToConstr) {
 }
 
 llvm::Optional<std::unique_ptr<TypeConstraint>>
+SSA_And::getVerifier(SmallVector<Value> const &valueToConstr) {
+  SmallVector<size_t> constraints;
+  for (Value arg : this->args()) {
+    for (size_t i = 0; i < valueToConstr.size(); i++) {
+      if (valueToConstr[i] == arg) {
+        constraints.push_back(i);
+        break;
+      }
+    }
+  }
+
+  return {std::make_unique<AndTypeConstraint>(constraints)};
+}
+
+llvm::Optional<std::unique_ptr<TypeConstraint>>
 SSA_AnyType::getVerifier(SmallVector<Value> const &valueToConstr) {
   return {std::make_unique<AnyTypeConstraint>()};
 }
