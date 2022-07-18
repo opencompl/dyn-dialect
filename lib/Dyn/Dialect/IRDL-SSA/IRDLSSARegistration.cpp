@@ -111,8 +111,7 @@ LogicalResult verifyOpDefConstraints(
 namespace mlir {
 namespace irdlssa {
 /// Register an operation represented by a `irdl.operation` operation.
-void registerOperation(LogicalResult &res, ExtensibleDialect *dialect,
-                       SSA_OperationOp op) {
+WalkResult registerOperation(ExtensibleDialect *dialect, SSA_OperationOp op) {
   // If an IRDL-Eval verifier is registered, use it.
   for (Operation &childOp : op.getOps()) {
     using irdleval::Verifier;
@@ -122,8 +121,7 @@ void registerOperation(LogicalResult &res, ExtensibleDialect *dialect,
           opVerifier);
 
       if (!interpreter.hasValue()) {
-        res = failure();
-        return;
+        return WalkResult::interrupt();
       }
 
       size_t numExpectedResults = 0;
@@ -180,7 +178,7 @@ void registerOperation(LogicalResult &res, ExtensibleDialect *dialect,
           std::move(parser), std::move(printer));
       dialect->registerDynamicOp(std::move(opDef));
 
-      return;
+      return WalkResult::advance();
     }
   }
 
@@ -204,8 +202,7 @@ void registerOperation(LogicalResult &res, ExtensibleDialect *dialect,
         llvm::cast<VerifyConstraintInterface>(v.getDefiningOp());
     auto verifier = op.getVerifier(constrToValue);
     if (!verifier.hasValue()) {
-      res = failure();
-      return;
+      return WalkResult::interrupt();
     }
     constraints.push_back(std::move(*verifier));
   }
@@ -262,12 +259,13 @@ void registerOperation(LogicalResult &res, ExtensibleDialect *dialect,
                                         std::move(regionVerifier),
                                         std::move(parser), std::move(printer));
   dialect->registerDynamicOp(std::move(opDef));
+
+  return WalkResult::advance();
 }
 } // namespace irdlssa
 } // namespace mlir
 
-static void registerType(LogicalResult &res, ExtensibleDialect *dialect,
-                         SSA_TypeOp op) {
+static WalkResult registerType(ExtensibleDialect *dialect, SSA_TypeOp op) {
   // If an IRDL-Eval verifier is registered, use it.
   for (Operation &childOp : op.getOps()) {
     using irdleval::Verifier;
@@ -277,8 +275,7 @@ static void registerType(LogicalResult &res, ExtensibleDialect *dialect,
           opVerifier);
 
       if (!interpreter.hasValue()) {
-        res = failure();
-        return;
+        return WalkResult::interrupt();
       }
 
       auto verifier = [interpreter(std::move(interpreter))](
@@ -302,7 +299,7 @@ static void registerType(LogicalResult &res, ExtensibleDialect *dialect,
 
       dialect->registerDynamicType(std::move(type));
 
-      return;
+      return WalkResult::advance();
     }
   }
 
@@ -326,8 +323,7 @@ static void registerType(LogicalResult &res, ExtensibleDialect *dialect,
         llvm::cast<VerifyConstraintInterface>(v.getDefiningOp());
     auto verifier = op.getVerifier(constrToValue);
     if (!verifier.hasValue()) {
-      res = failure();
-      return;
+      return WalkResult::interrupt();
     }
     constraints.push_back(std::move(*verifier));
   }
@@ -359,9 +355,11 @@ static void registerType(LogicalResult &res, ExtensibleDialect *dialect,
       DynamicTypeDefinition::get(op.name(), dialect, std::move(verifier));
 
   dialect->registerDynamicType(std::move(type));
+
+  return WalkResult::advance();
 }
 
-static void registerDialect(LogicalResult &res, SSA_DialectOp op) {
+static WalkResult registerDialect(SSA_DialectOp op) {
   auto *ctx = op.getContext();
   auto dialectName = op.name();
 
@@ -371,19 +369,21 @@ static void registerDialect(LogicalResult &res, SSA_DialectOp op) {
       llvm::dyn_cast<ExtensibleDialect>(ctx->getLoadedDialect(dialectName));
   assert(dialect && "extensible dialect should have been registered.");
 
-  op.walk([&](SSA_TypeOp op) { registerType(res, dialect, op); });
-  if (failed(res))
-    return;
+  WalkResult res =
+      op.walk([&](SSA_TypeOp op) { return registerType(dialect, op); });
+  if (res.wasInterrupted())
+    return res;
 
-  op.walk([&](SSA_OperationOp op) { registerOperation(res, dialect, op); });
+  return op.walk(
+      [&](SSA_OperationOp op) { return registerOperation(dialect, op); });
 }
 
 namespace mlir {
 namespace irdlssa {
 LogicalResult registerDialects(ModuleOp op) {
-  LogicalResult res = success();
-  op.walk([&](SSA_DialectOp dialect) { registerDialect(res, dialect); });
-  return res;
+  WalkResult res =
+      op.walk([&](SSA_DialectOp dialect) { return registerDialect(dialect); });
+  return failure(res.wasInterrupted());
 }
 } // namespace irdlssa
 } // namespace mlir

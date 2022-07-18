@@ -90,8 +90,6 @@
         "typeindex": "cpp",
         "typeinfo": "cpp",
         "valarray": "cpp",
-        "variant": "cpp",
-        "*.def": "cpp",
-        "*.rh": "cpp"
+        "variant": "cpp"
     },
 }
