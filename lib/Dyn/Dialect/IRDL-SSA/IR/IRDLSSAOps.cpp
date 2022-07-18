@@ -8,44 +8,17 @@
 
 #include "Dyn/Dialect/IRDL-SSA/IR/IRDLSSA.h"
 #include "Dyn/Dialect/IRDL-SSA/IR/IRDLSSAAttributes.h"
+#include "Dyn/Dialect/IRDL/TypeWrapper.h"
 #include "mlir/Support/LogicalResult.h"
 #include <memory>
 
 using namespace mlir;
 using namespace mlir::irdlssa;
-using mlir::irdl::TypeWrapper;
-
-// Utils
-
-DynamicTypeDefinition *findDynamicType(MLIRContext &ctx, StringRef type) {
-  auto splitted = type.split('.');
-  auto dialectName = splitted.first;
-  auto typeName = splitted.second;
-
-  auto dialect = ctx.getOrLoadDialect(dialectName);
-  if (!dialect)
-    return nullptr;
-
-  auto extensibleDialect = llvm::dyn_cast<ExtensibleDialect>(dialect);
-  if (!extensibleDialect)
-    return nullptr;
-
-  return extensibleDialect->lookupTypeDefinition(typeName);
-}
-
-TypeWrapper *findTypeWrapper(MLIRContext &ctx, StringRef type) {
-  Dialect *irdlssaDialect = ctx.getLoadedDialect("irdlssa");
-  assert(irdlssaDialect && "irdlssa is not registered");
-
-  IRDLSSADialect *irdlssa = dyn_cast<IRDLSSADialect>(irdlssaDialect);
-  assert(irdlssa && "irdlssa dialect is not IRDL-SSA");
-
-  return irdlssa->getTypeWrapper(type);
-}
+using namespace mlir::irdl;
 
 // Verifier instantiation
 Attribute
-instanciateParamType(llvm::function_ref<InFlightDiagnostic()> emitError,
+instantiateParamType(llvm::function_ref<InFlightDiagnostic()> emitError,
                      MLIRContext &ctx, ParamTypeAttrOrAnyAttr attr) {
   if (ParamTypeInstanceAttr typeDesc =
           attr.getAttr().dyn_cast<ParamTypeInstanceAttr>()) {
@@ -53,7 +26,7 @@ instanciateParamType(llvm::function_ref<InFlightDiagnostic()> emitError,
 
     SmallVector<Attribute> params;
     for (ParamTypeAttrOrAnyAttr param : typeDesc.getParams()) {
-      auto result = instanciateParamType(emitError, ctx, param);
+      auto result = instantiateParamType(emitError, ctx, param);
       if (!result) {
         return Attribute();
       }
@@ -61,16 +34,16 @@ instanciateParamType(llvm::function_ref<InFlightDiagnostic()> emitError,
     }
 
     if (DynamicTypeDefinition *type = findDynamicType(ctx, typeName)) {
-      DynamicType instanciated =
+      DynamicType instantiated =
           DynamicType::getChecked(emitError, type, params);
-      if (instanciated)
-        return TypeAttr::get(instanciated);
+      if (instantiated)
+        return TypeAttr::get(instantiated);
       else
         return Attribute();
     } else if (TypeWrapper *type = findTypeWrapper(ctx, typeName)) {
-      Type instanciated = type->instanciate(emitError, params);
-      if (instanciated)
-        return TypeAttr::get(instanciated);
+      Type instantiated = type->instantiate(emitError, params);
+      if (instantiated)
+        return TypeAttr::get(instantiated);
       else
         return Attribute();
     } else {
@@ -84,7 +57,7 @@ instanciateParamType(llvm::function_ref<InFlightDiagnostic()> emitError,
 
 llvm::Optional<std::unique_ptr<TypeConstraint>>
 SSA_IsType::getVerifier(SmallVector<Value> const &valueToConstr) {
-  auto attr = instanciateParamType([&]() { return this->emitError(); },
+  auto attr = instantiateParamType([&]() { return this->emitError(); },
                                    *this->getContext(), this->type());
 
   if (!attr)

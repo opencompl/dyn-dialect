@@ -1,0 +1,61 @@
+// RUN: dyn-opt %s | dyn-opt | FileCheck %s
+
+// CHECK: module {
+module {
+  // CHECK-LABEL: irdlssa.dialect testd {
+  irdlssa.dialect testd {
+    // CHECK-LABEL: irdlssa.type singleton {
+    irdlssa.type singleton {
+      irdleval.verifier {
+        irdleval.success
+      }
+    }
+    
+    // CHECK-LABEL: irdlssa.type parametrized {
+    irdlssa.type parametrized {
+      %0 = irdlssa.any_type
+      %1 = irdlssa.is_type : i32
+      %2 = irdlssa.is_type : i64
+      %3 = irdlssa.any_of(%1, %2)
+      irdlssa.parameters(%0, %3)
+
+      irdleval.verifier {
+      ^bb0(%arg0: !irdleval.type, %arg1: !irdleval.type):
+        %4 = irdleval.alloca
+        %5 = irdleval.alloca
+        %6 = irdleval.alloca
+        %7 = irdleval.alloca
+        irdleval.assign(%4, %arg0)
+        irdleval.assign(%7, %arg1)
+        irdleval.check_type(%arg1, i32, ^bb1, ^bb2)
+      ^bb1:  // 2 preds: ^bb0, ^bb2
+        irdleval.success
+      ^bb2:  // pred: ^bb0
+        irdleval.check_type(%arg1, i64, ^bb1, ^bb3)
+      ^bb3:  // pred: ^bb2
+        irdleval.clear(%4)
+        irdleval.clear(%7)
+        irdleval.failure
+      }
+    }
+
+    // CHECK-LABEL: irdlssa.operation any {
+    irdlssa.operation any {
+      %0 = irdlssa.any_type
+      irdlssa.results(%0)
+
+      // CHECK: irdleval.verifier {
+      // CHECK: ^[[bb0:[^\(]*]](%[[arg0:[^:]*]]: !irdleval.type):
+      // CHECK:   %[[v1:[^ ]*]] = irdleval.alloca
+      // CHECK:   irdleval.assign(%[[v1]], %[[arg0]])
+      // CHECK:   irdleval.success
+      // CHECK: }
+      irdleval.verifier {
+      ^bb0(%arg0: !irdleval.type):
+        %1 = irdleval.alloca
+        irdleval.assign(%1, %arg0)
+        irdleval.success
+      }
+    }
+  }
+}

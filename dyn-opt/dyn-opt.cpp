@@ -6,8 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Dyn/Dialect/IRDL-Eval/IR/IRDLEval.h"
 #include "Dyn/Dialect/IRDL-SSA/IR/IRDLSSA.h"
 #include "Dyn/Dialect/IRDL/IR/IRDL.h"
+#include "GenEval.h"
 #include "LowerIRDL.h"
 #include "MlirOptMain.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -32,6 +34,7 @@
 using namespace mlir;
 using namespace irdl;
 using namespace irdlssa;
+using namespace irdleval;
 
 class ComplexTypeWrapper : public ConcreteTypeWrapper<ComplexType> {
   StringRef getName() override { return "std.complex"; }
@@ -42,7 +45,7 @@ class ComplexTypeWrapper : public ConcreteTypeWrapper<ComplexType> {
 
   size_t getParameterAmount() override { return 1; }
 
-  Type instanciate(llvm::function_ref<InFlightDiagnostic()> emitError,
+  Type instantiate(llvm::function_ref<InFlightDiagnostic()> emitError,
                    ArrayRef<Attribute> parameters) override {
     if (parameters.size() != this->getParameterAmount()) {
       emitError().append("invalid number of type parameters ",
@@ -63,6 +66,8 @@ int main(int argc, char **argv) {
   ctx.getOrLoadDialect<irdl::IRDLDialect>();
   auto irdl = ctx.getOrLoadDialect<irdl::IRDLDialect>();
   auto irdlssa = ctx.getOrLoadDialect<irdlssa::IRDLSSADialect>();
+  ctx.getOrLoadDialect<irdleval::IRDLEvalDialect>();
+  ctx.getOrLoadDialect<mlir::cf::ControlFlowDialect>();
 
   irdlssa->addTypeWrapper<ComplexTypeWrapper>();
   irdl->addTypeWrapper<ComplexTypeWrapper>();
@@ -73,6 +78,10 @@ int main(int argc, char **argv) {
       [tyCtx{std::move(tyCtx)}]() -> std::unique_ptr<::mlir::Pass> {
         return std::make_unique<LowerIRDL>(tyCtx);
       });
+
+  mlir::registerPass([]() -> std::unique_ptr<::mlir::Pass> {
+    return std::make_unique<GenEval>();
+  });
 
   // Register all dialects
   DialectRegistry registry;

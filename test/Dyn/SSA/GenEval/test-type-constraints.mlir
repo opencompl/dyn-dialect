@@ -1,4 +1,4 @@
-// RUN: dyn-opt %S/../../testd.irdl --irdl-lowering | dyn-opt %s --irdlssa-file=/dev/stdin -split-input-file -verify-diagnostics | FileCheck %s
+// RUN: dyn-opt %S/../testd.irdlssa -irdl-gen-eval | dyn-opt %s --irdlssa-file=/dev/stdin -split-input-file -verify-diagnostics | FileCheck %s
 
 //===----------------------------------------------------------------------===//
 // Equality constraint
@@ -13,8 +13,48 @@ func.func @succeededEqConstraint() {
 // -----
 
 func.func @failedEqConstraint() {
-  // expected-error@+1 {{expected type 'i32' but got type 'i64'}}
+  // expected-error@+1 {{the provided types do not satisfy the type constraints}}
   "testd.eq"() : () -> i64
+  return
+}
+
+// -----
+
+func.func @succeededEqParamConstraint() {
+  // CHECK: "testd.eq_param"() : () -> !testd.parametric<i32>
+  "testd.eq_param"() : () -> !testd.parametric<i32>
+  return
+}
+
+// -----
+
+func.func @failedEqParamConstraint1() {
+  // expected-error@+1 {{the provided types do not satisfy the type constraints}}
+  "testd.eq_param"() : () -> i64
+  return
+}
+
+// -----
+
+func.func @failedEqParamConstraint2() {
+  // expected-error@+1 {{the provided types do not satisfy the type constraints}}
+  "testd.eq_param"() : () -> !testd.parametric<i64>
+  return
+}
+
+// -----
+
+func.func @failedEqParamConstraint3() {
+  // expected-error@+1 {{the provided types do not satisfy the type constraints}}
+  "testd.eq_param"() : () -> !testd.parametric<!testd.parametric<i32>>
+  return
+}
+
+// -----
+
+func.func @failedEqParamConstraint4() {
+  // expected-error@+1 {{only type attribute type parameters are currently supported}}
+  "testd.eq_param"() : () -> !testd.parametric<0xBAD>
   return
 }
 
@@ -35,7 +75,7 @@ func.func @succeededAnyOfConstraint() {
 // -----
 
 func.func @failedAnyOfConstraint() {
-  // expected-error@+1 {{type 'i1' does not satisfy the constraint}}
+  // expected-error@+1 {{the provided types do not satisfy the type constraints}}
   "testd.anyof"() : () -> i1
   return
 }
@@ -55,7 +95,7 @@ func.func @succeededAndConstraint() {
 // -----
 
 func.func @failedAndConstraint1() {
-  // expected-error@+1 {{type 'i1' does not satisfy the constraint}}
+  // expected-error@+1 {{the provided types do not satisfy the type constraints}}
   "testd.and"() : () -> i1
   return
 }
@@ -63,7 +103,7 @@ func.func @failedAndConstraint1() {
 // -----
 
 func.func @failedAndConstraint2() {
-  // expected-error@+1 {{type 'i32' does not satisfy the constraint}}
+  // expected-error@+1 {{the provided types do not satisfy the type constraints}}
   "testd.and"() : () -> i32
   return
 }
@@ -99,7 +139,7 @@ func.func @succeededParamsConstraint() {
 // -----
 
 func.func @failedDynParamsConstraintBase() {
-  // expected-error@+1 {{expected base type 'std.complex' but got type 'i32'}}
+  // expected-error@+1 {{the provided types do not satisfy the type constraints}}
   "testd.params"() : () -> i32
   return
 }
@@ -107,7 +147,7 @@ func.func @failedDynParamsConstraintBase() {
 // -----
 
 func.func @failedDynParamsConstraintParam() {
-  // expected-error@+1 {{type 'i1' does not satisfy the constraint}}
+  // expected-error@+1 {{the provided types do not satisfy the type constraints}}
   "testd.params"() : () -> complex<i1>
   return
 }
@@ -131,7 +171,7 @@ func.func @succeededDynBaseConstraint() {
 // -----
 
 func.func @failedDynBaseConstraint() {
-  // expected-error@+1 {{expected base type 'testd.parametric' but got type 'i32'}}
+  // expected-error@+1 {{the provided types do not satisfy the type constraints}}
   "testd.dynbase"() : () -> i32
   return
 }
@@ -153,7 +193,7 @@ func.func @succeededDynParamsConstraint() {
 // -----
 
 func.func @failedDynParamsConstraintBase() {
-  // expected-error@+1 {{expected base type 'testd.parametric' but got type 'i32'}}
+  // expected-error@+1 {{the provided types do not satisfy the type constraints}}
   "testd.dynparams"() : () -> i32
   return
 }
@@ -161,7 +201,7 @@ func.func @failedDynParamsConstraintBase() {
 // -----
 
 func.func @failedDynParamsConstraintParam() {
-  // expected-error@+1 {{type 'i1' does not satisfy the constraint}}
+  // expected-error@+1 {{the provided types do not satisfy the type constraints}}
   "testd.dynparams"() : () -> !testd.parametric<i1>
   return
 }
@@ -189,7 +229,7 @@ func.func @succeededConstraintVars2() {
 // -----
 
 func.func @failedConstraintVars() {
-  // expected-error@+1 {{expected type 'i64' but got 'i32'}}
+  // expected-error@+1 {{the provided types do not satisfy the type constraints}}
   "testd.constraint_vars"() : () -> (i64, i32)
   return
 }
