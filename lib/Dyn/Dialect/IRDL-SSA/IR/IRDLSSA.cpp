@@ -9,7 +9,7 @@
 #include "Dyn/Dialect/IRDL-SSA/IR/IRDLSSA.h"
 #include "Dyn/Dialect/IRDL-SSA/IR/IRDLSSAAttributes.h"
 #include "Dyn/Dialect/IRDL-SSA/IRDLSSARegistration.h"
-#include "Dyn/Dialect/IRDL-SSA/TypeWrapper.h"
+#include "Dyn/Dialect/IRDL/TypeWrapper.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/DialectImplementation.h"
@@ -24,6 +24,7 @@
 
 using namespace mlir;
 using namespace mlir::irdlssa;
+using mlir::irdl::TypeWrapper;
 
 using ArgDef = std::pair<StringRef, Attribute>;
 using ArgDefs = ArrayRef<ArgDef>;
@@ -55,11 +56,11 @@ void IRDLSSADialect::initialize() {
 }
 
 void IRDLSSADialect::addTypeWrapper(std::unique_ptr<TypeWrapper> wrapper) {
-  this->irdlssaContext.addTypeWrapper(std::move(wrapper));
+  this->irdlContext.addTypeWrapper(std::move(wrapper));
 }
 
 TypeWrapper *IRDLSSADialect::getTypeWrapper(StringRef typeName) {
-  return this->irdlssaContext.getTypeWrapper(typeName);
+  return this->irdlContext.getTypeWrapper(typeName);
 }
 
 //===----------------------------------------------------------------------===//

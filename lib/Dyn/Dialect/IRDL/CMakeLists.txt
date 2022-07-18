@@ -1,6 +1,9 @@
 add_mlir_dialect_library(MLIRIRDL
         IR/IRDL.cpp
         IR/IRDLAttributes.cpp
+        IRDLContext.cpp
+        IRDLRegistration.cpp
+        TypeConstraint.cpp
 
         ADDITIONAL_HEADER_DIRS
         ${PROJECT_SOURCE_DIR}/include/Dyn/Dialect/IRDL
@@ -14,4 +17,3 @@ add_mlir_dialect_library(MLIRIRDL
   LINK_LIBS PUBLIC
   MLIRIR
   )
-

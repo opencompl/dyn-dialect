@@ -13,6 +13,7 @@
 
 using namespace mlir;
 using namespace mlir::irdlssa;
+using mlir::irdl::TypeWrapper;
 
 // Utils
 
@@ -138,6 +139,21 @@ SSA_AnyOf::getVerifier(SmallVector<Value> const &valueToConstr) {
   }
 
   return {std::make_unique<AnyOfTypeConstraint>(constraints)};
+}
+
+llvm::Optional<std::unique_ptr<TypeConstraint>>
+SSA_And::getVerifier(SmallVector<Value> const &valueToConstr) {
+  SmallVector<size_t> constraints;
+  for (Value arg : this->args()) {
+    for (size_t i = 0; i < valueToConstr.size(); i++) {
+      if (valueToConstr[i] == arg) {
+        constraints.push_back(i);
+        break;
+      }
+    }
+  }
+
+  return {std::make_unique<AndTypeConstraint>(constraints)};
 }
 
 llvm::Optional<std::unique_ptr<TypeConstraint>>

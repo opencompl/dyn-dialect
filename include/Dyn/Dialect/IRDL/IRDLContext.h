@@ -1,4 +1,4 @@
-//===- IRDLSSAContext.h - IRDL-SSA context ----------------------*- C++ -*-===//
+//===- IRDLContext.h - IRDL context -----------------------------*- C++ -*-===//
 //
 // This file is licensed under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,21 +10,21 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef DYN_DIALECT_IRDL_SSA_IRDLSSA_CONTEXT_H_
-#define DYN_DIALECT_IRDL_SSA_IRDLSSA_CONTEXT_H_
+#ifndef DYN_DIALECT_IRDL_IRDL_CONTEXT_H_
+#define DYN_DIALECT_IRDL_IRDL_CONTEXT_H_
 
-#include "Dyn/Dialect/IRDL-SSA/TypeWrapper.h"
+#include "Dyn/Dialect/IRDL/TypeWrapper.h"
 #include "llvm/ADT/StringMap.h"
 
 namespace mlir {
-namespace irdlssa {
+namespace irdl {
 
 /// Context for the runtime registration of IRDL dialect definitions.
-class IRDLSSAContext {
+class IRDLContext {
   llvm::StringMap<std::unique_ptr<TypeWrapper>> types;
 
 public:
-  IRDLSSAContext() {}
+  IRDLContext() {}
 
   void addTypeWrapper(std::unique_ptr<TypeWrapper> wrapper);
   TypeWrapper *getTypeWrapper(StringRef typeName);
@@ -36,8 +36,8 @@ public:
 
 /// Context for the analysis of IRDL dialect definitions.
 struct TypeContext {
-  /// Utility constructor to load all type information from an IRDLSSAContext.
-  TypeContext(IRDLSSAContext &ctx);
+  /// Utility constructor to load all type information from an IRDLContext.
+  TypeContext(IRDLContext &ctx);
 
   struct TypeInfo {
     size_t paramAmount;
@@ -47,7 +47,7 @@ struct TypeContext {
   llvm::StringMap<TypeInfo> types;
 };
 
-} // namespace irdlssa
+} // namespace irdl
 } // namespace mlir
 
-#endif // DYN_DIALECT_IRDL_SSA_IRDLSSA_CONTEXT_H_
+#endif // DYN_DIALECT_IRDL_IRDL_CONTEXT_H_

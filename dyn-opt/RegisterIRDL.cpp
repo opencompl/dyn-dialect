@@ -15,6 +15,7 @@
 #include "Dyn/Dialect/IRDL-SSA/IR/IRDLSSA.h"
 #include "Dyn/Dialect/IRDL-SSA/IRDLSSARegistration.h"
 #include "Dyn/Dialect/IRDL/IR/IRDL.h"
+#include "Dyn/Dialect/IRDL/IRDLRegistration.h"
 #include "LowerIRDL.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/Diagnostics.h"
@@ -33,10 +34,7 @@ using namespace mlir;
 LogicalResult mlir::registerIRDL(StringRef irdlFile, MLIRContext *ctx) {
   DialectRegistry registry;
   registry.insert<irdl::IRDLDialect>();
-  registry.insert<irdlssa::IRDLSSADialect>();
   ctx->appendDialectRegistry(registry);
-
-  auto irdlssa = ctx->getOrLoadDialect<irdlssa::IRDLSSADialect>();
 
   // Set up the input file.
   std::string errorMessage;
@@ -61,20 +59,9 @@ LogicalResult mlir::registerIRDL(StringRef irdlFile, MLIRContext *ctx) {
   // Parse the input file.
   auto module(parseSourceFile<ModuleOp>(sourceMgr, ctx));
 
-  // Translate to IRDL-SSA.
-  PassManager pm(ctx);
-  pm.addPass(std::make_unique<irdl::LowerIRDL>(irdlssa->irdlssaContext));
-  if (failed(pm.run(*module))) {
-    return failure();
-  }
-
-  // Register IRDL-SSA dialects.
-  LogicalResult registrationResult = irdlssa::registerDialects(module.get());
+  // Register IRDL dialects.
+  irdl::registerDialects(module.get());
   ctx->enableMultithreading(wasThreadingEnabled);
-
-  if (failed(registrationResult)) {
-    return failure();
-  }
 
   return failure(!module);
 }

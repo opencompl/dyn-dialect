@@ -22,6 +22,13 @@ irdl.dialect testd {
     irdl.results(res: AnyOf<i32, i64>)
   }
 
+  // CHECK: irdl.operation and {
+  // CHECK:   irdl.results(res: And<AnyOf<i32, i64>, i64>)
+  // CHECK: }
+  irdl.operation and {
+    irdl.results(res: And<AnyOf<i32, i64>, i64>)
+  }
+
   // CHECK: irdl.operation any {
   // CHECK:   irdl.results(res: Any)
   // CHECK: }

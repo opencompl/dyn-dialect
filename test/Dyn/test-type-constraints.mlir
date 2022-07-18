@@ -43,6 +43,34 @@ func.func @failedAnyOfConstraint() {
 // -----
 
 //===----------------------------------------------------------------------===//
+// And constraint
+//===----------------------------------------------------------------------===//
+
+func.func @succeededAndConstraint() {
+  // CHECK: "testd.and"() : () -> i64
+  "testd.and"() : () -> i64
+  return
+}
+
+// -----
+
+func.func @failedAndConstraint1() {
+  // expected-error@+1 {{type 'i1' does not satisfy the constraint}}
+  "testd.and"() : () -> i1
+  return
+}
+
+// -----
+
+func.func @failedAndConstraint2() {
+  // expected-error@+1 {{type 'i32' does not satisfy the constraint}}
+  "testd.and"() : () -> i32
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // Any constraint
 //===----------------------------------------------------------------------===//
 
@@ -161,7 +189,7 @@ func.func @succeededConstraintVars2() {
 // -----
 
 func.func @failedConstraintVars() {
-  // expected-error@+1 {{expected type 'i64' but got 'i32'}}
+  // expected-error@+1 {{expected 'i64' but got 'i32'}}
   "testd.constraint_vars"() : () -> (i64, i32)
   return
 }

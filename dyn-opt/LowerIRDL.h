@@ -13,7 +13,7 @@
 #ifndef DYNOPT_LOWERIRDL_H
 #define DYNOPT_LOWERIRDL_H
 
-#include "Dyn/Dialect/IRDL-SSA/IRDLSSAContext.h"
+#include "Dyn/Dialect/IRDL/IRDLContext.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/Pass/Pass.h"
@@ -27,10 +27,10 @@ namespace irdl {
 /// types declared within the translated IRDL declaration.
 class LowerIRDL
     : public mlir::PassWrapper<LowerIRDL, mlir::OperationPass<mlir::ModuleOp>> {
-  mlir::irdlssa::TypeContext typeCtx;
+  mlir::irdl::TypeContext typeCtx;
 
 public:
-  LowerIRDL(mlir::irdlssa::TypeContext ctx) : typeCtx(ctx) {}
+  LowerIRDL(mlir::irdl::TypeContext ctx) : typeCtx(ctx) {}
 
   void runOnOperation() override;
 

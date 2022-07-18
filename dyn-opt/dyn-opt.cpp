@@ -61,11 +61,13 @@ int main(int argc, char **argv) {
 
   MLIRContext ctx;
   ctx.getOrLoadDialect<irdl::IRDLDialect>();
+  auto irdl = ctx.getOrLoadDialect<irdl::IRDLDialect>();
   auto irdlssa = ctx.getOrLoadDialect<irdlssa::IRDLSSADialect>();
 
   irdlssa->addTypeWrapper<ComplexTypeWrapper>();
+  irdl->addTypeWrapper<ComplexTypeWrapper>();
 
-  TypeContext tyCtx(irdlssa->irdlssaContext);
+  TypeContext tyCtx(irdlssa->irdlContext);
 
   mlir::registerPass(
       [tyCtx{std::move(tyCtx)}]() -> std::unique_ptr<::mlir::Pass> {

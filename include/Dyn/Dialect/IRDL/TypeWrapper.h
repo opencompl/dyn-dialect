@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef DYN_DIALECT_IRDL_SSA_TYPEWRAPPER_H_
-#define DYN_DIALECT_IRDL_SSA_TYPEWRAPPER_H_
+#ifndef DYN_DIALECT_IRDL_TYPEWRAPPER_H_
+#define DYN_DIALECT_IRDL_TYPEWRAPPER_H_
 
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Dialect.h"
@@ -21,7 +21,7 @@
 #include "llvm/ADT/SmallString.h"
 
 namespace mlir {
-namespace irdlssa {
+namespace irdl {
 /// A wrapper around a C++-defined type to extract type parameters.
 /// For most cases, TypeWrapper should be used instead.
 class TypeWrapper {
@@ -57,7 +57,7 @@ public:
   bool isCorrectType(mlir::Type type) override { return type.isa<T>(); }
 };
 
-} // namespace irdlssa
+} // namespace irdl
 } // namespace mlir
 
-#endif // DYN_DIALECT_IRDL_SSA_TYPEWRAPPER_H_
+#endif // DYN_DIALECT_IRDL_TYPEWRAPPER_H_

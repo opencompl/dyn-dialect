@@ -1,7 +1,6 @@
-// RUN: dyn-opt %s --irdl-file=%S/cmath.irdl | dyn-opt --irdl-file=%S/cmath.irdl | FileCheck %s
+// RUN: dyn-opt %S/../../cmath.irdl --irdl-lowering | dyn-opt %s --irdlssa-file=/dev/stdin | FileCheck %s
 
 module {
-
   // CHECK: func.func @conorm(%{{.*}}: !cmath.complex<f32>, %{{.*}}: !cmath.complex<f32>) -> f32 {
   // CHECK:   %{{.*}} = "cmath.norm"(%{{.*}}) : (!cmath.complex<f32>) -> f32
   // CHECK:   %{{.*}} = "cmath.norm"(%{{.*}}) : (!cmath.complex<f32>) -> f32

@@ -7,9 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "Dyn/Dialect/IRDL/IR/IRDL.h"
-#include "Dyn/Dialect/IRDL-SSA/IR/IRDLSSA.h"
-#include "Dyn/Dialect/IRDL-SSA/TypeWrapper.h"
 #include "Dyn/Dialect/IRDL/IR/IRDLAttributes.h"
+#include "Dyn/Dialect/IRDL/TypeWrapper.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/ExtensibleDialect.h"
@@ -21,8 +20,6 @@
 
 using namespace mlir;
 using namespace mlir::irdl;
-using mlir::irdlssa::IRDLSSADialect;
-using mlir::irdlssa::TypeWrapper;
 
 using ArgDef = std::pair<StringRef, Attribute>;
 using ArgDefs = ArrayRef<ArgDef>;
@@ -39,6 +36,14 @@ void IRDLDialect::initialize() {
 #include "Dyn/Dialect/IRDL/IR/IRDLOps.cpp.inc"
       >();
   registerAttributes();
+}
+
+void IRDLDialect::addTypeWrapper(std::unique_ptr<TypeWrapper> wrapper) {
+  this->irdlContext.addTypeWrapper(std::move(wrapper));
+}
+
+TypeWrapper *IRDLDialect::getTypeWrapper(StringRef typeName) {
+  return this->irdlContext.getTypeWrapper(typeName);
 }
 
 //===----------------------------------------------------------------------===//
@@ -141,6 +146,54 @@ void printAnyOfTypeConstraint(OpAsmPrinter &p,
   auto constrs = anyOfConstr.getConstrs();
 
   p << "AnyOf<";
+  for (size_t i = 0; i + 1 < constrs.size(); i++) {
+    printTypeConstraint(p, constrs[i]);
+    p << ", ";
+  }
+  printTypeConstraint(p, constrs.back());
+  p << ">";
+}
+
+/// Parse an And constraint if there is one.
+/// It has the format 'And<type (, type)*>'.
+OptionalParseResult parseOptionalAndTypeConstraint(OpAsmParser &p,
+                                                   Attribute *typeConstraint) {
+  if (p.parseOptionalKeyword("And"))
+    return {};
+
+  if (p.parseLess())
+    return {failure()};
+
+  SmallVector<Attribute> constraints;
+
+  {
+    Attribute constraint;
+    if (parseTypeConstraint(p, &constraint))
+      return {failure()};
+    constraints.push_back(constraint);
+  }
+
+  while (p.parseOptionalGreater()) {
+    if (p.parseComma())
+      return {failure()};
+
+    Attribute constraint;
+    if (parseTypeConstraint(p, &constraint))
+      return {failure()};
+    constraints.push_back(constraint);
+  }
+
+  *typeConstraint =
+      AndTypeConstraintAttr::get(p.getBuilder().getContext(), constraints);
+  return {success()};
+}
+
+/// Print an And type constraint.
+/// It has the format 'And<type (, type)*>'.
+void printAndTypeConstraint(OpAsmPrinter &p, AndTypeConstraintAttr andConstr) {
+  auto constrs = andConstr.getConstrs();
+
+  p << "And<";
   for (size_t i = 0; i + 1 < constrs.size(); i++) {
     printTypeConstraint(p, constrs[i]);
     p << ", ";
@@ -289,6 +342,11 @@ ParseResult parseTypeConstraint(OpAsmParser &p, Attribute *typeConstraint) {
   if (anyOfRes.hasValue())
     return *anyOfRes;
 
+  // Parse an And constraint.
+  auto andRes = parseOptionalAndTypeConstraint(p, typeConstraint);
+  if (andRes.hasValue())
+    return *andRes;
+
   auto ctx = p.getBuilder().getContext();
 
   // Type equality constraint.
@@ -314,8 +372,8 @@ ParseResult parseTypeConstraint(OpAsmParser &p, Attribute *typeConstraint) {
   StringRef keyword;
   if (succeeded(p.parseOptionalKeyword(&keyword))) {
     // Parse a non-dynamic type parameter constraint.
-    auto irdlssa = ctx->getOrLoadDialect<IRDLSSADialect>();
-    auto typeWrapper = irdlssa->getTypeWrapper(keyword);
+    auto irdl = ctx->getOrLoadDialect<IRDLDialect>();
+    auto typeWrapper = irdl->getTypeWrapper(keyword);
     if (typeWrapper)
       return parseTypeParamsConstraint(p, typeWrapper, typeConstraint);
 
@@ -352,6 +410,9 @@ void printTypeConstraint(OpAsmPrinter &p, Attribute typeConstraint) {
   } else if (auto anyOfConstr =
                  typeConstraint.dyn_cast<AnyOfTypeConstraintAttr>()) {
     printAnyOfTypeConstraint(p, anyOfConstr);
+  } else if (auto andConstr =
+                 typeConstraint.dyn_cast<AndTypeConstraintAttr>()) {
+    printAndTypeConstraint(p, andConstr);
   } else if (auto typeParamsConstr =
                  typeConstraint.dyn_cast<TypeParamsConstraintAttr>()) {
     printTypeParamsConstraint(p, typeParamsConstr);
