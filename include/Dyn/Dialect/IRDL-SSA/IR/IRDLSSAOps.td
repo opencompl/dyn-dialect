@@ -353,7 +353,7 @@ def IRDL_SSA_AnyOf : IRDL_SSA_ConstraintOp<"any_of", [ParentOneOf<["SSA_TypeOp",
 }
 
 def IRDL_SSA_And : IRDL_SSA_ConstraintOp<"and", [ParentOneOf<["SSA_TypeOp", "SSA_OperationOp"]>]> {
-  let summary = "Constraints to all the provided types";
+  let summary = "Constraints to all the provided constraints";
   let description = [{
     `irdlssa.and` defines a constraint that accepts any type that
     satisfies all of its provided type constraints.
