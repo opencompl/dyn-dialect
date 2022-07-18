@@ -57,6 +57,9 @@ public:
   bool isCorrectType(mlir::Type type) override { return type.isa<T>(); }
 };
 
+DynamicTypeDefinition *findDynamicType(MLIRContext &ctx, StringRef type);
+TypeWrapper *findTypeWrapper(MLIRContext &ctx, StringRef type);
+
 } // namespace irdl
 } // namespace mlir
 

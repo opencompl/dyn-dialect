@@ -8,12 +8,13 @@
 
 #include "Dyn/Dialect/IRDL-SSA/IR/IRDLSSA.h"
 #include "Dyn/Dialect/IRDL-SSA/IR/IRDLSSAAttributes.h"
+#include "Dyn/Dialect/IRDL/TypeWrapper.h"
 #include "mlir/Support/LogicalResult.h"
 #include <memory>
 
 using namespace mlir;
 using namespace mlir::irdlssa;
-using mlir::irdl::TypeWrapper;
+using namespace mlir::irdl;
 
 // Verifier instantiation
 Attribute

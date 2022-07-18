@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Dyn/Dialect/IRDL-SSA/TypeWrapper.h"
+#include "Dyn/Dialect/IRDL/TypeWrapper.h"
 
-#include "Dyn/Dialect/IRDL-SSA/IR/IRDLSSA.h"
+#include "Dyn/Dialect/IRDL/IR/IRDL.h"
 
 namespace mlir {
-namespace irdlssa {
+namespace irdl {
 
 DynamicTypeDefinition *findDynamicType(MLIRContext &ctx, StringRef type) {
   auto splitted = type.split('.');
@@ -30,14 +30,11 @@ DynamicTypeDefinition *findDynamicType(MLIRContext &ctx, StringRef type) {
 }
 
 TypeWrapper *findTypeWrapper(MLIRContext &ctx, StringRef type) {
-  Dialect *irdlssaDialect = ctx.getLoadedDialect("irdlssa");
-  assert(irdlssaDialect && "irdlssa is not registered");
+  IRDLDialect *irdl = ctx.getLoadedDialect<IRDLDialect>();
+  assert(irdl && "irdl is not registered");
 
-  IRDLSSADialect *irdlssa = dyn_cast<IRDLSSADialect>(irdlssaDialect);
-  assert(irdlssa && "irdlssa dialect is not IRDL-SSA");
-
-  return irdlssa->getTypeWrapper(type);
+  return irdl->getTypeWrapper(type);
 }
 
-} // namespace irdlssa
+} // namespace irdl
 } // namespace mlir

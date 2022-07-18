@@ -122,6 +122,9 @@ private:
   void compileAnyOf(ConstraintCheck &checkDesc, Value slot,
                     ConstraintCheckCompileJob &currentJob,
                     ArrayRef<Value> argConstraints);
+  void compileAnd(ConstraintCheck &checkDesc, Value slot,
+                  ConstraintCheckCompileJob &currentJob,
+                  ArrayRef<Value> argConstraints);
 
   /// Ensures the work stack linking invariant upholds
   /// in every registered job for debug assert purposes.
@@ -157,11 +160,10 @@ Block &BacktrackPoint::generateBacktrackBlock(Location loc, Region &region,
 
 bool ConstraintCheckCompileJob::workStackInvariant() const {
   for (size_t i = 1; i < this->workStack.size(); i++) {
-    if (this->workStack[i - 1].start != this->workStack[i].target) {
+    if (this->workStack[i - 1].start != this->workStack[i].target)
       return false;
-    } else if (this->workStack[i].target->getOperations().size() != 0) {
+    else if (this->workStack[i].target->getOperations().size() != 0)
       return false;
-    }
   }
 
   return true;
@@ -175,12 +177,13 @@ void ConstraintCompiler::compileAnyType(ConstraintCheck &checkDesc, Value slot,
         this->location, this->region, rewriter);
     rewriter.create<MatchType>(this->location, slot, checkDesc.typeToCheck,
                                checkDesc.target, &failure);
-  } else {
-    rewriter.create<AssignType>(this->location, slot, checkDesc.typeToCheck);
-    rewriter.create<BranchOp>(this->location, checkDesc.target);
-    currentJob.definedSlots.insert(slot);
-    currentJob.btPoint.slotsToClearWhenFails.push_back(slot);
+    return;
   }
+
+  rewriter.create<AssignType>(this->location, slot, checkDesc.typeToCheck);
+  rewriter.create<BranchOp>(this->location, checkDesc.target);
+  currentJob.definedSlots.insert(slot);
+  currentJob.btPoint.slotsToClearWhenFails.push_back(slot);
 }
 
 void ConstraintCompiler::compileIsType(ConstraintCheck &checkDesc, Value slot,
@@ -203,40 +206,41 @@ void ConstraintCompiler::compileParametricType(
   if (currentJob.definedSlots.contains(slot)) {
     rewriter.create<MatchType>(this->location, slot, checkDesc.typeToCheck,
                                checkDesc.target, &failure);
-  } else {
-    Block &parametricSuccess = region.emplaceBlock();
-    SmallVector<Type> argTypes(argConstraints.size(),
-                               EvalTypeType::get(this->ctx));
-    SmallVector<Location> argLocs(argConstraints.size(), this->location);
-    parametricSuccess.addArguments(argTypes, argLocs);
-    rewriter.create<CheckParametric>(this->location, checkDesc.typeToCheck,
-                                     base, &parametricSuccess, &failure);
-
-    // Pre-assign the type in the slot table as if the constraint
-    // check succeeded. This is correct because further parameter
-    // checks cannot reference this slot anyway.
-    rewriter.setInsertionPointToEnd(&parametricSuccess);
-    rewriter.create<AssignType>(this->location, slot, checkDesc.typeToCheck);
-    currentJob.definedSlots.insert(slot);
-    currentJob.btPoint.slotsToClearWhenFails.push_back(slot);
-
-    // Schedule type-parameter checking work items.
-    Block *start = &parametricSuccess;
-    Block *target;
-    SmallVector<ConstraintCheck> newChecks;
-    for (size_t i = 0; i + 1 < argConstraints.size(); i++) {
-      target = &region.emplaceBlock();
-      newChecks.emplace_back(start, target, argConstraints[i],
-                             parametricSuccess.getArgument(i));
-      start = target;
-    }
-
-    newChecks.emplace_back(
-        start, checkDesc.target, argConstraints[argConstraints.size() - 1],
-        parametricSuccess.getArgument(argConstraints.size() - 1));
-
-    currentJob.workStack.append(newChecks.rbegin(), newChecks.rend());
+    return;
   }
+
+  Block &parametricSuccess = region.emplaceBlock();
+  SmallVector<Type> argTypes(argConstraints.size(),
+                             EvalTypeType::get(this->ctx));
+  SmallVector<Location> argLocs(argConstraints.size(), this->location);
+  parametricSuccess.addArguments(argTypes, argLocs);
+  rewriter.create<CheckParametric>(this->location, checkDesc.typeToCheck, base,
+                                   &parametricSuccess, &failure);
+
+  // Pre-assign the type in the slot table as if the constraint
+  // check succeeded. This is correct because further parameter
+  // checks cannot reference this slot anyway.
+  rewriter.setInsertionPointToEnd(&parametricSuccess);
+  rewriter.create<AssignType>(this->location, slot, checkDesc.typeToCheck);
+  currentJob.definedSlots.insert(slot);
+  currentJob.btPoint.slotsToClearWhenFails.push_back(slot);
+
+  // Schedule type-parameter checking work items.
+  Block *start = &parametricSuccess;
+  Block *target;
+  SmallVector<ConstraintCheck> newChecks;
+  for (size_t i = 0; i + 1 < argConstraints.size(); i++) {
+    target = &region.emplaceBlock();
+    newChecks.emplace_back(start, target, argConstraints[i],
+                           parametricSuccess.getArgument(i));
+    start = target;
+  }
+
+  newChecks.emplace_back(
+      start, checkDesc.target, argConstraints[argConstraints.size() - 1],
+      parametricSuccess.getArgument(argConstraints.size() - 1));
+
+  currentJob.workStack.append(newChecks.rbegin(), newChecks.rend());
 }
 
 void ConstraintCompiler::compileAnyOf(ConstraintCheck &checkDesc, Value slot,
@@ -248,100 +252,140 @@ void ConstraintCompiler::compileAnyOf(ConstraintCheck &checkDesc, Value slot,
     rewriter.setInsertionPointToEnd(checkDesc.start);
     rewriter.create<MatchType>(this->location, slot, checkDesc.typeToCheck,
                                checkDesc.target, &failure);
-  } else {
-    if (argConstraints.size() == 0) {
-      // Simple failure for trivial AnyOf constraints
-      Block &failure = currentJob.btPoint.generateBacktrackBlock(
-          this->location, this->region, rewriter);
-      rewriter.setInsertionPointToEnd(checkDesc.start);
-      rewriter.create<BranchOp>(this->location, &failure);
-      return;
-    }
-
-    // Pre-assign the type in the slot table as if the constraint
-    // check succeeded. This is correct because further parameter
-    // checks cannot reference this slot anyway.
-    rewriter.setInsertionPointToEnd(checkDesc.start);
-    rewriter.create<AssignType>(this->location, slot, checkDesc.typeToCheck);
-    currentJob.definedSlots.insert(slot);
-    currentJob.btPoint.slotsToClearWhenFails.push_back(slot);
-
-    // AnyOf constraints are checked by attempting to go as deep
-    // as possible in a branch, and backtracking to the next branch
-    // if anything failed while exploring the attempted branch.
-    // This is achieved in the compiler by created a compile job
-    // for each branch and its initial constraint check, each job
-    // holding a copy of the initial work stack, with a different
-    // backtracking point.
-
-    // Prepare the backtrack points for all possible AnyOf branch
-    SmallVector<BacktrackPoint> backtrackPoints;
-    for (size_t i = 0; i + 1 < argConstraints.size(); i++) {
-      backtrackPoints.emplace_back(&this->region.emplaceBlock());
-    }
-    backtrackPoints.push_back(std::move(currentJob.btPoint));
-
-    // Create new work stacks for all possible AnyOf branch
-    // except the first one. The first one will re-use the
-    // original work stack for efficiency.
-    // This is achieved by duplicating all blocks in the work
-    // stacks and linking them correctly.
-    for (size_t i = 1; i < argConstraints.size(); i++) {
-      SmallVector<ConstraintCheck> newWorkStack = currentJob.workStack;
-      DenseMap<Block *, Block *> blockTransl;
-
-      // Copy work item start blocks
-      for (size_t i = 0; i < currentJob.workStack.size(); i++) {
-        // This is guaranteed by the linked structure of the stack.
-        assert(blockTransl.count(currentJob.workStack[i].start) == 0 &&
-               "repeated start block for work stack item");
-        assert(currentJob.workStack[i].start->getOperations().size() == 0 &&
-               "work stack block is not empty");
-
-        blockTransl.insert(
-            {currentJob.workStack[i].start, &region.emplaceBlock()});
-        newWorkStack[i].start = blockTransl[currentJob.workStack[i].start];
-      }
-
-      // Update all targets except the last one.
-      // The last one points to global success and thus must be kept.
-      for (size_t i = 1; i < currentJob.workStack.size(); i++) {
-        // This is guaranteed by the linked structure of the stack.
-        assert(blockTransl.count(currentJob.workStack[i].target) == 1 &&
-               "invalid successor for work stack item");
-
-        newWorkStack[i].target = blockTransl[currentJob.workStack[i].target];
-      }
-
-      // Find the next work item to compute after the branch constraint test
-      // succeeds.
-      Block *target = checkDesc.target;
-      if (blockTransl.count(checkDesc.target) == 1) {
-        target = blockTransl[checkDesc.target];
-      }
-
-      // Schedule checking the branch constraint itself.
-      newWorkStack.emplace_back(backtrackPoints[i - 1].toVisitWhenFails, target,
-                                argConstraints[i], checkDesc.typeToCheck);
-
-      // To summarize, at this point the new work stack consists of a copy of
-      // the initial work stack with a check for the constraint of this AnyOf
-      // branch on top. We can now add a job that will compile this work stack:
-      // first check that we indeed want to go deeper in this branch
-      // by compiling a check for this branch's constraint, then compile
-      // the rest of the work to do. If any of those things fails, we
-      // go to a backtrack point that points to a similar stack for the next
-      // AnyOf branch, or to the backtrack point of the current AnyOf.
-      this->compileJobs.emplace_back(std::move(newWorkStack),
-                                     std::move(backtrackPoints[i]),
-                                     currentJob.definedSlots);
-    }
-
-    // Reuse the original work stack for the first branch for efficiency
-    currentJob.workStack.emplace_back(checkDesc.start, checkDesc.target,
-                                      argConstraints[0], checkDesc.typeToCheck);
-    currentJob.btPoint = std::move(backtrackPoints[0]);
+    return;
   }
+
+  if (argConstraints.empty()) {
+    // Simple failure for trivial AnyOf constraints
+    Block &failure = currentJob.btPoint.generateBacktrackBlock(
+        this->location, this->region, rewriter);
+    rewriter.setInsertionPointToEnd(checkDesc.start);
+    rewriter.create<BranchOp>(this->location, &failure);
+    return;
+  }
+
+  // Pre-assign the type in the slot table as if the constraint
+  // check succeeded. This is correct because further parameter
+  // checks cannot reference this slot anyway.
+  rewriter.setInsertionPointToEnd(checkDesc.start);
+  rewriter.create<AssignType>(this->location, slot, checkDesc.typeToCheck);
+  currentJob.definedSlots.insert(slot);
+  currentJob.btPoint.slotsToClearWhenFails.push_back(slot);
+
+  // AnyOf constraints are checked by attempting to go as deep
+  // as possible in a branch, and backtracking to the next branch
+  // if anything failed while exploring the attempted branch.
+  // This is achieved in the compiler by created a compile job
+  // for each branch and its initial constraint check, each job
+  // holding a copy of the initial work stack, with a different
+  // backtracking point.
+
+  // Prepare the backtrack points for all possible AnyOf branch
+  SmallVector<BacktrackPoint> backtrackPoints;
+  for (size_t i = 0; i + 1 < argConstraints.size(); i++) {
+    backtrackPoints.emplace_back(&this->region.emplaceBlock());
+  }
+  backtrackPoints.push_back(std::move(currentJob.btPoint));
+
+  // Create new work stacks for all possible AnyOf branch
+  // except the first one. The first one will re-use the
+  // original work stack for efficiency.
+  // This is achieved by duplicating all blocks in the work
+  // stacks and linking them correctly.
+  for (size_t i = 1; i < argConstraints.size(); i++) {
+    SmallVector<ConstraintCheck> newWorkStack = currentJob.workStack;
+    DenseMap<Block *, Block *> blockTransl;
+
+    // Copy work item start blocks
+    for (size_t i = 0; i < currentJob.workStack.size(); i++) {
+      // This is guaranteed by the linked structure of the stack.
+      assert(blockTransl.count(currentJob.workStack[i].start) == 0 &&
+             "repeated start block for work stack item");
+      assert(currentJob.workStack[i].start->getOperations().size() == 0 &&
+             "work stack block is not empty");
+
+      blockTransl.insert(
+          {currentJob.workStack[i].start, &region.emplaceBlock()});
+      newWorkStack[i].start = blockTransl[currentJob.workStack[i].start];
+    }
+
+    // Update all targets except the last one.
+    // The last one points to global success and thus must be kept.
+    for (size_t i = 1; i < currentJob.workStack.size(); i++) {
+      // This is guaranteed by the linked structure of the stack.
+      assert(blockTransl.count(currentJob.workStack[i].target) == 1 &&
+             "invalid successor for work stack item");
+
+      newWorkStack[i].target = blockTransl[currentJob.workStack[i].target];
+    }
+
+    // Find the next work item to compute after the branch constraint test
+    // succeeds.
+    Block *target = checkDesc.target;
+    if (blockTransl.count(checkDesc.target) == 1) {
+      target = blockTransl[checkDesc.target];
+    }
+
+    // Schedule checking the branch constraint itself.
+    newWorkStack.emplace_back(backtrackPoints[i - 1].toVisitWhenFails, target,
+                              argConstraints[i], checkDesc.typeToCheck);
+
+    // To summarize, at this point the new work stack consists of a copy of
+    // the initial work stack with a check for the constraint of this AnyOf
+    // branch on top. We can now add a job that will compile this work stack:
+    // first check that we indeed want to go deeper in this branch
+    // by compiling a check for this branch's constraint, then compile
+    // the rest of the work to do. If any of those things fails, we
+    // go to a backtrack point that points to a similar stack for the next
+    // AnyOf branch, or to the backtrack point of the current AnyOf.
+    this->compileJobs.emplace_back(std::move(newWorkStack),
+                                   std::move(backtrackPoints[i]),
+                                   currentJob.definedSlots);
+  }
+
+  // Reuse the original work stack for the first branch for efficiency
+  currentJob.workStack.emplace_back(checkDesc.start, checkDesc.target,
+                                    argConstraints[0], checkDesc.typeToCheck);
+  currentJob.btPoint = std::move(backtrackPoints[0]);
+}
+
+void ConstraintCompiler::compileAnd(ConstraintCheck &checkDesc, Value slot,
+                                    ConstraintCheckCompileJob &currentJob,
+                                    ArrayRef<Value> argConstraints) {
+  if (currentJob.definedSlots.contains(slot)) {
+    Block &failure = currentJob.btPoint.generateBacktrackBlock(
+        this->location, this->region, rewriter);
+    rewriter.setInsertionPointToEnd(checkDesc.start);
+    rewriter.create<MatchType>(this->location, slot, checkDesc.typeToCheck,
+                               checkDesc.target, &failure);
+    return;
+  }
+
+  if (argConstraints.empty()) {
+    // Simple success for trivial And constraints
+    rewriter.setInsertionPointToEnd(checkDesc.start);
+    rewriter.create<BranchOp>(this->location, checkDesc.target);
+    return;
+  }
+
+  // For each argument of the And constraint, generate a work item
+  // and put it on the work stack.
+
+  Block *start = checkDesc.start;
+  Block *target;
+  SmallVector<ConstraintCheck> newChecks;
+  for (size_t i = 0; i + 1 < argConstraints.size(); i++) {
+    target = &region.emplaceBlock();
+    newChecks.emplace_back(start, target, argConstraints[i],
+                           checkDesc.typeToCheck);
+    start = target;
+  }
+
+  newChecks.emplace_back(start, checkDesc.target,
+                         argConstraints[argConstraints.size() - 1],
+                         checkDesc.typeToCheck);
+
+  currentJob.workStack.append(newChecks.rbegin(), newChecks.rend());
 }
 
 bool ConstraintCompiler::workStackInvariant() const {
@@ -443,6 +487,12 @@ void ConstraintCompiler::compile(MLIRContext *ctx, Block &constraints,
             compiler.compileAnyOf(currentCheck,
                                   cstrToSlot[currentCheck.constraint],
                                   currentJob, args);
+          })
+          .Case<SSA_And>([&](SSA_And op) {
+            SmallVector<Value> args = op.args();
+            compiler.compileAnd(currentCheck,
+                                cstrToSlot[currentCheck.constraint], currentJob,
+                                args);
           })
           .Default([](Operation *op) { assert(0 && "unsupported operation"); });
     }

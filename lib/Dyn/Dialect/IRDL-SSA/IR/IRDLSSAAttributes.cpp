@@ -7,13 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "Dyn/Dialect/IRDL-SSA/IR/IRDLSSAAttributes.h"
-#include "Dyn/Dialect/IRDL-SSA/TypeWrapper.h"
+#include "Dyn/Dialect/IRDL/TypeWrapper.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 namespace mlir {
 namespace irdlssa {
+
+using namespace irdl;
 
 Attribute ParamTypeInstanceAttr::parse(AsmParser &odsParser, Type odsType) {
   auto ctx = odsParser.getContext();

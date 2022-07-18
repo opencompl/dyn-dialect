@@ -83,6 +83,34 @@ func.func @failedAnyOfConstraint() {
 // -----
 
 //===----------------------------------------------------------------------===//
+// And constraint
+//===----------------------------------------------------------------------===//
+
+func.func @succeededAndConstraint() {
+  // CHECK: "testd.and"() : () -> i64
+  "testd.and"() : () -> i64
+  return
+}
+
+// -----
+
+func.func @failedAndConstraint1() {
+  // expected-error@+1 {{the provided types do not satisfy the type constraints}}
+  "testd.and"() : () -> i1
+  return
+}
+
+// -----
+
+func.func @failedAndConstraint2() {
+  // expected-error@+1 {{the provided types do not satisfy the type constraints}}
+  "testd.and"() : () -> i32
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // Any constraint
 //===----------------------------------------------------------------------===//
 

@@ -7,13 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "Dyn/Dialect/IRDL-Eval/IRDLEvalInterpreter.h"
-#include "Dyn/Dialect/IRDL-SSA/TypeWrapper.h"
+#include "Dyn/Dialect/IRDL/TypeWrapper.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/IR/ExtensibleDialect.h"
 
 using namespace mlir;
 using namespace irdleval;
 using namespace irdlssa;
+using namespace irdl;
 using Instruction = IRDLEvalInterpreter::Instruction;
 using ExecutionResult = IRDLEvalInterpreter::ExecutionResult;
 
