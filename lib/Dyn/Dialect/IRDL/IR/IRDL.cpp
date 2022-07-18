@@ -189,7 +189,7 @@ OptionalParseResult parseOptionalAndTypeConstraint(OpAsmParser &p,
 }
 
 /// Print an And type constraint.
-/// It has the format 'AnyOf<type, (, type)*>'.
+/// It has the format 'And<type (, type)*>'.
 void printAndTypeConstraint(OpAsmPrinter &p, AndTypeConstraintAttr andConstr) {
   auto constrs = andConstr.getConstrs();
 
