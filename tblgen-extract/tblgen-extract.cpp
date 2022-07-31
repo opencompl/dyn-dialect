@@ -127,6 +127,13 @@ Attribute extractConstraint(MLIRContext *ctx, StringRef pred) {
     return AnyOfTypeConstraintAttr::get(ctx, {lhs, rhs});
   }
 
+  // And constraint
+  if (auto andOperands = separateOnOperator(pred, "&&")) {
+    auto lhs = extractConstraint(ctx, andOperands->first);
+    auto rhs = extractConstraint(ctx, andOperands->second);
+    return AndTypeConstraintAttr::get(ctx, {lhs, rhs});
+  }
+
   // BaseCppClass
   // TODO: change this to a TypeWrapperBaseConstraint
   if (pred.startswith("$_self.isa<") && pred.endswith(">()")) {
