@@ -23,7 +23,7 @@
 namespace mlir {
 namespace irdl {
 /// A wrapper around a C++-defined type to extract type parameters.
-/// For most cases, TypeWrapper should be used instead.
+/// For most cases, ConcreteTypeWrapper should be used instead.
 class TypeWrapper {
 public:
   /// Check if the given type is the one wrapped.
