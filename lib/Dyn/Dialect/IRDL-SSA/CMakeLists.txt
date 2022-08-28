@@ -15,4 +15,5 @@ add_mlir_dialect_library(MLIRIRDLSSA
 
   LINK_LIBS PUBLIC
   MLIRIR
+  MLIRIRDL
   )
