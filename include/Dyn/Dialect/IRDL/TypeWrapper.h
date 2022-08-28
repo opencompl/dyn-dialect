@@ -44,6 +44,8 @@ public:
   virtual size_t getParameterAmount() = 0;
 };
 
+using TypeWrapperPtr = TypeWrapper *;
+
 /// A wrapper around a concrete C++-defined type.
 template <typename T> class ConcreteTypeWrapper : public TypeWrapper {
 public:

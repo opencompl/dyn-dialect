@@ -29,13 +29,13 @@ LogicalResult ConstraintVerifier::verifyType(
 
   assert(variable < this->constraints.size() && "invalid constraint variable");
 
-  if (this->assigned[variable].hasValue()) {
-    if (type == this->assigned[variable].getValue())
+  if (this->assigned[variable].has_value()) {
+    if (type == this->assigned[variable].value())
       return success();
     else {
       if (emitError)
         return (*emitError)().append("expected type ",
-                                     this->assigned[variable].getValue(),
+                                     this->assigned[variable].value(),
                                      " but got ", type);
       return failure();
     }

@@ -123,7 +123,7 @@ void registerOperation(IRDLContext &irdlCtx, ExtensibleDialect *dialect,
 
   // Add the operand constraints to the type constraints.
   auto operandsOp = op.getOp<OperandsOp>();
-  if (operandsOp.hasValue()) {
+  if (operandsOp.has_value()) {
     operandConstraints.reserve(operandsOp->params().size());
     for (auto operand : operandsOp->params().getValue()) {
       auto operandAttr = operand.cast<NamedTypeConstraintAttr>();
@@ -136,7 +136,7 @@ void registerOperation(IRDLContext &irdlCtx, ExtensibleDialect *dialect,
 
   // Add the result constraints to the type constraints.
   auto resultsOp = op.getOp<ResultsOp>();
-  if (resultsOp.hasValue()) {
+  if (resultsOp.has_value()) {
     resultConstraints.reserve(resultsOp->params().size());
     for (auto result : resultsOp->params().getValue()) {
       auto resultAttr = result.cast<NamedTypeConstraintAttr>();
@@ -182,7 +182,7 @@ static void registerType(IRDLContext &irdlCtx, ExtensibleDialect *dialect,
   auto params = op.getOp<ParametersOp>();
 
   SmallVector<std::unique_ptr<TypeConstraint>> paramConstraints;
-  if (params.hasValue()) {
+  if (params.has_value()) {
     for (auto param : params->params().getValue()) {
       paramConstraints.push_back(param.cast<NamedTypeConstraintAttr>()
                                      .getConstraint()

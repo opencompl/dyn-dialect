@@ -120,19 +120,19 @@ WalkResult registerOperation(ExtensibleDialect *dialect, SSA_OperationOp op) {
           [&]() { return opVerifier.emitError(); }, opVerifier.getContext(),
           opVerifier);
 
-      if (!interpreter.hasValue()) {
+      if (!interpreter.has_value()) {
         return WalkResult::interrupt();
       }
 
       size_t numExpectedResults = 0;
       auto resultsOp = op.getOp<SSA_ResultsOp>();
-      if (resultsOp.hasValue()) {
+      if (resultsOp.has_value()) {
         numExpectedResults = resultsOp->args().size();
       }
 
       size_t numExpectedOperands = 0;
       auto operandsOp = op.getOp<SSA_OperandsOp>();
-      if (operandsOp.hasValue()) {
+      if (operandsOp.has_value()) {
         numExpectedOperands = operandsOp->args().size();
       }
 
@@ -201,7 +201,7 @@ WalkResult registerOperation(ExtensibleDialect *dialect, SSA_OperationOp op) {
     VerifyConstraintInterface op =
         llvm::cast<VerifyConstraintInterface>(v.getDefiningOp());
     auto verifier = op.getVerifier(constrToValue);
-    if (!verifier.hasValue()) {
+    if (!verifier.has_value()) {
       return WalkResult::interrupt();
     }
     constraints.push_back(std::move(*verifier));
@@ -212,7 +212,7 @@ WalkResult registerOperation(ExtensibleDialect *dialect, SSA_OperationOp op) {
 
   // Gather which constraint slots correspond to operand constraints
   auto operandsOp = op.getOp<SSA_OperandsOp>();
-  if (operandsOp.hasValue()) {
+  if (operandsOp.has_value()) {
     operandConstraints.reserve(operandsOp->args().size());
     for (auto operand : operandsOp->args()) {
       for (size_t i = 0; i < constrToValue.size(); i++) {
@@ -226,7 +226,7 @@ WalkResult registerOperation(ExtensibleDialect *dialect, SSA_OperationOp op) {
 
   // Gather which constraint slots correspond to result constraints
   auto resultsOp = op.getOp<SSA_ResultsOp>();
-  if (resultsOp.hasValue()) {
+  if (resultsOp.has_value()) {
     resultConstraints.reserve(resultsOp->args().size());
     for (auto result : resultsOp->args()) {
       for (size_t i = 0; i < constrToValue.size(); i++) {
@@ -274,7 +274,7 @@ static WalkResult registerType(ExtensibleDialect *dialect, SSA_TypeOp op) {
           [&]() { return opVerifier.emitError(); }, opVerifier.getContext(),
           opVerifier);
 
-      if (!interpreter.hasValue()) {
+      if (!interpreter.has_value()) {
         return WalkResult::interrupt();
       }
 
@@ -322,7 +322,7 @@ static WalkResult registerType(ExtensibleDialect *dialect, SSA_TypeOp op) {
     VerifyConstraintInterface op =
         llvm::cast<VerifyConstraintInterface>(v.getDefiningOp());
     auto verifier = op.getVerifier(constrToValue);
-    if (!verifier.hasValue()) {
+    if (!verifier.has_value()) {
       return WalkResult::interrupt();
     }
     constraints.push_back(std::move(*verifier));
@@ -331,7 +331,7 @@ static WalkResult registerType(ExtensibleDialect *dialect, SSA_TypeOp op) {
   // Gather which constraint slots correspond to parameter constraints
   auto params = op.getOp<SSA_ParametersOp>();
   SmallVector<size_t> paramConstraints;
-  if (params.hasValue()) {
+  if (params.has_value()) {
     paramConstraints.reserve(params->args().size());
     for (auto param : params->args()) {
       for (size_t i = 0; i < constrToValue.size(); i++) {

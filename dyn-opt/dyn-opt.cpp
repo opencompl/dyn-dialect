@@ -55,7 +55,7 @@ class ComplexTypeWrapper : public ConcreteTypeWrapper<ComplexType> {
     }
 
     return ComplexType::getChecked(emitError,
-                                   parameters[0].cast<TypeAttr>().getType());
+                                   parameters[0].cast<TypeAttr>().getValue());
   }
 };
 

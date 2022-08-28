@@ -84,8 +84,8 @@ static void printKeywordOrString(OpAsmPrinter &p, Operation *,
 /// If no region is parsed, create a new region with a single empty block.
 static ParseResult parseSingleBlockRegion(OpAsmParser &p, Region &region) {
   auto regionParseRes = p.parseOptionalRegion(region);
-  if (regionParseRes.hasValue()) {
-    if (failed(regionParseRes.getValue()))
+  if (regionParseRes.has_value()) {
+    if (failed(regionParseRes.value()))
       return failure();
   }
   // If the region is empty, add a single empty block.

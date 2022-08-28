@@ -67,8 +67,8 @@ static void printKeywordOrString(OpAsmPrinter &p, Operation *,
 /// If no region is parsed, create a new region with a single empty block.
 static ParseResult parseSingleBlockRegion(OpAsmParser &p, Region &region) {
   auto regionParseRes = p.parseOptionalRegion(region);
-  if (regionParseRes.hasValue()) {
-    if (failed(regionParseRes.getValue()))
+  if (regionParseRes.has_value()) {
+    if (failed(regionParseRes.value()))
       return failure();
   }
   // If the region is empty, add a single empty block.
@@ -334,17 +334,17 @@ ParseResult parseTypeConstraint(OpAsmParser &p, Attribute *typeConstraint) {
 
   // Parse an Any constraint.
   auto anyRes = parseOptionalAnyTypeConstraint(p, typeConstraint);
-  if (anyRes.hasValue())
+  if (anyRes.has_value())
     return *anyRes;
 
   // Parse an AnyOf constraint.
   auto anyOfRes = parseOptionalAnyOfTypeConstraint(p, typeConstraint);
-  if (anyOfRes.hasValue())
+  if (anyOfRes.has_value())
     return *anyOfRes;
 
   // Parse an And constraint.
   auto andRes = parseOptionalAndTypeConstraint(p, typeConstraint);
-  if (andRes.hasValue())
+  if (andRes.has_value())
     return *andRes;
 
   auto ctx = p.getBuilder().getContext();
@@ -353,8 +353,8 @@ ParseResult parseTypeConstraint(OpAsmParser &p, Attribute *typeConstraint) {
   // It has the format 'type'.
   Type type;
   auto typeParsed = p.parseOptionalType(type);
-  if (typeParsed.hasValue()) {
-    if (failed(typeParsed.getValue()))
+  if (typeParsed.has_value()) {
+    if (failed(typeParsed.value()))
       return failure();
 
     *typeConstraint = EqTypeConstraintAttr::get(ctx, type);
@@ -381,7 +381,7 @@ ParseResult parseTypeConstraint(OpAsmParser &p, Attribute *typeConstraint) {
       // Parse a dynamic type parameter constraint.
       auto paramRes =
           parseOptionalDynTypeParamsConstraint(p, keyword, typeConstraint);
-      if (paramRes.hasValue())
+      if (paramRes.has_value())
         return *paramRes;
       p.emitError(loc, "type constraint expected");
       return failure();
@@ -389,7 +389,7 @@ ParseResult parseTypeConstraint(OpAsmParser &p, Attribute *typeConstraint) {
 
     auto baseRes =
         parseOptionalDynTypeBaseConstraint(p, keyword, typeConstraint);
-    if (baseRes.hasValue())
+    if (baseRes.has_value())
       return *baseRes;
 
     p.emitError(loc, "type constraint expected");

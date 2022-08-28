@@ -29,7 +29,7 @@ class TypeConstraint;
 /// of an IRDL-SSA declaration.
 class ConstraintVerifier {
   ArrayRef<std::unique_ptr<TypeConstraint>> constraints;
-  SmallVector<Optional<Type>> assigned;
+  SmallVector<Optional<mlir::Type>> assigned;
 
 public:
   ConstraintVerifier(ArrayRef<std::unique_ptr<TypeConstraint>> constraints);

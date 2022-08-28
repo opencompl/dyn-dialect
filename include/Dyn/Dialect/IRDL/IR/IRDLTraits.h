@@ -56,7 +56,7 @@ public:
     /// Get the unique operation of a specific op that is in the operation
     /// region.
     template <typename OpT>
-    std::enable_if_t<llvm::disjunction<std::is_same<OpT, ChildOp>...>::value,
+    std::enable_if_t<std::disjunction<std::is_same<OpT, ChildOp>...>::value,
                      llvm::Optional<OpT>>
     getOp() {
       auto ops =
