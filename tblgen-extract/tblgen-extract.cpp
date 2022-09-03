@@ -105,6 +105,10 @@ Optional<StringRef> cppToIRDLTypeName(StringRef cppName) {
     return {"shape.shape"};
   if (cppName == "::mlir::IndexType")
     return {"builtin.index"};
+  if (cppName == "::mlir::TensorType")
+    return {"builtin.tensor"};
+  if (cppName == "::mlir::VectorType")
+    return {"builtin.vector"};
   return {};
 }
 
