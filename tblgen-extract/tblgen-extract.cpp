@@ -140,6 +140,18 @@ Attribute extractConstraint(MLIRContext *ctx, StringRef pred) {
       return DynTypeBaseConstraintAttr::get(ctx, *irdlName);
   }
 
+  // FloatType constraint
+  if (pred == ("$_self.isa<::mlir::FloatType>()")) {
+    std::vector<Attribute> constraints;
+    constraints.push_back(DynTypeBaseConstraintAttr::get(ctx, "builtin.bf16"));
+    constraints.push_back(DynTypeBaseConstraintAttr::get(ctx, "builtin.f16"));
+    constraints.push_back(DynTypeBaseConstraintAttr::get(ctx, "builtin.f32"));
+    constraints.push_back(DynTypeBaseConstraintAttr::get(ctx, "builtin.f64"));
+    constraints.push_back(DynTypeBaseConstraintAttr::get(ctx, "builtin.f80"));
+    constraints.push_back(DynTypeBaseConstraintAttr::get(ctx, "builtin.f128"));
+    return AnyOfTypeConstraintAttr::get(ctx, constraints);
+  }
+
   llvm::errs() << "Cannot resolve constraint: " << pred << "\n";
   return AnyTypeConstraintAttr::get(ctx);
 }
