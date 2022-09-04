@@ -78,26 +78,6 @@ StringRef removeOuterParentheses(StringRef str) {
   return str;
 }
 
-/// Split a predicate on the given operator.
-/// For instance, `separateOnOperator("a || b", "||")` will return
-/// `{"a", "b"}`.
-Optional<std::pair<StringRef, StringRef>> separateOnOperator(StringRef str,
-                                                             StringRef op) {
-  auto parenLevel = 0;
-  for (size_t idx = 0; idx < str.size(); idx++) {
-    auto c = str[idx];
-    if (c == '(')
-      parenLevel += 1;
-    if (c == ')') {
-      parenLevel -= 1;
-      assert(parenLevel >= 0);
-    }
-    if (parenLevel == 0 && str.slice(idx, idx + op.size()) == op)
-      return {{str.slice(0, idx), str.slice(idx + op.size(), str.size())}};
-  }
-  return {};
-}
-
 Optional<StringRef> cppToIRDLTypeName(StringRef cppName) {
   if (cppName == "::mlir::shape::SizeType")
     return {"shape.size"};
@@ -112,25 +92,31 @@ Optional<StringRef> cppToIRDLTypeName(StringRef cppName) {
   return {};
 }
 
-Attribute extractConstraint(MLIRContext *ctx, StringRef pred) {
-  pred = removeOuterParentheses(pred).trim();
+Attribute extractConstraint(MLIRContext *ctx, tblgen::Pred predTblgen) {
+  const Record &predRec = predTblgen.getDef();
+  auto predStr = predTblgen.getCondition();
+  auto pred = removeOuterParentheses(predStr).trim();
 
   // Any constraint
   if (pred == "true")
     return AnyTypeConstraintAttr::get(ctx);
 
   // AnyOf constraint
-  if (auto orOperands = separateOnOperator(pred, "||")) {
-    auto lhs = extractConstraint(ctx, orOperands->first);
-    auto rhs = extractConstraint(ctx, orOperands->second);
-    return AnyOfTypeConstraintAttr::get(ctx, {lhs, rhs});
+  if (predRec.isSubClassOf("Or")) {
+    std::vector<Attribute> constraints;
+    for (auto *child : predRec.getValueAsListOfDefs("children")) {
+      constraints.push_back(extractConstraint(ctx, tblgen::Pred(child)));
+    }
+    return AnyOfTypeConstraintAttr::get(ctx, constraints);
   }
 
   // And constraint
-  if (auto andOperands = separateOnOperator(pred, "&&")) {
-    auto lhs = extractConstraint(ctx, andOperands->first);
-    auto rhs = extractConstraint(ctx, andOperands->second);
-    return AndTypeConstraintAttr::get(ctx, {lhs, rhs});
+  if (predRec.isSubClassOf("And")) {
+    std::vector<Attribute> constraints;
+    for (auto *child : predRec.getValueAsListOfDefs("children")) {
+      constraints.push_back(extractConstraint(ctx, tblgen::Pred(child)));
+    }
+    return AndTypeConstraintAttr::get(ctx, constraints);
   }
 
   // BaseCppClass
@@ -153,13 +139,13 @@ Attribute extractConstraint(MLIRContext *ctx, StringRef pred) {
   }
 
   llvm::errs() << "Cannot resolve constraint: " << pred << "\n";
+  llvm::errs() << predRec << "\n\n";
   return AnyTypeConstraintAttr::get(ctx);
 }
 
 Attribute extractConstraint(MLIRContext *ctx,
                             const tblgen::Constraint &constraint) {
-  std::string pred = constraint.getPredicate().getCondition();
-  return extractConstraint(ctx, pred);
+  return extractConstraint(ctx, constraint.getPredicate());
 }
 
 /// Extract an operation to IRDL.
