@@ -154,6 +154,22 @@ private:
   DynamicTypeDefinition *dynTypeDef;
 };
 
+/// Type constraint asserting that the base type is of a certain C++-defined
+/// type.
+class TypeBaseConstraint : public TypeConstraint {
+public:
+  TypeBaseConstraint(TypeWrapper *typeDef) : typeDef(typeDef) {}
+
+  virtual LogicalResult
+  verifyType(Optional<function_ref<InFlightDiagnostic()>> emitError, Type type,
+             ArrayRef<std::unique_ptr<TypeConstraint>> typeConstraintVars,
+             MutableArrayRef<Type> varsValue) override;
+
+private:
+  /// Base type that satisfies the constraint.
+  TypeWrapper *typeDef;
+};
+
 //===----------------------------------------------------------------------===//
 // Parameters type constraint
 //===----------------------------------------------------------------------===//

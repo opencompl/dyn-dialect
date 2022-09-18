@@ -104,6 +104,19 @@ LogicalResult VarTypeConstraint::verifyType(
   return success();
 }
 
+LogicalResult TypeBaseConstraint::verifyType(
+    Optional<function_ref<InFlightDiagnostic()>> emitError, Type type,
+    ArrayRef<std::unique_ptr<TypeConstraint>> typeConstraintVars,
+    MutableArrayRef<Type> varsValue) {
+  if (typeDef->isCorrectType(type))
+    return success();
+
+  if (emitError)
+    return (*emitError)().append("expected base type ", typeDef->getName(),
+                                 ", but got ", type, " type.");
+  return failure();
+}
+
 LogicalResult DynTypeBaseConstraint::verifyType(
     Optional<function_ref<InFlightDiagnostic()>> emitError, Type type,
     ArrayRef<std::unique_ptr<TypeConstraint>> typeConstraintVars,
