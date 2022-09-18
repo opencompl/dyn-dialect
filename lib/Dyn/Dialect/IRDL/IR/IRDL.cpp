@@ -209,7 +209,7 @@ ParseResult parseTypeParamsConstraint(OpAsmParser &p, TypeWrapper *wrapper,
   auto ctx = p.getBuilder().getContext();
 
   // Empty case
-  if (p.parseOptionalLess() || !p.parseOptionalGreater()) {
+  if (p.parseOptionalGreater().succeeded()) {
     *typeConstraint = TypeParamsConstraintAttr::get(ctx, wrapper, {});
     return success();
   }
@@ -218,20 +218,20 @@ ParseResult parseTypeParamsConstraint(OpAsmParser &p, TypeWrapper *wrapper,
 
   paramConstraints.push_back({});
   if (parseTypeConstraint(p, &paramConstraints.back()))
-    return {failure()};
+    return failure();
 
   while (p.parseOptionalGreater()) {
     if (p.parseComma())
-      return {failure()};
+      return failure();
 
     paramConstraints.push_back({});
     if (parseTypeConstraint(p, &paramConstraints.back()))
-      return {failure()};
+      return failure();
   }
 
   *typeConstraint =
       TypeParamsConstraintAttr::get(ctx, wrapper, paramConstraints);
-  return {success()};
+  return success();
 }
 
 void printTypeParamsConstraint(OpAsmPrinter &p,
@@ -374,10 +374,12 @@ ParseResult parseTypeConstraint(OpAsmParser &p, Attribute *typeConstraint) {
     // Parse a non-dynamic type parameter constraint.
     auto irdl = ctx->getOrLoadDialect<IRDLDialect>();
     auto typeWrapper = irdl->getTypeWrapper(keyword);
-    if (typeWrapper)
-      return parseTypeParamsConstraint(p, typeWrapper, typeConstraint);
 
     if (p.parseLess().succeeded()) {
+      // Parse a C++-defined type parameter constraint.
+      if (typeWrapper)
+        return parseTypeParamsConstraint(p, typeWrapper, typeConstraint);
+
       // Parse a dynamic type parameter constraint.
       auto paramRes =
           parseOptionalDynTypeParamsConstraint(p, keyword, typeConstraint);
@@ -385,6 +387,11 @@ ParseResult parseTypeConstraint(OpAsmParser &p, Attribute *typeConstraint) {
         return *paramRes;
       p.emitError(loc, "type constraint expected");
       return failure();
+    }
+
+    if (typeWrapper) {
+      *typeConstraint = TypeBaseConstraintAttr::get(ctx, typeWrapper);
+      return success();
     }
 
     auto baseRes =
@@ -416,6 +423,9 @@ void printTypeConstraint(OpAsmPrinter &p, Attribute typeConstraint) {
   } else if (auto typeParamsConstr =
                  typeConstraint.dyn_cast<TypeParamsConstraintAttr>()) {
     printTypeParamsConstraint(p, typeParamsConstr);
+  } else if (auto typeBaseConstr =
+                 typeConstraint.dyn_cast<TypeBaseConstraintAttr>()) {
+    p << typeBaseConstr.getTypeDef()->getName();
   } else if (auto dynTypeBaseConstr =
                  typeConstraint.dyn_cast<DynTypeBaseConstraintAttr>()) {
     printDynTypeBaseConstraint(p, dynTypeBaseConstr);

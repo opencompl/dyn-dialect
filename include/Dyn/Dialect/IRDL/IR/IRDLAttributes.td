@@ -81,6 +81,23 @@ def VarTypeConstraintAttr : IRDL_AttrDef<"VarTypeConstraint", "var_type_constrai
   let assemblyFormat = "`<` $name `>`";
 }
 
+class TypeWrapperParameter<string desc = ""> :
+    AttrOrTypeParameter<"mlir::irdl::TypeWrapperPtr", desc> {
+  string convertFromStorage = "($_self)";
+}
+
+def TypeBaseConstraintAttr : IRDL_AttrDef<"TypeBaseConstraint", "type_base_constraint",
+      [TypeConstraintAttrInterface, DeclareAttrInterfaceMethods<TypeConstraintAttrInterface>]> {
+  let summary = "constraint on the base of a C++-defined type";
+  let description = [{
+    Attribute representing a constraint on the base of a C++-defined type.
+    The constraint is satisfied by types that have the correct base type.
+  }];
+  let parameters = (ins TypeWrapperParameter<>:$typeDef);
+  let assemblyFormat = "`<` $typeDef `>`";
+}
+
+
 def DynTypeBaseConstraintAttr : IRDL_AttrDef<"DynTypeBaseConstraint", "dyn_type_base_constraint",
       [TypeConstraintAttrInterface, DeclareAttrInterfaceMethods<TypeConstraintAttrInterface>]> {
   let summary = "constraint on the base of a dynamic type";
@@ -103,11 +120,6 @@ def DynTypeParamsConstraintAttr : IRDL_AttrDef<"DynTypeParamsConstraint", "dyn_t
   let parameters = (ins StringRefParameter<>:$typeName,
       ArrayRefParameter<"mlir::Attribute", "list of param constraints">:$paramConstraints);
   let assemblyFormat = "`<` $typeName `<` $paramConstraints `>` `>`";
-}
-
-class TypeWrapperParameter<string desc = ""> :
-    AttrOrTypeParameter<"mlir::irdl::TypeWrapperPtr", desc> {
-  string convertFromStorage = "($_self)";
 }
 
 def TypeParamsConstraintAttr : IRDL_AttrDef<"TypeParamsConstraint", "type_params_constraint",

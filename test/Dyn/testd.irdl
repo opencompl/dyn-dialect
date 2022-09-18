@@ -43,6 +43,13 @@ irdl.dialect testd {
     irdl.results(res: testd.parametric)
   }
 
+  // CHECK: irdl.operation base {
+  // CHECK:   irdl.results(res: std.complex)
+  // CHECK: }
+  irdl.operation base {
+    irdl.results(res: std.complex)
+  }
+
   // CHECK: irdl.operation dynparams {
   // CHECK:   irdl.results(res: testd.parametric<AnyOf<i32, i64>>)
   // CHECK: }

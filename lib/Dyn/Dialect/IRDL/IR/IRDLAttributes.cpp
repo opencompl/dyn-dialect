@@ -259,6 +259,34 @@ mlir::Value DynTypeBaseConstraintAttr::registerAsSSA(
 }
 
 //===----------------------------------------------------------------------===//
+// Attribute for constraint on non-dynamic type base type
+//===----------------------------------------------------------------------===/
+
+std::unique_ptr<TypeConstraint> TypeBaseConstraintAttr::getTypeConstraint(
+    IRDLContext &irdlCtx,
+    SmallVector<std::pair<StringRef, std::unique_ptr<TypeConstraint>>> const
+        &constrVars) const {
+  return std::make_unique<TypeBaseConstraint>(getTypeDef());
+}
+
+mlir::Value TypeBaseConstraintAttr::registerAsSSA(
+    TypeContext &typeCtx, mlir::ConversionPatternRewriter &rewriter,
+    SmallVector<std::pair<StringRef, Value>> &vars,
+    mlir::Location location) const {
+
+  SmallVector<Value> constrs;
+  for (size_t i = 0; i < getTypeDef()->getParameterAmount(); i++) {
+    constrs.push_back(rewriter.create<irdlssa::SSA_AnyType>(
+        location, rewriter.getType<irdlssa::ConstraintType>()));
+  }
+
+  irdlssa::SSA_ParametricType op = rewriter.create<irdlssa::SSA_ParametricType>(
+      location, rewriter.getType<irdlssa::ConstraintType>(),
+      this->getTypeDef()->getName(), constrs);
+  return op.getResult();
+}
+
+//===----------------------------------------------------------------------===//
 // Attribute for constraint on dynamic type parameters
 //===----------------------------------------------------------------------===//
 
