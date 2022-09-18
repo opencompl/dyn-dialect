@@ -127,7 +127,7 @@ def TypeConstraintParameter :
   AttrOrTypeParameter<"::mlir::Attribute", "type constraint attribute"> {}
 
 def NamedTypeConstraintAttr : IRDL_AttrDef<"NamedTypeConstraint",
-                                           "Named type constraint"> {
+                                           "named_type_constraint"> {
   let summary = "Type constraint with an associated name";
   let parameters = (ins StringRefParameter<>:$name, TypeConstraintParameter:$constraint);
   let assemblyFormat = "`<` $name `:` $constraint `>`";
