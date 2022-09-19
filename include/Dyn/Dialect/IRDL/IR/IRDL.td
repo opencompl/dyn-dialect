@@ -64,13 +64,13 @@ def IRDL_Dialect : Dialect {
     /// Returns nullptr if no type wrapper with that name is found.
     TypeWrapper* getTypeWrapper(StringRef typeName);
 
+    /// Add a type wrapper to IRDL.
+    void addTypeWrapper(std::unique_ptr<mlir::irdl::TypeWrapper> wrapper);
+
     /// Context object for this IRDL instance (type definitions).
     mlir::irdl::IRDLContext irdlContext;
 
-  private:
-    /// Add a type wrapper to IRDL.
-    void addTypeWrapper(std::unique_ptr<mlir::irdl::TypeWrapper> wrapper);
-  
+  private:  
     /// Register the attributes used by default by IRDL.
     void registerAttributes();
     /// Register the attributes used by standard interfaces wrappers in IRDL.
