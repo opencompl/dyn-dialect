@@ -375,7 +375,7 @@ ParseResult parseTypeConstraint(OpAsmParser &p, Attribute *typeConstraint) {
     auto irdl = ctx->getOrLoadDialect<IRDLDialect>();
     auto typeWrapper = irdl->getTypeWrapper(keyword);
 
-    if (p.parseLess().succeeded()) {
+    if (p.parseOptionalLess().succeeded()) {
       // Parse a C++-defined type parameter constraint.
       if (typeWrapper)
         return parseTypeParamsConstraint(p, typeWrapper, typeConstraint);
