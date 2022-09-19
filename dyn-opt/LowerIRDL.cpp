@@ -37,8 +37,9 @@ struct LowerIRDLDialect : public mlir::OpConversionPattern<DialectOp> {
   void rewrite(DialectOp op, OpAdaptor adaptor,
                ConversionPatternRewriter &rewriter) const override {
     rewriter.setInsertionPoint(op);
-    auto newOp = rewriter.create<SSA_DialectOp>(op.getLoc(), adaptor.name());
-    rewriter.inlineRegionBefore(op.body(), newOp.body(), newOp.body().end());
+    auto newOp = rewriter.create<SSA_DialectOp>(op.getLoc(), adaptor.getName());
+    rewriter.inlineRegionBefore(op.getBody(), newOp.getBody(),
+                                newOp.getBody().end());
     rewriter.eraseOp(op);
   }
 };
@@ -53,12 +54,12 @@ struct LowerIRDLType : public mlir::OpConversionPattern<TypeOp> {
 
   void rewrite(TypeOp op, OpAdaptor adaptor,
                ConversionPatternRewriter &rewriter) const override {
-    auto &r = op.body();
+    auto &r = op.getBody();
 
     SmallVector<std::pair<StringRef, Value>> vars;
     rewriter.setInsertionPointToStart(&r.front());
     r.walk([&](ConstraintVarsOp constVars) {
-      for (auto arg : constVars.params()) {
+      for (auto arg : constVars.getParams()) {
         auto var = arg.cast<NamedTypeConstraintAttr>();
         Value varVal = var.getConstraint()
                            .cast<TypeConstraintAttrInterface>()
@@ -71,7 +72,7 @@ struct LowerIRDLType : public mlir::OpConversionPattern<TypeOp> {
 
     r.walk([&](ParametersOp paramOp) {
       SmallVector<Value> params;
-      for (auto param : paramOp.params()) {
+      for (auto param : paramOp.getParams()) {
         params.push_back(param.cast<NamedTypeConstraintAttr>()
                              .getConstraint()
                              .cast<TypeConstraintAttrInterface>()
@@ -84,8 +85,8 @@ struct LowerIRDLType : public mlir::OpConversionPattern<TypeOp> {
     });
 
     rewriter.setInsertionPoint(op);
-    auto newOp = rewriter.create<SSA_TypeOp>(op.getLoc(), op.name());
-    rewriter.inlineRegionBefore(r, newOp.body(), newOp.body().end());
+    auto newOp = rewriter.create<SSA_TypeOp>(op.getLoc(), op.getName());
+    rewriter.inlineRegionBefore(r, newOp.getBody(), newOp.getBody().end());
     rewriter.eraseOp(op);
   }
 };
@@ -100,12 +101,12 @@ struct LowerIRDLOp : public mlir::OpConversionPattern<OperationOp> {
 
   void rewrite(OperationOp op, OpAdaptor adaptor,
                ConversionPatternRewriter &rewriter) const override {
-    auto &r = op.body();
+    auto &r = op.getBody();
 
     SmallVector<std::pair<StringRef, Value>> vars;
     rewriter.setInsertionPointToStart(&r.front());
     r.walk([&](ConstraintVarsOp constVars) {
-      for (auto arg : constVars.params()) {
+      for (auto arg : constVars.getParams()) {
         auto var = arg.cast<NamedTypeConstraintAttr>();
         Value varVal = var.getConstraint()
                            .cast<TypeConstraintAttrInterface>()
@@ -118,7 +119,7 @@ struct LowerIRDLOp : public mlir::OpConversionPattern<OperationOp> {
 
     r.walk([&](OperandsOp paramOp) {
       SmallVector<Value> params;
-      for (auto param : paramOp.params()) {
+      for (auto param : paramOp.getParams()) {
         params.push_back(param.cast<NamedTypeConstraintAttr>()
                              .getConstraint()
                              .cast<TypeConstraintAttrInterface>()
@@ -132,7 +133,7 @@ struct LowerIRDLOp : public mlir::OpConversionPattern<OperationOp> {
 
     r.walk([&](ResultsOp resultOp) {
       SmallVector<Value> results;
-      for (auto result : resultOp.params()) {
+      for (auto result : resultOp.getParams()) {
         results.push_back(result.cast<NamedTypeConstraintAttr>()
                               .getConstraint()
                               .cast<TypeConstraintAttrInterface>()
@@ -145,8 +146,8 @@ struct LowerIRDLOp : public mlir::OpConversionPattern<OperationOp> {
     });
 
     rewriter.setInsertionPoint(op);
-    auto newOp = rewriter.create<SSA_OperationOp>(op.getLoc(), op.name());
-    rewriter.inlineRegionBefore(r, newOp.body(), newOp.body().end());
+    auto newOp = rewriter.create<SSA_OperationOp>(op.getLoc(), op.getName());
+    rewriter.inlineRegionBefore(r, newOp.getBody(), newOp.getBody().end());
     rewriter.eraseOp(op);
   }
 };
@@ -164,13 +165,13 @@ void LowerIRDL::runOnOperation() {
     d.walk([&](TypeOp t) {
       t.walk([&](ParametersOp p) {
         std::string name;
-        name.reserve(d.name().size() + 1 + t.name().size());
-        name += d.name();
+        name.reserve(d.getName().size() + 1 + t.getName().size());
+        name += d.getName();
         name += '.';
-        name += t.name();
+        name += t.getName();
 
         this->typeCtx.types.insert(
-            {std::move(name), TypeContext::TypeInfo(p.params().size())});
+            {std::move(name), TypeContext::TypeInfo(p.getParams().size())});
       });
     });
   });

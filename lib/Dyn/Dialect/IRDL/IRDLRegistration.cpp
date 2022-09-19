@@ -110,8 +110,8 @@ void registerOperation(IRDLContext &irdlCtx, ExtensibleDialect *dialect,
 
   auto constraintVarsOp = op.getOp<ConstraintVarsOp>();
   if (constraintVarsOp) {
-    constraintVars.reserve(constraintVarsOp->params().size());
-    for (auto constraint : constraintVarsOp->params().getValue()) {
+    constraintVars.reserve(constraintVarsOp->getParams().size());
+    for (auto constraint : constraintVarsOp->getParams().getValue()) {
       auto constraintAttr = constraint.cast<NamedTypeConstraintAttr>();
       auto constraintConstr = constraintAttr.getConstraint()
                                   .cast<TypeConstraintAttrInterface>()
@@ -124,8 +124,8 @@ void registerOperation(IRDLContext &irdlCtx, ExtensibleDialect *dialect,
   // Add the operand constraints to the type constraints.
   auto operandsOp = op.getOp<OperandsOp>();
   if (operandsOp.has_value()) {
-    operandConstraints.reserve(operandsOp->params().size());
-    for (auto operand : operandsOp->params().getValue()) {
+    operandConstraints.reserve(operandsOp->getParams().size());
+    for (auto operand : operandsOp->getParams().getValue()) {
       auto operandAttr = operand.cast<NamedTypeConstraintAttr>();
       auto constraint = operandAttr.getConstraint()
                             .cast<TypeConstraintAttrInterface>()
@@ -137,8 +137,8 @@ void registerOperation(IRDLContext &irdlCtx, ExtensibleDialect *dialect,
   // Add the result constraints to the type constraints.
   auto resultsOp = op.getOp<ResultsOp>();
   if (resultsOp.has_value()) {
-    resultConstraints.reserve(resultsOp->params().size());
-    for (auto result : resultsOp->params().getValue()) {
+    resultConstraints.reserve(resultsOp->getParams().size());
+    for (auto result : resultsOp->getParams().getValue()) {
       auto resultAttr = result.cast<NamedTypeConstraintAttr>();
       auto constraint = resultAttr.getConstraint()
                             .cast<TypeConstraintAttrInterface>()
@@ -169,9 +169,9 @@ void registerOperation(IRDLContext &irdlCtx, ExtensibleDialect *dialect,
 
   auto regionVerifier = [](Operation *op) { return success(); };
 
-  auto opDef = DynamicOpDefinition::get(op.name(), dialect, std::move(verifier),
-                                        std::move(regionVerifier),
-                                        std::move(parser), std::move(printer));
+  auto opDef = DynamicOpDefinition::get(
+      op.getName(), dialect, std::move(verifier), std::move(regionVerifier),
+      std::move(parser), std::move(printer));
   dialect->registerDynamicOp(std::move(opDef));
 }
 } // namespace irdl
@@ -183,7 +183,7 @@ static void registerType(IRDLContext &irdlCtx, ExtensibleDialect *dialect,
 
   SmallVector<std::unique_ptr<TypeConstraint>> paramConstraints;
   if (params.has_value()) {
-    for (auto param : params->params().getValue()) {
+    for (auto param : params->getParams().getValue()) {
       paramConstraints.push_back(param.cast<NamedTypeConstraintAttr>()
                                      .getConstraint()
                                      .cast<TypeConstraintAttrInterface>()
@@ -198,14 +198,14 @@ static void registerType(IRDLContext &irdlCtx, ExtensibleDialect *dialect,
   };
 
   auto type =
-      DynamicTypeDefinition::get(op.name(), dialect, std::move(verifier));
+      DynamicTypeDefinition::get(op.getName(), dialect, std::move(verifier));
 
   dialect->registerDynamicType(std::move(type));
 }
 
 static void registerDialect(IRDLContext &irdlCtx, DialectOp op) {
   auto *ctx = op.getContext();
-  auto dialectName = op.name();
+  auto dialectName = op.getName();
 
   ctx->getOrLoadDynamicDialect(dialectName, [](DynamicDialect *dialect) {});
 

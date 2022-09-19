@@ -156,7 +156,7 @@ void extractOperation(OpBuilder &builder, tblgen::Operator &tblgenOp,
       UnknownLoc::get(ctx), StringAttr::get(ctx, tblgenOp.getOperationName()));
 
   // Add the block in the region
-  auto &opBlock = op.body().emplaceBlock();
+  auto &opBlock = op.getBody().emplaceBlock();
   builder.setInsertionPoint(&opBlock, opBlock.begin());
 
   // Extract operands
@@ -200,7 +200,7 @@ void extractDialect(OpBuilder &builder, RecordKeeper &records) {
   // Create the IDRL dialect operation, and set the insertion point in it.
   auto dialect = builder.create<irdl::DialectOp>(
       UnknownLoc::get(ctx), StringAttr::get(ctx, dialectName));
-  auto &dialectBlock = dialect.body().emplaceBlock();
+  auto &dialectBlock = dialect.getBody().emplaceBlock();
   builder.setInsertionPoint(&dialectBlock, dialectBlock.begin());
 
   // Walk all TableGen operations, and create new IRDL operations.

@@ -58,7 +58,7 @@ instantiateParamType(llvm::function_ref<InFlightDiagnostic()> emitError,
 llvm::Optional<std::unique_ptr<TypeConstraint>>
 SSA_IsType::getVerifier(SmallVector<Value> const &valueToConstr) {
   auto attr = instantiateParamType([&]() { return this->emitError(); },
-                                   *this->getContext(), this->type());
+                                   *this->getContext(), this->getExpected());
 
   if (!attr)
     return {};
@@ -74,7 +74,7 @@ SSA_IsType::getVerifier(SmallVector<Value> const &valueToConstr) {
 llvm::Optional<std::unique_ptr<TypeConstraint>>
 SSA_ParametricType::getVerifier(SmallVector<Value> const &valueToConstr) {
   SmallVector<size_t> constraints;
-  for (Value arg : this->args()) {
+  for (Value arg : this->getArgs()) {
     for (size_t i = 0; i < valueToConstr.size(); i++) {
       if (valueToConstr[i] == arg) {
         constraints.push_back(i);
@@ -83,7 +83,7 @@ SSA_ParametricType::getVerifier(SmallVector<Value> const &valueToConstr) {
     }
   }
 
-  auto typeName = this->type();
+  auto typeName = this->getBaseType();
   if (DynamicTypeDefinition *type =
           findDynamicType(*this->getContext(), typeName)) {
     return {std::make_unique<DynParametricTypeConstraint>(
@@ -102,7 +102,7 @@ SSA_ParametricType::getVerifier(SmallVector<Value> const &valueToConstr) {
 llvm::Optional<std::unique_ptr<TypeConstraint>>
 SSA_AnyOf::getVerifier(SmallVector<Value> const &valueToConstr) {
   SmallVector<size_t> constraints;
-  for (Value arg : this->args()) {
+  for (Value arg : this->getArgs()) {
     for (size_t i = 0; i < valueToConstr.size(); i++) {
       if (valueToConstr[i] == arg) {
         constraints.push_back(i);
@@ -117,7 +117,7 @@ SSA_AnyOf::getVerifier(SmallVector<Value> const &valueToConstr) {
 llvm::Optional<std::unique_ptr<TypeConstraint>>
 SSA_And::getVerifier(SmallVector<Value> const &valueToConstr) {
   SmallVector<size_t> constraints;
-  for (Value arg : this->args()) {
+  for (Value arg : this->getArgs()) {
     for (size_t i = 0; i < valueToConstr.size(); i++) {
       if (valueToConstr[i] == arg) {
         constraints.push_back(i);

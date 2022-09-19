@@ -127,13 +127,13 @@ WalkResult registerOperation(ExtensibleDialect *dialect, SSA_OperationOp op) {
       size_t numExpectedResults = 0;
       auto resultsOp = op.getOp<SSA_ResultsOp>();
       if (resultsOp.has_value()) {
-        numExpectedResults = resultsOp->args().size();
+        numExpectedResults = resultsOp->getArgs().size();
       }
 
       size_t numExpectedOperands = 0;
       auto operandsOp = op.getOp<SSA_OperandsOp>();
       if (operandsOp.has_value()) {
-        numExpectedOperands = operandsOp->args().size();
+        numExpectedOperands = operandsOp->getArgs().size();
       }
 
       auto verifier = [interpreter(std::move(interpreter)), numExpectedResults,
@@ -174,7 +174,7 @@ WalkResult registerOperation(ExtensibleDialect *dialect, SSA_OperationOp op) {
       auto regionVerifier = [](Operation *op) { return success(); };
 
       auto opDef = DynamicOpDefinition::get(
-          op.name(), dialect, std::move(verifier), std::move(regionVerifier),
+          op.getName(), dialect, std::move(verifier), std::move(regionVerifier),
           std::move(parser), std::move(printer));
       dialect->registerDynamicOp(std::move(opDef));
 
@@ -213,8 +213,8 @@ WalkResult registerOperation(ExtensibleDialect *dialect, SSA_OperationOp op) {
   // Gather which constraint slots correspond to operand constraints
   auto operandsOp = op.getOp<SSA_OperandsOp>();
   if (operandsOp.has_value()) {
-    operandConstraints.reserve(operandsOp->args().size());
-    for (auto operand : operandsOp->args()) {
+    operandConstraints.reserve(operandsOp->getArgs().size());
+    for (auto operand : operandsOp->getArgs()) {
       for (size_t i = 0; i < constrToValue.size(); i++) {
         if (constrToValue[i] == operand) {
           operandConstraints.push_back(i);
@@ -227,8 +227,8 @@ WalkResult registerOperation(ExtensibleDialect *dialect, SSA_OperationOp op) {
   // Gather which constraint slots correspond to result constraints
   auto resultsOp = op.getOp<SSA_ResultsOp>();
   if (resultsOp.has_value()) {
-    resultConstraints.reserve(resultsOp->args().size());
-    for (auto result : resultsOp->args()) {
+    resultConstraints.reserve(resultsOp->getArgs().size());
+    for (auto result : resultsOp->getArgs()) {
       for (size_t i = 0; i < constrToValue.size(); i++) {
         if (constrToValue[i] == result) {
           resultConstraints.push_back(i);
@@ -255,9 +255,9 @@ WalkResult registerOperation(ExtensibleDialect *dialect, SSA_OperationOp op) {
 
   auto regionVerifier = [](Operation *op) { return success(); };
 
-  auto opDef = DynamicOpDefinition::get(op.name(), dialect, std::move(verifier),
-                                        std::move(regionVerifier),
-                                        std::move(parser), std::move(printer));
+  auto opDef = DynamicOpDefinition::get(
+      op.getName(), dialect, std::move(verifier), std::move(regionVerifier),
+      std::move(parser), std::move(printer));
   dialect->registerDynamicOp(std::move(opDef));
 
   return WalkResult::advance();
@@ -294,8 +294,8 @@ static WalkResult registerType(ExtensibleDialect *dialect, SSA_TypeOp op) {
         return interpreter->getVerifier().verify(emitError, args);
       };
 
-      auto type =
-          DynamicTypeDefinition::get(op.name(), dialect, std::move(verifier));
+      auto type = DynamicTypeDefinition::get(op.getName(), dialect,
+                                             std::move(verifier));
 
       dialect->registerDynamicType(std::move(type));
 
@@ -332,8 +332,8 @@ static WalkResult registerType(ExtensibleDialect *dialect, SSA_TypeOp op) {
   auto params = op.getOp<SSA_ParametersOp>();
   SmallVector<size_t> paramConstraints;
   if (params.has_value()) {
-    paramConstraints.reserve(params->args().size());
-    for (auto param : params->args()) {
+    paramConstraints.reserve(params->getArgs().size());
+    for (auto param : params->getArgs()) {
       for (size_t i = 0; i < constrToValue.size(); i++) {
         if (constrToValue[i] == param) {
           paramConstraints.push_back(i);
@@ -352,7 +352,7 @@ static WalkResult registerType(ExtensibleDialect *dialect, SSA_TypeOp op) {
   };
 
   auto type =
-      DynamicTypeDefinition::get(op.name(), dialect, std::move(verifier));
+      DynamicTypeDefinition::get(op.getName(), dialect, std::move(verifier));
 
   dialect->registerDynamicType(std::move(type));
 
@@ -361,7 +361,7 @@ static WalkResult registerType(ExtensibleDialect *dialect, SSA_TypeOp op) {
 
 static WalkResult registerDialect(SSA_DialectOp op) {
   auto *ctx = op.getContext();
-  auto dialectName = op.name();
+  auto dialectName = op.getName();
 
   ctx->getOrLoadDynamicDialect(dialectName, [](DynamicDialect *dialect) {});
 

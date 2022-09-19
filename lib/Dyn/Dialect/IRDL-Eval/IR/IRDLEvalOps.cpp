@@ -21,22 +21,22 @@ LogicalResult Verifier::verify() {
   size_t argAmount = 0;
   for (Operation &op : parent->getRegion(0).getOps()) {
     if (SSA_OperandsOp operOp = llvm::dyn_cast<SSA_OperandsOp>(op)) {
-      argAmount += operOp.args().size();
+      argAmount += operOp.getArgs().size();
     } else if (SSA_ResultsOp resOp = llvm::dyn_cast<SSA_ResultsOp>(op)) {
-      argAmount += resOp.args().size();
+      argAmount += resOp.getArgs().size();
     } else if (SSA_ParametersOp paramOp =
                    llvm::dyn_cast<SSA_ParametersOp>(op)) {
-      argAmount += paramOp.args().size();
+      argAmount += paramOp.getArgs().size();
     }
   }
 
-  if (this->body().getArguments().size() != argAmount) {
+  if (this->getBody().getArguments().size() != argAmount) {
     return this->emitError().append("verifier body region expected ", argAmount,
                                     " arguments but got ",
-                                    this->body().getArguments().size());
+                                    this->getBody().getArguments().size());
   }
 
-  auto args = this->body().getArguments();
+  auto args = this->getBody().getArguments();
   for (size_t i = 0; i < args.size(); i++) {
     if (!args[i].getType().isa<EvalTypeType>()) {
       return this->emitError().append(
@@ -49,39 +49,39 @@ LogicalResult Verifier::verify() {
 }
 
 LogicalResult MatchType::verify() {
-  if (this->success()->getArguments().size() != 0) {
+  if (this->getSuccess()->getArguments().size() != 0) {
     return this->emitError().append(
         "success block expected to have 0 arguments, has ",
-        this->success()->getArguments().size());
+        this->getSuccess()->getArguments().size());
   }
 
-  if (this->failure()->getArguments().size() != 0) {
+  if (this->getFailure()->getArguments().size() != 0) {
     return this->emitError().append(
         "failure block expected to have 0 arguments, has ",
-        this->failure()->getArguments().size());
+        this->getFailure()->getArguments().size());
   }
 
   return LogicalResult::success();
 }
 
 LogicalResult CheckType::verify() {
-  if (this->success()->getArguments().size() != 0) {
+  if (this->getSuccess()->getArguments().size() != 0) {
     return this->emitError().append(
         "success block expected to have 0 arguments, has ",
-        this->success()->getArguments().size());
+        this->getSuccess()->getArguments().size());
   }
 
-  if (this->failure()->getArguments().size() != 0) {
+  if (this->getFailure()->getArguments().size() != 0) {
     return this->emitError().append(
         "failure block expected to have 0 arguments, has ",
-        this->failure()->getArguments().size());
+        this->getFailure()->getArguments().size());
   }
 
   return LogicalResult::success();
 }
 
 LogicalResult CheckParametric::verify() {
-  auto args = this->success()->getArguments();
+  auto args = this->getSuccess()->getArguments();
   for (size_t i = 0; i < args.size(); i++) {
     if (!args[i].getType().isa<EvalTypeType>()) {
       return this->emitError().append("success block argument ", args[i],
@@ -90,10 +90,10 @@ LogicalResult CheckParametric::verify() {
     }
   }
 
-  if (this->invalidBase()->getArguments().size() != 0) {
+  if (this->getInvalidBase()->getArguments().size() != 0) {
     return this->emitError().append(
         "invalid base block expected to have 0 arguments, has ",
-        this->invalidBase()->getArguments().size());
+        this->getInvalidBase()->getArguments().size());
   }
 
   return LogicalResult::success();

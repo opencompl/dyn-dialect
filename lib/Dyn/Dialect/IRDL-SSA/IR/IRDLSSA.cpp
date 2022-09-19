@@ -104,7 +104,7 @@ static void printSingleBlockRegion(OpAsmPrinter &p, Operation *op,
 }
 
 LogicalResult SSA_DialectOp::verify() {
-  return success(Dialect::isValidNamespace(name()));
+  return success(Dialect::isValidNamespace(getName()));
 }
 
 #include "Dyn/Dialect/IRDL-SSA/IR/IRDLSSAInterfaces.cpp.inc"

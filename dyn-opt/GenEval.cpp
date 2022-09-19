@@ -404,7 +404,7 @@ void ConstraintCompiler::compile(MLIRContext *ctx, Block &constraints,
   rewriter.setInsertionPointToEnd(&constraints);
   auto verifierOp = rewriter.create<Verifier>(location);
 
-  Region &region = verifierOp.body();
+  Region &region = verifierOp.getBody();
 
   SmallVector<Type> argTypes(args.size(), EvalTypeType::get(ctx));
   SmallVector<Location> argLocs(args.size(), location);
@@ -474,22 +474,22 @@ void ConstraintCompiler::compile(MLIRContext *ctx, Block &constraints,
           .Case<SSA_IsType>([&](SSA_IsType op) {
             compiler.compileIsType(currentCheck,
                                    cstrToSlot[currentCheck.constraint],
-                                   currentJob, op.type());
+                                   currentJob, op.getExpected());
           })
           .Case<SSA_ParametricType>([&](SSA_ParametricType op) {
-            SmallVector<Value> args = op.args();
+            SmallVector<Value> args = op.getArgs();
             compiler.compileParametricType(currentCheck,
                                            cstrToSlot[currentCheck.constraint],
-                                           currentJob, op.type(), args);
+                                           currentJob, op.getBaseType(), args);
           })
           .Case<SSA_AnyOf>([&](SSA_AnyOf op) {
-            SmallVector<Value> args = op.args();
+            SmallVector<Value> args = op.getArgs();
             compiler.compileAnyOf(currentCheck,
                                   cstrToSlot[currentCheck.constraint],
                                   currentJob, args);
           })
           .Case<SSA_And>([&](SSA_And op) {
-            SmallVector<Value> args = op.args();
+            SmallVector<Value> args = op.getArgs();
             compiler.compileAnd(currentCheck,
                                 cstrToSlot[currentCheck.constraint], currentJob,
                                 args);
@@ -512,11 +512,11 @@ void GenEval::runOnOperation() {
     SmallVector<Value> args;
     for (Operation &op : op.getRegion().getOps())
       if (SSA_ParametersOp paramOp = llvm::dyn_cast<SSA_ParametersOp>(op))
-        for (auto arg : paramOp.args())
+        for (auto arg : paramOp.getArgs())
           args.push_back(arg);
 
     ConstraintCompiler::compile(&this->getContext(),
-                                op.body().getBlocks().front(), rewriter,
+                                op.getBody().getBlocks().front(), rewriter,
                                 op.getLoc(), args);
   });
 
@@ -530,14 +530,14 @@ void GenEval::runOnOperation() {
 
     SmallVector<Value> args;
     if (operOp)
-      for (auto arg : operOp->args())
+      for (auto arg : operOp->getArgs())
         args.push_back(arg);
     if (resOp)
-      for (auto arg : resOp->args())
+      for (auto arg : resOp->getArgs())
         args.push_back(arg);
 
     ConstraintCompiler::compile(&this->getContext(),
-                                op.body().getBlocks().front(), rewriter,
+                                op.getBody().getBlocks().front(), rewriter,
                                 op.getLoc(), args);
   });
 }

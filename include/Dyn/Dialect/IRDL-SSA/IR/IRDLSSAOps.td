@@ -262,9 +262,9 @@ def IRDL_SSA_IsType : IRDL_SSA_ConstraintOp<"is_type", [ParentOneOf<["SSA_TypeOp
     takes as parameter exactly `std.complex<f32>` and returns an `f32`.
   }];
 
-  let arguments = (ins ParamTypeAttrOrAnyAttr:$type);
+  let arguments = (ins ParamTypeAttrOrAnyAttr:$expected);
   let results = (outs IRDL_SSA_ConstraintType:$output);
-  let assemblyFormat = [{ `:` $type attr-dict }];
+  let assemblyFormat = [{ `:` $expected attr-dict }];
 }
 
 def IRDL_SSA_ParametricType : IRDL_SSA_ConstraintOp<"parametric_type", [ParentOneOf<["SSA_TypeOp", "SSA_OperationOp"]>, NoSideEffect]> {
@@ -293,9 +293,9 @@ def IRDL_SSA_ParametricType : IRDL_SSA_ConstraintOp<"parametric_type", [ParentOn
     for any `T` takes a `cmath.complex` with parameter `T` and returns a `T`.
   }];
 
-  let arguments = (ins StrAttr:$type, Variadic<IRDL_SSA_ConstraintType>:$args);
+  let arguments = (ins StrAttr:$base_type, Variadic<IRDL_SSA_ConstraintType>:$args);
   let results = (outs IRDL_SSA_ConstraintType:$output);
-  let assemblyFormat = [{ `:` $type (`<` $args^ `>`)? attr-dict }];
+  let assemblyFormat = [{ `:` $base_type (`<` $args^ `>`)? attr-dict }];
 }
 
 def IRDL_SSA_AnyType : IRDL_SSA_ConstraintOp<"any_type", [ParentOneOf<["SSA_TypeOp", "SSA_OperationOp"]>]> {

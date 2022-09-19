@@ -279,10 +279,10 @@ IRDLEvalInterpreter::compile(llvm::function_ref<InFlightDiagnostic()> emitError,
           })
           .Case([&](CheckType op) {
             Attribute instantiatedParam =
-                op.expected().instantiateParamType(emitError, *ctx);
+                op.getExpected().instantiateParamType(emitError, *ctx);
 
             if (!instantiatedParam) {
-              emitError().append("invalid attribute ", op.expected());
+              emitError().append("invalid attribute ", op.getExpected());
               fatal = true;
               return;
             }
@@ -291,51 +291,54 @@ IRDLEvalInterpreter::compile(llvm::function_ref<InFlightDiagnostic()> emitError,
             if (TypeAttr typeAttr = instantiatedParam.dyn_cast<TypeAttr>()) {
               type = typeAttr.getValue();
             } else {
-              emitError().append("attribute ", op.expected(), " is not a type");
+              emitError().append("attribute ", op.getExpected(),
+                                 " is not a type");
               fatal = true;
               return;
             }
 
             instructions.push_back(std::make_unique<CheckTypeInstruction>(
-                typeVarToId[op.typeVar()], type, blockToId[op.success()],
-                blockToId[op.failure()]));
+                typeVarToId[op.getTypeVar()], type, blockToId[op.getSuccess()],
+                blockToId[op.getFailure()]));
           })
           .Case([&](CheckParametric op) {
             SmallVector<size_t> typeVarsToDefine;
-            for (Value arg : op.success()->getArguments()) {
+            for (Value arg : op.getSuccess()->getArguments()) {
               typeVarsToDefine.push_back(typeVarToId[arg]);
             }
 
             if (DynamicTypeDefinition *dynTypeDef =
-                    findDynamicType(*ctx, op.base())) {
+                    findDynamicType(*ctx, op.getBase())) {
               instructions.push_back(
                   std::make_unique<CheckDynParametricInstruction>(
-                      typeVarToId[op.typeVar()], dynTypeDef, typeVarsToDefine,
-                      blockToId[op.success()], blockToId[op.invalidBase()]));
+                      typeVarToId[op.getTypeVar()], dynTypeDef,
+                      typeVarsToDefine, blockToId[op.getSuccess()],
+                      blockToId[op.getInvalidBase()]));
             } else if (TypeWrapper *typeWrapper =
-                           findTypeWrapper(*ctx, op.base())) {
+                           findTypeWrapper(*ctx, op.getBase())) {
               instructions.push_back(
                   std::make_unique<CheckParametricInstruction>(
-                      typeVarToId[op.typeVar()], typeWrapper, typeVarsToDefine,
-                      blockToId[op.success()], blockToId[op.invalidBase()]));
+                      typeVarToId[op.getTypeVar()], typeWrapper,
+                      typeVarsToDefine, blockToId[op.getSuccess()],
+                      blockToId[op.getInvalidBase()]));
 
             } else {
-              emitError().append("type ", op.base(), " not found");
+              emitError().append("type ", op.getBase(), " not found");
               fatal = true;
             }
           })
           .Case([&](MatchType op) {
             instructions.push_back(std::make_unique<MatchTypeInstruction>(
-                typeVarToId[op.typeVar()], slotToId[op.slot()],
-                blockToId[op.success()], blockToId[op.failure()]));
+                typeVarToId[op.getTypeVar()], slotToId[op.getSlot()],
+                blockToId[op.getSuccess()], blockToId[op.getFailure()]));
           })
           .Case([&](AssignType op) {
             instructions.push_back(std::make_unique<AssignTypeInstruction>(
-                typeVarToId[op.typeVar()], slotToId[op.slot()]));
+                typeVarToId[op.getTypeVar()], slotToId[op.getSlot()]));
           })
           .Case([&](ClearType op) {
             instructions.push_back(
-                std::make_unique<ClearTypeInstruction>(slotToId[op.slot()]));
+                std::make_unique<ClearTypeInstruction>(slotToId[op.getSlot()]));
           })
           .Case([&](Alloca op) {})
           .Default([&](Operation *op) {

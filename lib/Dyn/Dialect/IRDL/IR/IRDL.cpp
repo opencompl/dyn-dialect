@@ -446,7 +446,7 @@ void printTypeConstraint(OpAsmPrinter &p, Attribute typeConstraint) {
 //===----------------------------------------------------------------------===//
 
 LogicalResult DialectOp::verify() {
-  return success(Dialect::isValidNamespace(name()));
+  return success(Dialect::isValidNamespace(getName()));
 }
 
 //===----------------------------------------------------------------------===//
