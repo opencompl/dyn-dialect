@@ -13,7 +13,7 @@
 #ifndef DYN_IRDL_SSA_IR_IRDLSSAREGISTRATION_H
 #define DYN_IRDL_SSA_IR_IRDLSSAREGISTRATION_H
 
-#include "Dyn/Dialect/IRDL/TypeWrapper.h"
+#include "mlir/Dialect/IRDL/TypeWrapper.h"
 #include "mlir/IR/ExtensibleDialect.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Support/LogicalResult.h"

@@ -9,7 +9,7 @@
 #include "Dyn/Dialect/IRDL-SSA/IR/IRDLSSA.h"
 #include "Dyn/Dialect/IRDL-SSA/IR/IRDLSSAAttributes.h"
 #include "Dyn/Dialect/IRDL-SSA/IRDLSSARegistration.h"
-#include "Dyn/Dialect/IRDL/TypeWrapper.h"
+#include "mlir/Dialect/IRDL/TypeWrapper.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/DialectImplementation.h"

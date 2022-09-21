@@ -13,9 +13,9 @@
 #include "LowerIRDL.h"
 
 #include "Dyn/Dialect/IRDL-SSA/IR/IRDLSSA.h"
-#include "Dyn/Dialect/IRDL/IR/IRDL.h"
-#include "Dyn/Dialect/IRDL/IR/IRDLAttributes.h"
-#include "Dyn/Dialect/IRDL/IR/IRDLInterfaces.h"
+#include "mlir/Dialect/IRDL/IR/IRDL.h"
+#include "mlir/Dialect/IRDL/IR/IRDLAttributes.h"
+#include "mlir/Dialect/IRDL/IR/IRDLInterfaces.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/Support/Casting.h"
@@ -25,6 +25,120 @@ using namespace mlir::irdlssa;
 
 namespace mlir {
 namespace irdl {
+
+static mlir::Value
+registerConstraintAsSSA(Attribute attr, TypeContext &typeCtx,
+                        mlir::ConversionPatternRewriter &rewriter,
+                        SmallVector<std::pair<StringRef, Value>> &vars,
+                        mlir::Location location) {
+  if (auto eqAttr = attr.dyn_cast<EqTypeConstraintAttr>()) {
+    irdlssa::SSA_IsType op = rewriter.create<irdlssa::SSA_IsType>(
+        location, rewriter.getType<irdlssa::ConstraintType>(),
+        ParamTypeAttrOrAnyAttr::get(rewriter.getContext(),
+                                    TypeAttr::get(eqAttr.getType())));
+    return op.getResult();
+  }
+
+  if (auto anyAttr = attr.dyn_cast<AnyTypeConstraintAttr>()) {
+    irdlssa::SSA_AnyType op = rewriter.create<irdlssa::SSA_AnyType>(
+        location, rewriter.getType<irdlssa::ConstraintType>());
+    return op.getResult();
+  }
+
+  if (auto anyOfAttr = attr.dyn_cast<AnyOfTypeConstraintAttr>()) {
+    SmallVector<Value> constrs;
+    for (auto constrAttr : anyOfAttr.getConstrs()) {
+      constrs.push_back(registerConstraintAsSSA(constrAttr, typeCtx, rewriter,
+                                                vars, location));
+    }
+
+    irdlssa::SSA_AnyOf op = rewriter.create<irdlssa::SSA_AnyOf>(
+        location, rewriter.getType<irdlssa::ConstraintType>(), constrs);
+    return op.getResult();
+  }
+
+  if (auto andAttr = attr.dyn_cast<AndTypeConstraintAttr>()) {
+    SmallVector<Value> constrs;
+    for (auto constrAttr : andAttr.getConstrs()) {
+      constrs.push_back(registerConstraintAsSSA(constrAttr, typeCtx, rewriter,
+                                                vars, location));
+    }
+
+    irdlssa::SSA_And op = rewriter.create<irdlssa::SSA_And>(
+        location, rewriter.getType<irdlssa::ConstraintType>(), constrs);
+    return op.getResult();
+  }
+
+  if (auto varAttr = attr.dyn_cast<VarTypeConstraintAttr>()) {
+    for (auto var : vars) {
+      if (var.first == varAttr.getName()) {
+        return var.second;
+      }
+    }
+    assert(false && "Unknown variable constraint");
+  }
+
+  if (auto dynBaseAttr = attr.dyn_cast<DynTypeBaseConstraintAttr>()) {
+    SmallVector<Value> constrs;
+    auto typeInfo = typeCtx.types.find(dynBaseAttr.getTypeName());
+    if (typeInfo != typeCtx.types.end()) {
+      for (size_t i = 0; i < typeInfo->getValue().paramAmount; i++) {
+        constrs.push_back(rewriter.create<irdlssa::SSA_AnyType>(
+            location, rewriter.getType<irdlssa::ConstraintType>()));
+      }
+    }
+
+    irdlssa::SSA_ParametricType op =
+        rewriter.create<irdlssa::SSA_ParametricType>(
+            location, rewriter.getType<irdlssa::ConstraintType>(),
+            dynBaseAttr.getTypeName(), constrs);
+    return op.getResult();
+  }
+
+  if (auto baseAttr = attr.dyn_cast<TypeBaseConstraintAttr>()) {
+    SmallVector<Value> constrs;
+    for (size_t i = 0; i < baseAttr.getTypeDef()->getParameterAmount(); i++) {
+      constrs.push_back(rewriter.create<irdlssa::SSA_AnyType>(
+          location, rewriter.getType<irdlssa::ConstraintType>()));
+    }
+
+    irdlssa::SSA_ParametricType op =
+        rewriter.create<irdlssa::SSA_ParametricType>(
+            location, rewriter.getType<irdlssa::ConstraintType>(),
+            baseAttr.getTypeDef()->getName(), constrs);
+    return op.getResult();
+  }
+
+  if (auto dynParamsAttr = attr.dyn_cast<DynTypeParamsConstraintAttr>()) {
+    SmallVector<Value> constrs;
+    for (auto constrAttr : dynParamsAttr.getParamConstraints()) {
+      constrs.push_back(registerConstraintAsSSA(constrAttr, typeCtx, rewriter,
+                                                vars, location));
+    }
+
+    irdlssa::SSA_ParametricType op =
+        rewriter.create<irdlssa::SSA_ParametricType>(
+            location, rewriter.getType<irdlssa::ConstraintType>(),
+            dynParamsAttr.getTypeName(), constrs);
+    return op.getResult();
+  }
+
+  if (auto paramsAttr = attr.dyn_cast<TypeParamsConstraintAttr>()) {
+    SmallVector<Value> constrs;
+    for (auto constrAttr : paramsAttr.getParamConstraints()) {
+      constrs.push_back(registerConstraintAsSSA(constrAttr, typeCtx, rewriter,
+                                                vars, location));
+    }
+
+    irdlssa::SSA_ParametricType op =
+        rewriter.create<irdlssa::SSA_ParametricType>(
+            location, rewriter.getType<irdlssa::ConstraintType>(),
+            paramsAttr.getTypeDef()->getName(), constrs);
+    return op.getResult();
+  }
+
+  assert(false && "Unknown Type constraint");
+}
 
 struct LowerIRDLDialect : public mlir::OpConversionPattern<DialectOp> {
   TypeContext &typeContext;
@@ -61,10 +175,9 @@ struct LowerIRDLType : public mlir::OpConversionPattern<TypeOp> {
     r.walk([&](ConstraintVarsOp constVars) {
       for (auto arg : constVars.getParams()) {
         auto var = arg.cast<NamedTypeConstraintAttr>();
-        Value varVal = var.getConstraint()
-                           .cast<TypeConstraintAttrInterface>()
-                           .registerAsSSA(this->typeContext, rewriter, vars,
-                                          constVars->getLoc());
+        auto varConstr = var.getConstraint();
+        Value varVal = registerConstraintAsSSA(
+            varConstr, this->typeContext, rewriter, vars, constVars->getLoc());
         vars.push_back({var.getName(), varVal});
       }
       rewriter.eraseOp(constVars);
@@ -73,11 +186,9 @@ struct LowerIRDLType : public mlir::OpConversionPattern<TypeOp> {
     r.walk([&](ParametersOp paramOp) {
       SmallVector<Value> params;
       for (auto param : paramOp.getParams()) {
-        params.push_back(param.cast<NamedTypeConstraintAttr>()
-                             .getConstraint()
-                             .cast<TypeConstraintAttrInterface>()
-                             .registerAsSSA(this->typeContext, rewriter, vars,
-                                            paramOp->getLoc()));
+        auto constr = param.cast<NamedTypeConstraintAttr>().getConstraint();
+        params.push_back(registerConstraintAsSSA(
+            constr, this->typeContext, rewriter, vars, paramOp->getLoc()));
       }
 
       rewriter.replaceOpWithNewOp<SSA_ParametersOp>(paramOp.getOperation(),
@@ -108,10 +219,9 @@ struct LowerIRDLOp : public mlir::OpConversionPattern<OperationOp> {
     r.walk([&](ConstraintVarsOp constVars) {
       for (auto arg : constVars.getParams()) {
         auto var = arg.cast<NamedTypeConstraintAttr>();
-        Value varVal = var.getConstraint()
-                           .cast<TypeConstraintAttrInterface>()
-                           .registerAsSSA(this->typeContext, rewriter, vars,
-                                          constVars->getLoc());
+        auto varConstr = var.getConstraint();
+        Value varVal = registerConstraintAsSSA(
+            varConstr, this->typeContext, rewriter, vars, constVars->getLoc());
         vars.push_back({var.getName(), varVal});
       }
       rewriter.eraseOp(constVars);
@@ -120,11 +230,9 @@ struct LowerIRDLOp : public mlir::OpConversionPattern<OperationOp> {
     r.walk([&](OperandsOp paramOp) {
       SmallVector<Value> params;
       for (auto param : paramOp.getParams()) {
-        params.push_back(param.cast<NamedTypeConstraintAttr>()
-                             .getConstraint()
-                             .cast<TypeConstraintAttrInterface>()
-                             .registerAsSSA(this->typeContext, rewriter, vars,
-                                            paramOp->getLoc()));
+        auto constr = param.cast<NamedTypeConstraintAttr>().getConstraint();
+        params.push_back(registerConstraintAsSSA(
+            constr, this->typeContext, rewriter, vars, paramOp->getLoc()));
       }
 
       rewriter.replaceOpWithNewOp<SSA_OperandsOp>(paramOp.getOperation(),
@@ -134,11 +242,9 @@ struct LowerIRDLOp : public mlir::OpConversionPattern<OperationOp> {
     r.walk([&](ResultsOp resultOp) {
       SmallVector<Value> results;
       for (auto result : resultOp.getParams()) {
-        results.push_back(result.cast<NamedTypeConstraintAttr>()
-                              .getConstraint()
-                              .cast<TypeConstraintAttrInterface>()
-                              .registerAsSSA(this->typeContext, rewriter, vars,
-                                             resultOp->getLoc()));
+        auto constr = result.cast<NamedTypeConstraintAttr>().getConstraint();
+        results.push_back(registerConstraintAsSSA(
+            constr, this->typeContext, rewriter, vars, resultOp->getLoc()));
       }
 
       rewriter.replaceOpWithNewOp<SSA_ResultsOp>(resultOp.getOperation(),

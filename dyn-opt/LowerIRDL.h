@@ -13,7 +13,7 @@
 #ifndef DYNOPT_LOWERIRDL_H
 #define DYNOPT_LOWERIRDL_H
 
-#include "Dyn/Dialect/IRDL/IRDLContext.h"
+#include "mlir/Dialect/IRDL/IRDLContext.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/Pass/Pass.h"

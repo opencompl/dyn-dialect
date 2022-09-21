@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Dyn/Dialect/IRDL-SSA/IR/IRDLSSAAttributes.h"
-#include "Dyn/Dialect/IRDL/TypeWrapper.h"
+#include "mlir/Dialect/IRDL/TypeWrapper.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"

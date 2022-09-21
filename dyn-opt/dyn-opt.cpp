@@ -8,10 +8,10 @@
 
 #include "Dyn/Dialect/IRDL-Eval/IR/IRDLEval.h"
 #include "Dyn/Dialect/IRDL-SSA/IR/IRDLSSA.h"
-#include "Dyn/Dialect/IRDL/IR/IRDL.h"
 #include "GenEval.h"
 #include "LowerIRDL.h"
 #include "MlirOptMain.h"
+#include "mlir/Dialect/IRDL/IR/IRDL.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Dialect.h"

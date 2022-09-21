@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "Dyn/Dialect/IRDL-Eval/IRDLEvalInterpreter.h"
-#include "Dyn/Dialect/IRDL/TypeWrapper.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
+#include "mlir/Dialect/IRDL/TypeWrapper.h"
 #include "mlir/IR/ExtensibleDialect.h"
 
 using namespace mlir;
