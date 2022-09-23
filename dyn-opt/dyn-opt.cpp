@@ -36,7 +36,7 @@ using namespace irdl;
 using namespace irdlssa;
 using namespace irdleval;
 
-class ComplexTypeWrapper : public ConcreteTypeWrapper<ComplexType> {
+class ComplexTypeWrapper : public CppTypeWrapper<ComplexType> {
   StringRef getName() override { return "std.complex"; }
 
   SmallVector<Attribute> getParameters(ComplexType type) override {
