@@ -34,6 +34,10 @@ using namespace llvm;
 using namespace mlir;
 using namespace irdl;
 
+cl::opt<bool> emitOnlyAny("emit-only-any",
+                          cl::desc("Emit only Any constraints"),
+                          cl::init(false));
+
 std::vector<Record *> getOpDefinitions(const RecordKeeper &recordKeeper) {
   if (!recordKeeper.getClass("Op"))
     return {};
@@ -93,6 +97,8 @@ Optional<StringRef> cppToIRDLTypeName(StringRef cppName) {
 }
 
 Attribute extractConstraint(MLIRContext *ctx, tblgen::Pred predTblgen) {
+  if (emitOnlyAny)
+    return AnyTypeConstraintAttr::get(ctx);
   const Record &predRec = predTblgen.getDef();
   auto predStr = predTblgen.getCondition();
   auto pred = removeOuterParentheses(predStr).trim();
