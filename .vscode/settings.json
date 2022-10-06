@@ -92,4 +92,5 @@
         "valarray": "cpp",
         "variant": "cpp"
     },
+    "python.formatting.provider": "yapf",
 }
