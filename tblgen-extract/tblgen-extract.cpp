@@ -158,8 +158,17 @@ Attribute extractConstraint(MLIRContext *ctx,
 void extractOperation(OpBuilder &builder, tblgen::Operator &tblgenOp,
                       RecordKeeper &records) {
   auto ctx = builder.getContext();
-  auto op = builder.create<irdl::OperationOp>(
-      UnknownLoc::get(ctx), StringAttr::get(ctx, tblgenOp.getOperationName()));
+  auto dialectName = tblgenOp.getDialectName();
+  auto opName = tblgenOp.getOperationName();
+
+  // Remove the dialect name from the operation name.
+  // We first check that the dialect name is a prefix of the operation name,
+  // which is not the case for some operations.
+  if (((StringRef)opName).startswith(dialectName))
+    opName = std::string(opName.begin() + dialectName.size() + 1, opName.end());
+
+  auto op = builder.create<irdl::OperationOp>(UnknownLoc::get(ctx),
+                                              StringAttr::get(ctx, opName));
 
   // Add the block in the region
   auto &opBlock = op.getBody().emplaceBlock();
