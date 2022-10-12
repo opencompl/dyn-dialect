@@ -21,8 +21,10 @@ def generate_irdl_file(file: str,
     root, file = os.path.split(file)
     command = [
         f"./{tblgen_extract_bin}", f"{os.path.join(root, file)}",
-        f"--I={mlir_root}/include", f"--I={root}", f"--I={root_folder}", args
+        f"--I={mlir_root}/include", f"--I={root}", f"--I={root_folder}"
     ]
+    if args != "":
+        command.append(args)
     res = subprocess.run(command, capture_output=True)
     if res.returncode != 0:
         if (print_failing_command):
