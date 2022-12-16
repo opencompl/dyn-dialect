@@ -42,6 +42,8 @@ public:
 /// A generic type constraint.
 class TypeConstraint {
 public:
+  virtual ~TypeConstraint() = default;
+
   /// Check that a type is satisfying the type constraint, based
   /// on information fetchable using the context ConstraintVerifier.
   virtual LogicalResult
@@ -54,6 +56,8 @@ class IsTypeConstraint : public TypeConstraint {
 
 public:
   IsTypeConstraint(Type expectedType) : expectedType(expectedType) {}
+
+  virtual ~IsTypeConstraint() = default;
 
   LogicalResult
   verifyType(Optional<function_ref<InFlightDiagnostic()>> emitError, Type type,
@@ -69,6 +73,8 @@ public:
                            SmallVector<size_t> constraints)
       : expectedType(expectedType), constraints(std::move(constraints)) {}
 
+  virtual ~ParametricTypeConstraint() = default;
+
   LogicalResult
   verifyType(Optional<function_ref<InFlightDiagnostic()>> emitError, Type type,
              ConstraintVerifier &context) const override;
@@ -83,6 +89,8 @@ public:
                               SmallVector<size_t> constraints)
       : expectedType(expectedType), constraints(std::move(constraints)) {}
 
+  virtual ~DynParametricTypeConstraint() = default;
+
   LogicalResult
   verifyType(Optional<function_ref<InFlightDiagnostic()>> emitError, Type type,
              ConstraintVerifier &context) const override;
@@ -94,6 +102,8 @@ class AnyOfTypeConstraint : public TypeConstraint {
 public:
   AnyOfTypeConstraint(SmallVector<size_t> constraints)
       : constraints(std::move(constraints)) {}
+
+  virtual ~AnyOfTypeConstraint() = default;
 
   LogicalResult
   verifyType(Optional<function_ref<InFlightDiagnostic()>> emitError, Type type,
@@ -107,6 +117,8 @@ public:
   AndTypeConstraint(SmallVector<size_t> constraints)
       : constraints(std::move(constraints)) {}
 
+  virtual ~AndTypeConstraint() = default;
+
   LogicalResult
   verifyType(Optional<function_ref<InFlightDiagnostic()>> emitError, Type type,
              ConstraintVerifier &context) const override;
@@ -114,6 +126,8 @@ public:
 
 class AnyTypeConstraint : public TypeConstraint {
 public:
+  virtual ~AnyTypeConstraint() = default;
+
   LogicalResult
   verifyType(Optional<function_ref<InFlightDiagnostic()>> emitError, Type type,
              ConstraintVerifier &context) const override;
