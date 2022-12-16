@@ -19,6 +19,8 @@ using Instruction = IRDLEvalInterpreter::Instruction;
 using ExecutionResult = IRDLEvalInterpreter::ExecutionResult;
 
 struct GotoInstruction : public Instruction {
+  virtual ~GotoInstruction() = default;
+
   ExecutionResult
   interpret(IRDLEvalInterpreter::InterpreterVerifier &verifier) override {
     verifier.currentBlock = gotoBlock;
@@ -32,6 +34,8 @@ struct GotoInstruction : public Instruction {
 };
 
 struct SuccessInstruction : public Instruction {
+  virtual ~SuccessInstruction() = default;
+
   ExecutionResult
   interpret(IRDLEvalInterpreter::InterpreterVerifier &verifier) override {
     return ExecutionResult::success();
@@ -39,6 +43,8 @@ struct SuccessInstruction : public Instruction {
 };
 
 struct FailureInstruction : public Instruction {
+  virtual ~FailureInstruction() = default;
+
   ExecutionResult
   interpret(IRDLEvalInterpreter::InterpreterVerifier &verifier) override {
     return ExecutionResult::failure();
@@ -46,6 +52,8 @@ struct FailureInstruction : public Instruction {
 };
 
 struct CheckTypeInstruction : public Instruction {
+  virtual ~CheckTypeInstruction() = default;
+
   ExecutionResult
   interpret(IRDLEvalInterpreter::InterpreterVerifier &verifier) override {
     auto typeVar = verifier.typeVariables.find(toCheck);
@@ -74,6 +82,8 @@ struct CheckTypeInstruction : public Instruction {
 };
 
 struct CheckDynParametricInstruction : public Instruction {
+  virtual ~CheckDynParametricInstruction() = default;
+
   ExecutionResult
   interpret(IRDLEvalInterpreter::InterpreterVerifier &verifier) override {
     auto typeVar = verifier.typeVariables.find(toCheck);
@@ -117,6 +127,8 @@ struct CheckDynParametricInstruction : public Instruction {
 };
 
 struct CheckParametricInstruction : public Instruction {
+  virtual ~CheckParametricInstruction() = default;
+
   ExecutionResult
   interpret(IRDLEvalInterpreter::InterpreterVerifier &verifier) override {
     auto typeVar = verifier.typeVariables.find(toCheck);
@@ -159,6 +171,8 @@ struct CheckParametricInstruction : public Instruction {
 };
 
 struct MatchTypeInstruction : public Instruction {
+  virtual ~MatchTypeInstruction() = default;
+
   ExecutionResult
   interpret(IRDLEvalInterpreter::InterpreterVerifier &verifier) override {
     auto typeVar = verifier.typeVariables.find(toCheck);
@@ -191,6 +205,8 @@ struct MatchTypeInstruction : public Instruction {
 };
 
 struct AssignTypeInstruction : public Instruction {
+  virtual ~AssignTypeInstruction() = default;
+
   ExecutionResult
   interpret(IRDLEvalInterpreter::InterpreterVerifier &verifier) override {
     auto typeVar = verifier.typeVariables.find(toAssign);
@@ -210,6 +226,8 @@ struct AssignTypeInstruction : public Instruction {
 };
 
 struct ClearTypeInstruction : public Instruction {
+  virtual ~ClearTypeInstruction() = default;
+
   ExecutionResult
   interpret(IRDLEvalInterpreter::InterpreterVerifier &verifier) override {
     verifier.slotTable.erase(slot);

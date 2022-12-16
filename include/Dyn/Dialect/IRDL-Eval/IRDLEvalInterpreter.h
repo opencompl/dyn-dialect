@@ -47,6 +47,7 @@ public:
   };
 
   struct Instruction {
+    virtual ~Instruction() = default;
     virtual ExecutionResult interpret(InterpreterVerifier &verifier) = 0;
   };
 
