@@ -25,6 +25,8 @@ fi
 
 LINKER=${3:-${BEST_LINKER}}
 
+BUILD_TYPE=${4:-"Debug"}
+
 mkdir -p llvm-project/$BUILD_DIR
 mkdir -p llvm-project/$INSTALL_DIR
 cd llvm-project/$BUILD_DIR
@@ -40,7 +42,7 @@ cmake -G Ninja ../llvm \
   -DCMAKE_C_COMPILER=clang \
   -DCMAKE_CXX_COMPILER=clang++ \
   -DLLVM_USE_LINKER=${LINKER} \
-  -DCMAKE_BUILD_TYPE=Debug \
+  -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
   -DLLVM_ENABLE_ASSERTIONS=ON
 
 ninja install
