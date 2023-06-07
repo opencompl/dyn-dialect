@@ -131,7 +131,7 @@ void extractOperation(OpBuilder &builder, tblgen::Operator &tblgenOp,
   SmallVector<Value> operands;
   for (auto &tblgenOperand : tblgenOp.getOperands()) {
     auto operand =
-        extractConstraint(builder, tblgenOperand.constraint.getPredicate());
+        extractConstraint(opBuilder, tblgenOperand.constraint.getPredicate());
     operands.push_back(operand);
   }
 
@@ -144,8 +144,8 @@ void extractOperation(OpBuilder &builder, tblgen::Operator &tblgenOp,
   }
 
   // Create the operands and results operations.
-  builder.create<OperandsOp>(UnknownLoc::get(ctx), operands);
-  builder.create<ResultsOp>(UnknownLoc::get(ctx), results);
+  opBuilder.create<OperandsOp>(UnknownLoc::get(ctx), operands);
+  opBuilder.create<ResultsOp>(UnknownLoc::get(ctx), results);
 }
 
 /// Extract the dialect to IRDL
