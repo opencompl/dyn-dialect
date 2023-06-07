@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/IRDL/IR/IRDL.h"
-#include "mlir/Dialect/IRDL/IR/IRDLAttributes.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -34,26 +33,10 @@ using namespace llvm;
 using namespace mlir;
 using namespace irdl;
 
-cl::opt<bool> emitOnlyAny("emit-only-any",
-                          cl::desc("Emit only Any constraints"),
-                          cl::init(false));
-
 std::vector<Record *> getOpDefinitions(const RecordKeeper &recordKeeper) {
   if (!recordKeeper.getClass("Op"))
     return {};
   return recordKeeper.getAllDerivedDefinitions("Op");
-}
-
-std::vector<Record *> getTypeDefinitions(const RecordKeeper &recordKeeper) {
-  if (!recordKeeper.getClass("TypeDef"))
-    return {};
-  return recordKeeper.getAllDerivedDefinitions("TypeDef");
-}
-
-std::vector<Record *> getAttrDefinitions(const RecordKeeper &recordKeeper) {
-  if (!recordKeeper.getClass("AttrDef"))
-    return {};
-  return recordKeeper.getAllDerivedDefinitions("AttrDef");
 }
 
 /// Check that parentheses are balanced
@@ -82,30 +65,24 @@ StringRef removeOuterParentheses(StringRef str) {
   return str;
 }
 
-Optional<StringRef> cppToIRDLTypeName(StringRef cppName) {
-  if (cppName == "::mlir::shape::SizeType")
-    return {"shape.size"};
-  if (cppName == "::mlir::shape::ShapeType")
-    return {"shape.shape"};
-  if (cppName == "::mlir::IndexType")
-    return {"builtin.index"};
-  if (cppName == "::mlir::TensorType")
-    return {"builtin.tensor"};
-  if (cppName == "::mlir::VectorType")
-    return {"builtin.vector"};
-  return {};
-}
-
-Attribute extractConstraint(MLIRContext *ctx, tblgen::Pred predTblgen) {
-  if (emitOnlyAny)
-    return AnyTypeConstraintAttr::get(ctx);
-  const Record &predRec = predTblgen.getDef();
+Value extractConstraint(OpBuilder &builder, tblgen::Pred predTblgen) {
+  MLIRContext *ctx = builder.getContext();
   auto predStr = predTblgen.getCondition();
   auto pred = removeOuterParentheses(predStr).trim();
 
+  auto op =
+      builder.create<CPredOp>(UnknownLoc::get(ctx), StringAttr::get(ctx, pred));
+  return op.getOutput();
+
+  /*
   // Any constraint
-  if (pred == "true")
-    return AnyTypeConstraintAttr::get(ctx);
+  if (pred == "true") {
+    auto op = builder.create<AnyOp>(UnknownLoc::get(ctx));
+    return op.getOutput();
+  }
+
+  // Default constraint
+  return AnyTypeConstraintAttr::get(ctx);
 
   // AnyOf constraint
   if (predRec.isSubClassOf("Or")) {
@@ -125,33 +102,9 @@ Attribute extractConstraint(MLIRContext *ctx, tblgen::Pred predTblgen) {
     return AndTypeConstraintAttr::get(ctx, constraints);
   }
 
-  // BaseCppClass
-  // TODO: change this to a TypeWrapperBaseConstraint
-  if (pred.startswith("$_self.isa<") && pred.endswith(">()")) {
-    if (auto irdlName = cppToIRDLTypeName(pred.slice(11, pred.size() - 3)))
-      return DynTypeBaseConstraintAttr::get(ctx, *irdlName);
-  }
-
-  // FloatType constraint
-  if (pred == ("$_self.isa<::mlir::FloatType>()")) {
-    std::vector<Attribute> constraints;
-    constraints.push_back(DynTypeBaseConstraintAttr::get(ctx, "builtin.bf16"));
-    constraints.push_back(DynTypeBaseConstraintAttr::get(ctx, "builtin.f16"));
-    constraints.push_back(DynTypeBaseConstraintAttr::get(ctx, "builtin.f32"));
-    constraints.push_back(DynTypeBaseConstraintAttr::get(ctx, "builtin.f64"));
-    constraints.push_back(DynTypeBaseConstraintAttr::get(ctx, "builtin.f80"));
-    constraints.push_back(DynTypeBaseConstraintAttr::get(ctx, "builtin.f128"));
-    return AnyOfTypeConstraintAttr::get(ctx, constraints);
-  }
-
   llvm::errs() << "Cannot resolve constraint: " << pred << "\n";
   llvm::errs() << predRec << "\n\n";
-  return AnyTypeConstraintAttr::get(ctx);
-}
-
-Attribute extractConstraint(MLIRContext *ctx,
-                            const tblgen::Constraint &constraint) {
-  return extractConstraint(ctx, constraint.getPredicate());
+  return AnyTypeConstraintAttr::get(ctx); */
 }
 
 /// Extract an operation to IRDL.
@@ -172,41 +125,33 @@ void extractOperation(OpBuilder &builder, tblgen::Operator &tblgenOp,
 
   // Add the block in the region
   auto &opBlock = op.getBody().emplaceBlock();
-  builder.setInsertionPoint(&opBlock, opBlock.begin());
+  auto opBuilder = OpBuilder::atBlockBegin(&opBlock);
 
   // Extract operands
-  SmallVector<Attribute> operands;
+  SmallVector<Value> operands;
   for (auto &tblgenOperand : tblgenOp.getOperands()) {
-    auto constraint = extractConstraint(ctx, tblgenOperand.constraint);
     auto operand =
-        NamedTypeConstraintAttr::get(ctx, tblgenOperand.name, constraint);
+        extractConstraint(builder, tblgenOperand.constraint.getPredicate());
     operands.push_back(operand);
   }
-  auto irdlOperands = ArrayAttr::get(ctx, operands);
-  builder.create<OperandsOp>(UnknownLoc::get(ctx), irdlOperands);
 
   // Extract results
-  SmallVector<Attribute> results;
+  SmallVector<Value> results;
   for (auto &tblgenResult : tblgenOp.getResults()) {
-    auto constraint = extractConstraint(ctx, tblgenResult.constraint);
     auto result =
-        NamedTypeConstraintAttr::get(ctx, tblgenResult.name, constraint);
+        extractConstraint(opBuilder, tblgenResult.constraint.getPredicate());
     results.push_back(result);
   }
-  auto irdlResults = ArrayAttr::get(ctx, results);
-  builder.create<ResultsOp>(UnknownLoc::get(ctx), irdlResults);
 
-  // Put the insertion point after the created operation.
-  builder.setInsertionPointAfter(op);
-  assert(succeeded(op.verify()));
+  // Create the operands and results operations.
+  builder.create<OperandsOp>(UnknownLoc::get(ctx), operands);
+  builder.create<ResultsOp>(UnknownLoc::get(ctx), results);
 }
 
 /// Extract the dialect to IRDL
 void extractDialect(OpBuilder &builder, RecordKeeper &records) {
   auto ctx = builder.getContext();
   std::vector<Record *> opDefs = getOpDefinitions(records);
-  std::vector<Record *> typeDefs = getTypeDefinitions(records);
-  std::vector<Record *> attrDefs = getAttrDefinitions(records);
 
   // Retrieve the dialect name.
   assert(opDefs.size() > 0);
