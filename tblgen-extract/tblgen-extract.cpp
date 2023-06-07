@@ -70,17 +70,17 @@ Value extractConstraint(OpBuilder &builder, tblgen::Pred predTblgen) {
   auto predStr = predTblgen.getCondition();
   auto pred = removeOuterParentheses(predStr).trim();
 
-  auto op =
-      builder.create<CPredOp>(UnknownLoc::get(ctx), StringAttr::get(ctx, pred));
-  return op.getOutput();
-
-  /*
   // Any constraint
   if (pred == "true") {
     auto op = builder.create<AnyOp>(UnknownLoc::get(ctx));
     return op.getOutput();
   }
 
+  auto op =
+      builder.create<CPredOp>(UnknownLoc::get(ctx), StringAttr::get(ctx, pred));
+  return op.getOutput();
+
+  /*
   // Default constraint
   return AnyTypeConstraintAttr::get(ctx);
 
