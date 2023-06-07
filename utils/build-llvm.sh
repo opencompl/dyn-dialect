@@ -12,6 +12,26 @@
 #
 ##===----------------------------------------------------------------------===##
 
+
+BUILD_TYPE="Debug"
+
+# Parse command line options
+while [[ $# -gt 0 ]]; do
+    key="$1"
+
+    case $key in
+        --release)
+            BUILD_TYPE="Release"
+            shift
+            ;;
+        *)
+            echo "Unknown option: $key"
+            exit 1
+            ;;
+    esac
+done
+
+
 BUILD_DIR=${1:-"build"}
 INSTALL_DIR=${2:-"install"}
 
@@ -25,7 +45,10 @@ fi
 
 LINKER=${3:-${BEST_LINKER}}
 
-BUILD_TYPE=${4:-"Debug"}
+
+echo "$BUILD_TYPE"
+echo "$BUILD_DIR"
+echo "$INSTALL_DIR"
 
 mkdir -p llvm-project/$BUILD_DIR
 mkdir -p llvm-project/$INSTALL_DIR
