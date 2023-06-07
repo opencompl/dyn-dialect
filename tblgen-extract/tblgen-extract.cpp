@@ -65,106 +65,122 @@ StringRef removeOuterParentheses(StringRef str) {
   return str;
 }
 
-Value extractConstraint(OpBuilder &builder, tblgen::Pred predTblgen) {
-  MLIRContext *ctx = builder.getContext();
-  auto predRec = predTblgen.getDef();
-  auto predStr = predTblgen.getCondition();
-  auto pred = removeOuterParentheses(predStr).trim();
+class Extractor {
+public:
+  Extractor(RecordKeeper &records, OpBuilder &rootBuilder)
+      : records(records), rootBuilder(rootBuilder){};
 
-  // Any constraint
-  if (pred == "true") {
-    auto op = builder.create<AnyOp>(UnknownLoc::get(ctx));
-    return op.getOutput();
-  }
+  Value extractConstraint(OpBuilder &builder,
+                          tblgen::TypeConstraint predTblgen) {
+    MLIRContext *ctx = builder.getContext();
+    llvm::Record predRec = predTblgen.getDef();
+    std::string predStr = predTblgen.getPredicate().getCondition();
+    llvm::StringRef pred = removeOuterParentheses(predStr).trim();
 
-  // AnyOf constraint
-  if (predRec.isSubClassOf("Or")) {
-    std::vector<Value> constraints;
-    for (auto *child : predRec.getValueAsListOfDefs("children")) {
-      constraints.push_back(extractConstraint(builder, tblgen::Pred(child)));
+    // Any constraint
+    if (pred == "true") {
+      auto op = builder.create<AnyOp>(UnknownLoc::get(ctx));
+      return op.getOutput();
     }
-    auto op = builder.create<AnyOfOp>(UnknownLoc::get(ctx), constraints);
-    return op.getOutput();
-  }
 
-  // AllOf constraint
-  if (predRec.isSubClassOf("And")) {
-    std::vector<Value> constraints;
-    for (auto *child : predRec.getValueAsListOfDefs("children")) {
-      constraints.push_back(extractConstraint(builder, tblgen::Pred(child)));
+    // AnyOf constraint
+    if (predRec.isSubClassOf("Or")) {
+      std::vector<Value> constraints;
+      for (auto *child : predRec.getValueAsListOfDefs("children")) {
+        tblgen::TypeConstraint childType(child);
+        constraints.push_back(extractConstraint(builder, childType));
+      }
+      auto op = builder.create<AnyOfOp>(UnknownLoc::get(ctx), constraints);
+      return op.getOutput();
     }
-    auto op = builder.create<AllOfOp>(UnknownLoc::get(ctx), constraints);
+
+    // AllOf constraint
+    if (predRec.isSubClassOf("And")) {
+      std::vector<Value> constraints;
+      for (auto *child : predRec.getValueAsListOfDefs("children")) {
+        tblgen::TypeConstraint childType(child);
+        constraints.push_back(extractConstraint(builder, childType));
+      }
+      auto op = builder.create<AllOfOp>(UnknownLoc::get(ctx), constraints);
+      return op.getOutput();
+    }
+
+    auto op = builder.create<CPredOp>(UnknownLoc::get(ctx),
+                                      StringAttr::get(ctx, pred));
     return op.getOutput();
   }
 
-  auto op =
-      builder.create<CPredOp>(UnknownLoc::get(ctx), StringAttr::get(ctx, pred));
-  return op.getOutput();
-}
+  /// Extract an operation to IRDL.
+  void extractOperation(OpBuilder &builder, tblgen::Operator &tblgenOp) {
+    auto ctx = builder.getContext();
+    auto dialectName = tblgenOp.getDialectName();
+    auto opName = tblgenOp.getOperationName();
 
-/// Extract an operation to IRDL.
-void extractOperation(OpBuilder &builder, tblgen::Operator &tblgenOp,
-                      RecordKeeper &records) {
-  auto ctx = builder.getContext();
-  auto dialectName = tblgenOp.getDialectName();
-  auto opName = tblgenOp.getOperationName();
+    if (opName != "affine.apply")
+      return;
 
-  // Remove the dialect name from the operation name.
-  // We first check that the dialect name is a prefix of the operation name,
-  // which is not the case for some operations.
-  if (((StringRef)opName).startswith(dialectName))
-    opName = std::string(opName.begin() + dialectName.size() + 1, opName.end());
+    // Remove the dialect name from the operation name.
+    // We first check that the dialect name is a prefix of the operation name,
+    // which is not the case for some operations.
+    if (((StringRef)opName).startswith(dialectName))
+      opName =
+          std::string(opName.begin() + dialectName.size() + 1, opName.end());
 
-  auto op = builder.create<irdl::OperationOp>(UnknownLoc::get(ctx),
-                                              StringAttr::get(ctx, opName));
+    auto op = builder.create<irdl::OperationOp>(UnknownLoc::get(ctx),
+                                                StringAttr::get(ctx, opName));
 
-  // Add the block in the region
-  auto &opBlock = op.getBody().emplaceBlock();
-  auto opBuilder = OpBuilder::atBlockBegin(&opBlock);
+    // Add the block in the region
+    auto &opBlock = op.getBody().emplaceBlock();
+    auto opBuilder = OpBuilder::atBlockBegin(&opBlock);
 
-  // Extract operands
-  SmallVector<Value> operands;
-  for (auto &tblgenOperand : tblgenOp.getOperands()) {
-    auto operand =
-        extractConstraint(opBuilder, tblgenOperand.constraint.getPredicate());
-    operands.push_back(operand);
+    // Extract operands
+    SmallVector<Value> operands;
+    for (auto &tblgenOperand : tblgenOp.getOperands()) {
+      auto operand = extractConstraint(opBuilder, tblgenOperand.constraint);
+      operands.push_back(operand);
+    }
+
+    // Extract results
+    SmallVector<Value> results;
+    for (auto &tblgenResult : tblgenOp.getResults()) {
+      auto result = extractConstraint(opBuilder, tblgenResult.constraint);
+      results.push_back(result);
+    }
+
+    // Create the operands and results operations.
+    opBuilder.create<OperandsOp>(UnknownLoc::get(ctx), operands);
+    opBuilder.create<ResultsOp>(UnknownLoc::get(ctx), results);
   }
 
-  // Extract results
-  SmallVector<Value> results;
-  for (auto &tblgenResult : tblgenOp.getResults()) {
-    auto result =
-        extractConstraint(opBuilder, tblgenResult.constraint.getPredicate());
-    results.push_back(result);
+  /// Extract the dialect to IRDL
+  void extractDialect() {
+
+    auto ctx = rootBuilder.getContext();
+    std::vector<Record *> opDefs = getOpDefinitions(records);
+
+    // Retrieve the dialect name.
+    assert(opDefs.size() > 0);
+    auto dialectName = tblgen::Operator(opDefs[0]).getDialectName();
+
+    // Create the IDRL dialect operation, and set the insertion point in it.
+    auto dialect = rootBuilder.create<irdl::DialectOp>(
+        UnknownLoc::get(ctx), StringAttr::get(ctx, dialectName));
+    auto &dialectBlock = dialect.getBody().emplaceBlock();
+
+    auto builder = OpBuilder::atBlockBegin(&dialectBlock);
+
+    // Walk all TableGen operations, and create new IRDL operations.
+    for (auto rec : opDefs) {
+      // Create the operation using the TableGen name.
+      auto tblgenOp = tblgen::Operator(rec);
+      extractOperation(builder, tblgenOp);
+    }
   }
 
-  // Create the operands and results operations.
-  opBuilder.create<OperandsOp>(UnknownLoc::get(ctx), operands);
-  opBuilder.create<ResultsOp>(UnknownLoc::get(ctx), results);
-}
-
-/// Extract the dialect to IRDL
-void extractDialect(OpBuilder &builder, RecordKeeper &records) {
-  auto ctx = builder.getContext();
-  std::vector<Record *> opDefs = getOpDefinitions(records);
-
-  // Retrieve the dialect name.
-  assert(opDefs.size() > 0);
-  auto dialectName = tblgen::Operator(opDefs[0]).getDialectName();
-
-  // Create the IDRL dialect operation, and set the insertion point in it.
-  auto dialect = builder.create<irdl::DialectOp>(
-      UnknownLoc::get(ctx), StringAttr::get(ctx, dialectName));
-  auto &dialectBlock = dialect.getBody().emplaceBlock();
-  builder.setInsertionPoint(&dialectBlock, dialectBlock.begin());
-
-  // Walk all TableGen operations, and create new IRDL operations.
-  for (auto rec : opDefs) {
-    // Create the operation using the TableGen name.
-    auto tblgenOp = tblgen::Operator(rec);
-    extractOperation(builder, tblgenOp, records);
-  }
-}
+private:
+  RecordKeeper &records;
+  OpBuilder rootBuilder;
+};
 
 bool MlirTableGenStatsMain(raw_ostream &os, RecordKeeper &records) {
   // Create the context, and the main module operation.
@@ -178,7 +194,9 @@ bool MlirTableGenStatsMain(raw_ostream &os, RecordKeeper &records) {
   auto &moduleBlock = module->getRegion().getBlocks().front();
   builder.setInsertionPoint(&moduleBlock, moduleBlock.begin());
 
-  extractDialect(builder, records);
+  Extractor extractor(records, builder);
+
+  extractor.extractDialect();
 
   module->print(os);
 
