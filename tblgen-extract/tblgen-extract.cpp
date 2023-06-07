@@ -67,6 +67,7 @@ StringRef removeOuterParentheses(StringRef str) {
 
 Value extractConstraint(OpBuilder &builder, tblgen::Pred predTblgen) {
   MLIRContext *ctx = builder.getContext();
+  auto predRec = predTblgen.getDef();
   auto predStr = predTblgen.getCondition();
   auto pred = removeOuterParentheses(predStr).trim();
 
@@ -76,35 +77,29 @@ Value extractConstraint(OpBuilder &builder, tblgen::Pred predTblgen) {
     return op.getOutput();
   }
 
+  // AnyOf constraint
+  if (predRec.isSubClassOf("Or")) {
+    std::vector<Value> constraints;
+    for (auto *child : predRec.getValueAsListOfDefs("children")) {
+      constraints.push_back(extractConstraint(builder, tblgen::Pred(child)));
+    }
+    auto op = builder.create<AnyOfOp>(UnknownLoc::get(ctx), constraints);
+    return op.getOutput();
+  }
+
+  // AllOf constraint
+  if (predRec.isSubClassOf("And")) {
+    std::vector<Value> constraints;
+    for (auto *child : predRec.getValueAsListOfDefs("children")) {
+      constraints.push_back(extractConstraint(builder, tblgen::Pred(child)));
+    }
+    auto op = builder.create<AllOfOp>(UnknownLoc::get(ctx), constraints);
+    return op.getOutput();
+  }
+
   auto op =
       builder.create<CPredOp>(UnknownLoc::get(ctx), StringAttr::get(ctx, pred));
   return op.getOutput();
-
-  /*
-  // Default constraint
-  return AnyTypeConstraintAttr::get(ctx);
-
-  // AnyOf constraint
-  if (predRec.isSubClassOf("Or")) {
-    std::vector<Attribute> constraints;
-    for (auto *child : predRec.getValueAsListOfDefs("children")) {
-      constraints.push_back(extractConstraint(ctx, tblgen::Pred(child)));
-    }
-    return AnyOfTypeConstraintAttr::get(ctx, constraints);
-  }
-
-  // And constraint
-  if (predRec.isSubClassOf("And")) {
-    std::vector<Attribute> constraints;
-    for (auto *child : predRec.getValueAsListOfDefs("children")) {
-      constraints.push_back(extractConstraint(ctx, tblgen::Pred(child)));
-    }
-    return AndTypeConstraintAttr::get(ctx, constraints);
-  }
-
-  llvm::errs() << "Cannot resolve constraint: " << pred << "\n";
-  llvm::errs() << predRec << "\n\n";
-  return AnyTypeConstraintAttr::get(ctx); */
 }
 
 /// Extract an operation to IRDL.
