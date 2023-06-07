@@ -16,4 +16,6 @@ cmake -G Ninja ../ \
       -DCMAKE_EXPORT_COMPILE_COMMANDS=1 \
       -DMLIR_DIR=$(pwd)/../llvm-project/build/lib/cmake/mlir \
       -DLLVM_EXTERNAL_LIT=$(pwd)/../llvm-project/build/bin/llvm-lit \
-      -DLLVM_USE_LINKER=${LINKER}
+      -DLLVM_USE_LINKER=${LINKER} \
+      -DCMAKE_C_COMPILER=clang \
+      -DCMAKE_CXX_COMPILER=clang++
