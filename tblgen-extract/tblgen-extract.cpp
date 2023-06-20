@@ -70,11 +70,10 @@ public:
   Extractor(RecordKeeper &records, OpBuilder &rootBuilder)
       : records(records), rootBuilder(rootBuilder){};
 
-  Value extractConstraint(OpBuilder &builder,
-                          tblgen::TypeConstraint predTblgen) {
+  Value extractConstraint(OpBuilder &builder, tblgen::Pred tblgenPred) {
     MLIRContext *ctx = builder.getContext();
-    llvm::Record predRec = predTblgen.getDef();
-    std::string predStr = predTblgen.getPredicate().getCondition();
+    llvm::Record predRec = tblgenPred.getDef();
+    std::string predStr = tblgenPred.getCondition();
     llvm::StringRef pred = removeOuterParentheses(predStr).trim();
 
     // Any constraint
@@ -87,8 +86,7 @@ public:
     if (predRec.isSubClassOf("Or")) {
       std::vector<Value> constraints;
       for (auto *child : predRec.getValueAsListOfDefs("children")) {
-        tblgen::TypeConstraint childType(child);
-        constraints.push_back(extractConstraint(builder, childType));
+        constraints.push_back(extractConstraint(builder, tblgen::Pred(child)));
       }
       auto op = builder.create<AnyOfOp>(UnknownLoc::get(ctx), constraints);
       return op.getOutput();
@@ -98,11 +96,24 @@ public:
     if (predRec.isSubClassOf("And")) {
       std::vector<Value> constraints;
       for (auto *child : predRec.getValueAsListOfDefs("children")) {
-        tblgen::TypeConstraint childType(child);
-        constraints.push_back(extractConstraint(builder, childType));
+        constraints.push_back(extractConstraint(builder, tblgen::Pred(child)));
       }
       auto op = builder.create<AllOfOp>(UnknownLoc::get(ctx), constraints);
       return op.getOutput();
+    }
+
+    if (predRec.isSubClassOf("ISA")) {
+      StringRef isa = predRec.getValueAsString("isa");
+      TypeAttr isOpType = nullptr;
+
+      if (isa == "::mlir::IndexType") {
+        isOpType = TypeAttr::get(IndexType::get(ctx));
+      }
+
+      if (isOpType != nullptr) {
+        auto op = builder.create<IsOp>(UnknownLoc::get(ctx), isOpType);
+        return op.getOutput();
+      }
     }
 
     auto op = builder.create<CPredOp>(UnknownLoc::get(ctx),
@@ -115,9 +126,6 @@ public:
     auto ctx = builder.getContext();
     auto dialectName = tblgenOp.getDialectName();
     auto opName = tblgenOp.getOperationName();
-
-    if (opName != "affine.apply")
-      return;
 
     // Remove the dialect name from the operation name.
     // We first check that the dialect name is a prefix of the operation name,
@@ -136,14 +144,16 @@ public:
     // Extract operands
     SmallVector<Value> operands;
     for (auto &tblgenOperand : tblgenOp.getOperands()) {
-      auto operand = extractConstraint(opBuilder, tblgenOperand.constraint);
+      auto operand =
+          extractConstraint(opBuilder, tblgenOperand.constraint.getPredicate());
       operands.push_back(operand);
     }
 
     // Extract results
     SmallVector<Value> results;
     for (auto &tblgenResult : tblgenOp.getResults()) {
-      auto result = extractConstraint(opBuilder, tblgenResult.constraint);
+      auto result =
+          extractConstraint(opBuilder, tblgenResult.constraint.getPredicate());
       results.push_back(result);
     }
 
